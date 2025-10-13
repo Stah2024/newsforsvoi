@@ -38,7 +38,7 @@ def fetch_latest_posts():
         for u in updates
         if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
     ]
-    return list(reversed(posts[-10:])) if posts else []
+    return list(reversed(posts[-100:])) if posts else []
 
 def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
@@ -48,15 +48,12 @@ def is_older_than_two_days(timestamp):
 def format_post(message):
     html = "<article class='news-item'>\n"
 
-    # Время публикации (МСК)
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
 
-    # Текст
     if message.content_type == 'text':
         html += f"<p>{clean_text(message.text)}</p>\n"
 
-    # Фото
     elif message.content_type == 'photo':
         photos = message.photo
         file_info = bot.get_file(photos[-1].file_id)
@@ -67,7 +64,6 @@ def format_post(message):
         if len(photos) > 1:
             html += f"<a class='telegram-video-link' href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>🖼 Смотреть остальные фото в Telegram</a>\n"
 
-    # Видео
     elif message.content_type == 'video':
         file_info = bot.get_file(message.video.file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
@@ -96,7 +92,8 @@ def main():
             now = datetime.now(moscow).strftime("%d.%m.%Y %H:%M")
             news_file.write(f"<p>Нет новых постов — {now}</p>")
         else:
-            for post in posts:
+            visible_limit = 12
+            for i, post in enumerate(posts):
                 post_id = str(post.message_id)
                 if post_id in seen_ids:
                     continue
@@ -106,9 +103,34 @@ def main():
                 if is_older_than_two_days(post.date):
                     archive_file.write(html)
                 else:
+                    if i >= visible_limit:
+                        html = html.replace("<article", "<article class='news-item hidden'")
                     news_file.write(html)
 
                 new_ids.add(post_id)
+
+            # Добавляем кнопку и JS в конец news.html
+            news_file.write("""
+<button id="show-more">Показать ещё</button>
+
+<script>
+let batchSize = 10;
+document.addEventListener('DOMContentLoaded', () => {
+  const showMoreBtn = document.getElementById('show-more');
+  if (!showMoreBtn) return;
+
+  showMoreBtn.addEventListener('click', () => {
+    const hiddenCards = document.querySelectorAll('.news-item.hidden');
+    for (let i = 0; i < batchSize && i < hiddenCards.length; i++) {
+      hiddenCards[i].classList.remove('hidden');
+    }
+    if (document.querySelectorAll('.news-item.hidden').length === 0) {
+      showMoreBtn.style.display = 'none';
+    }
+  });
+});
+</script>
+""")
 
     save_seen_ids(seen_ids.union(new_ids))
 
