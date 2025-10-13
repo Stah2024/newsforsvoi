@@ -44,7 +44,7 @@
     <section id="news-feed">
       <h3>Последние новости</h3>
       <div id="news-container" class="news-grid"></div>
-      <button id="load-more" class="button">Показать ещё</button>
+      <button id="load-more" class="button">Смотреть ещё</button>
     </section>
   </main>
 
@@ -61,19 +61,21 @@
         temp.innerHTML = html;
 
         const items = Array.from(temp.querySelectorAll('.news-item'));
-        let visibleCount = 9;
+        let visibleCount = 10;
 
         function renderItems() {
           container.innerHTML = '';
           items.slice(0, visibleCount).forEach(item => container.appendChild(item));
           if (visibleCount >= items.length) {
             document.getElementById('load-more').style.display = 'none';
+          } else {
+            document.getElementById('load-more').style.display = 'block';
           }
           enableCardEnlargement();
         }
 
         document.getElementById('load-more').addEventListener('click', () => {
-          visibleCount += 9;
+          visibleCount += 10;
           renderItems();
         });
 
