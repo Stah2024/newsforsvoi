@@ -45,5 +45,5 @@ def main():
                 f.write(format_post(post))
 
 # ✅ ВАЖНО: правильная форма запуска
-if name == "main":
+if __name__ == "__main__":
     main()
