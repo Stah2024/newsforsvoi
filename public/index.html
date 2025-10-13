@@ -5,25 +5,118 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Новости для Своих — независимые новости России и мира</title>
   <link rel="stylesheet" href="style.css" />
-  <script defer src="load-news.js"></script>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+  <!-- SEO -->
+  <meta name="description" content="Актуальные новости России и мира без фейков и лишнего шума. Главные события, аналитика, обзоры и факты — коротко и по делу.">
+  <meta name="keywords" content="новости, Telegram, SVOih, события, видео, фото, Россия">
+  <meta name="author" content="SVOih News Team">
+  <meta name="yandex-verification" content="3a33e674e5836564">
+  <meta property="og:title" content="Новости для Своих" />
+  <meta property="og:description" content="Честные новости России и мира" />
+  <meta property="og:url" content="https://newsforsvoi.vercel.app/" />
+  <meta property="og:type" content="website" />
 </head>
 <body>
   <header>
-    <h1>Новости для Своих</h1>
-    <h2>Честные новости России и мира</h2>
+    <div class="header-content">
+      <img src="/rf-flag.svg" alt="Флаг России" class="flag-icon" />
+      <div class="text-block">
+        <h1>Новости для Своих</h1>
+        <h2>Честные новости России и мира</h2>
+        <p class="tagline">
+          Актуальные новости России и мира без фейков и лишнего шума.<br>
+          Главные события, аналитика, обзоры и факты — коротко и по делу.<br>
+          Читайте свежие новости, политические и военные сводки, новости экономики, технологий и общества.
+        </p>
+      </div>
+    </div>
+
+    <div class="search-wrapper">
+      <input type="search" id="search-box" placeholder="🔍 Поиск по новостям…" />
+    </div>
   </header>
 
   <main>
-    <p><strong>Новости для Своих</strong> — независимый Telegram-канал о событиях в России и мире.</p>
     <a href="https://t.me/newsSVOih" class="button" target="_blank">Перейти в Telegram-канал</a>
+    <a href="archive.html" class="button">Архив</a>
 
     <section id="news-feed">
       <h3>Последние новости</h3>
+      <div id="news-container" class="news-grid"></div>
+      <button id="load-more" class="button">Показать ещё</button>
     </section>
   </main>
 
   <footer>
     © 2025 Новости для Своих
   </footer>
+
+  <script>
+    fetch('/news.html')
+      .then(response => response.text())
+      .then(html => {
+        const container = document.getElementById('news-container');
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+
+        const items = Array.from(temp.querySelectorAll('.news-item'));
+        let visibleCount = 9;
+
+        function renderItems() {
+          container.innerHTML = '';
+          items.slice(0, visibleCount).forEach(item => container.appendChild(item));
+          if (visibleCount >= items.length) {
+            document.getElementById('load-more').style.display = 'none';
+          }
+          enableCardEnlargement();
+        }
+
+        document.getElementById('load-more').addEventListener('click', () => {
+          visibleCount += 9;
+          renderItems();
+        });
+
+        renderItems();
+      })
+      .catch(error => {
+        document.getElementById('news-container').innerHTML = '<p>Не удалось загрузить новости.</p>';
+        console.error('Ошибка загрузки news.html:', error);
+      });
+
+    document.getElementById('search-box').addEventListener('input', function(e) {
+      const query = e.target.value.toLowerCase();
+      document.querySelectorAll('.news-item').forEach(item => {
+        item.style.display = item.textContent.toLowerCase().includes(query) ? '' : 'none';
+      });
+    });
+
+    function enableCardEnlargement() {
+      document.querySelectorAll('.news-item').forEach(item => {
+        item.addEventListener('click', () => {
+          item.classList.toggle('enlarged');
+        });
+      });
+    }
+  </script>
+
+  <!-- Yandex.Metrika counter -->
+  <script type="text/javascript">
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {
+          if (document.scripts[j].src === r) { return; }
+        }
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym');
+
+    ym(104600251, 'init', {
+        clickmap:true,
+        trackLinks:true,
+        accurateTrackBounce:true
+    });
+  </script>
+  <noscript><div><img src="https://mc.yandex.ru/watch/104600251" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 </body>
 </html>
