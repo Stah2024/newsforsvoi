@@ -47,12 +47,10 @@ def is_older_than_two_days(timestamp):
     return now - post_time >= timedelta(days=2)
 
 def format_post(message):
-    # Пропускаем видео без caption — это дубликаты из одного поста
     if message.content_type == 'video' and not message.caption:
         return ""
 
     html = "<article class='news-item'>\n"
-
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
 
@@ -71,8 +69,13 @@ def format_post(message):
             html += f"<a class='telegram-video-link' href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>🖼 Смотреть остальные фото в Telegram</a>\n"
 
     elif message.content_type == 'video':
-        file_info = bot.get_file(message.video.file_id)
-        file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
+        try:
+            file_info = bot.get_file(message.video.file_id)
+            file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
+        except Exception as e:
+            print(f"⚠️ Ошибка при получении видео {message.message_id}: {e}")
+            return ""
+
         caption = clean_text(message.caption or "")
         html += f"<video controls src='{file_url}'></video>\n"
         if caption:
@@ -101,14 +104,12 @@ def main():
 
     os.makedirs("public", exist_ok=True)
 
-    # Загружаем старый news.html
     old_news = []
     if os.path.exists("public/news.html"):
         with open("public/news.html", "r", encoding="utf-8") as f:
             raw = f.read()
             old_news = re.findall(r"<article class='news-item'>.*?</article>", raw, re.DOTALL)
 
-    # Переносим устаревшие карточки в архив
     fresh_news = []
     with open("public/archive.html", "a", encoding="utf-8") as archive_file:
         for block in old_news:
@@ -118,7 +119,6 @@ def main():
             else:
                 fresh_news.append(block)
 
-    # Добавляем новые карточки
     visible_limit = 12
     visible_count = 0
     for post in posts:
@@ -136,7 +136,6 @@ def main():
         visible_count += 1
         new_ids.add(post_id)
 
-    # Записываем обновлённый news.html
     with open("public/news.html", "w", encoding="utf-8") as news_file:
         for block in fresh_news:
             news_file.write(block + "\n")
