@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://newsSVOih.ru/index.html</loc>
+    <loc>https://newsforsvoi.ru/index.html</loc>
     <lastmod>2025-10-12</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://newsSVOih.ru/news.html</loc>
+    <loc>https://newsforsvoi.ru/news.html</loc>
     <lastmod>2025-10-12</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://newsSVOih.ru/archive.html</loc>
+    <loc>https://newsforsvoi.ru/archive.html</loc>
     <lastmod>2025-10-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
