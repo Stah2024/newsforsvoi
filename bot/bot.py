@@ -2,6 +2,7 @@ import os
 import telebot
 from datetime import datetime, timedelta
 import pytz
+import re
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = "@newsSVOih"
@@ -84,38 +85,63 @@ def format_post(message):
     html += "</article>\n"
     return html
 
+def extract_timestamp(html_block):
+    match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
+    if match:
+        try:
+            return datetime.strptime(match.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow)
+        except:
+            return None
+    return None
+
 def main():
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
     new_ids = set()
 
     os.makedirs("public", exist_ok=True)
-    with open("public/news.html", "w", encoding="utf-8") as news_file, \
-         open("public/archive.html", "w", encoding="utf-8") as archive_file:
 
-        if not posts:
-            now = datetime.now(moscow).strftime("%d.%m.%Y %H:%M")
-            news_file.write(f"<p>Нет новых постов — {now}</p>")
-        else:
-            visible_limit = 12
-            for i, post in enumerate(posts):
-                post_id = str(post.message_id)
-                if post_id in seen_ids:
-                    continue
+    # Загружаем старый news.html
+    old_news = []
+    if os.path.exists("public/news.html"):
+        with open("public/news.html", "r", encoding="utf-8") as f:
+            raw = f.read()
+            old_news = re.findall(r"<article class='news-item'>.*?</article>", raw, re.DOTALL)
 
-                html = format_post(post)
-                if not html:
-                    continue
+    # Переносим устаревшие карточки в архив
+    fresh_news = []
+    with open("public/archive.html", "a", encoding="utf-8") as archive_file:
+        for block in old_news:
+            ts = extract_timestamp(block)
+            if ts and is_older_than_two_days(ts.timestamp()):
+                archive_file.write(block + "\n")
+            else:
+                fresh_news.append(block)
 
-                if is_older_than_two_days(post.date):
-                    archive_file.write(html)
-                else:
-                    if i >= visible_limit:
-                        html = html.replace("<article", "<article class='news-item hidden'")
-                    news_file.write(html)
+    # Добавляем новые карточки
+    visible_limit = 12
+    visible_count = 0
+    for post in posts:
+        post_id = str(post.message_id)
+        if post_id in seen_ids:
+            continue
 
-                new_ids.add(post_id)
+        html = format_post(post)
+        if not html:
+            continue
 
+        if visible_count >= visible_limit:
+            html = html.replace("<article", "<article class='news-item hidden'")
+        fresh_news.append(html)
+        visible_count += 1
+        new_ids.add(post_id)
+
+    # Записываем обновлённый news.html
+    with open("public/news.html", "w", encoding="utf-8") as news_file:
+        for block in fresh_news:
+            news_file.write(block + "\n")
+
+        if any("hidden" in block for block in fresh_news):
             news_file.write("""
 <button id="show-more">Показать ещё</button>
 <script>
