@@ -1,0 +1,47 @@
+// ...existing code...
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>News</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 16px; }
+    .post { border-bottom: 1px solid #ddd; padding: 8px 0; }
+    .date { color: #666; font-size: 0.9em; }
+  </style>
+</head>
+<body>
+  <h1>Новости</h1>
+  <div id="news">Загрузка...</div>
+
+  <script>
+    function renderPosts(posts) {
+      const root = document.getElementById('news');
+      if (!posts || posts.length === 0) {
+        root.innerHTML = '<p>Нет новостей</p>';
+        return;
+      }
+      root.innerHTML = posts.map(p => {
+        const text = (p.text || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+        return `<div class="post"><div class="date">${new Date(p.date).toLocaleString()}</div><div class="text">${text}</div></div>`;
+      }).join('');
+    }
+
+    async function loadNews() {
+      try {
+        const res = await fetch('/api/news', { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const posts = await res.json();
+        renderPosts(posts);
+      } catch (err) {
+        console.error('Ошибка загрузки новостей:', err);
+        document.getElementById('news').innerText = 'Ошибка загрузки новостей';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadNews);
+  </script>
+</body>
+</html>
+<!-- ...existing code... -->

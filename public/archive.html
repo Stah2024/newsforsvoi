@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Архив новостей — SVOih</title>
+  <link rel="stylesheet" href="style.css" />
+  <meta name="yandex-verification" content="104596413">
+  <meta name="google-site-verification" content="ТВОЙ_КОД_ГУГЛ">
+  <meta name="description" content="Архив новостей Telegram-канала SVOih. События, аналитика, обзоры и факты — коротко и по делу.">
+  <meta name="keywords" content="архив, новости, Telegram, SVOih, события, Россия, политика, экономика, технологии, общество">
+  <meta name="author" content="SVOih News Team">
+  <meta property="og:title" content="Архив новостей — SVOih" />
+  <meta property="og:description" content="Старые новости без фейков и лишнего шума. Аналитика, факты, события." />
+  <meta property="og:image" content="https://newsSVOih.site/channel-banner.jpg" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Архив новостей — SVOih" />
+  <meta name="twitter:description" content="Старые новости, политические и военные сводки, экономика, технологии и общество." />
+</head>
+<body>
+  <header>
+    <h1>Архив новостей</h1>
+    <h2>Посты старше 2 дней</h2>
+    <p class="intro">
+      Архив новостей Telegram-канала SVOih. События, аналитика, обзоры и факты — коротко и по делу.<br>
+      Здесь вы найдёте посты старше 2 дней: без фейков, без шума, только суть.
+    </p>
+  </header>
+
+  <main>
+    <a href="index.html" class="button">← Назад к свежим новостям</a>
+    <section id="archive-feed">
+      <div id="archive-container" class="news-grid"></div>
+    </section>
+  </main>
+
+  <footer>© 2025 Новости для Своих</footer>
+
+  <div id="modal" class="modal">
+    <div class="modal-content" id="modal-content"></div>
+  </div>
+
+  <script>
+    fetch('/news.html')
+      .then(res => res.text())
+      .then(html => {
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        const allItems = Array.from(temp.querySelectorAll('.news-item'));
+        const now = new Date();
+        const archiveItems = allItems.filter(item => {
+          const dateStr = item.getAttribute('data-date');
+          if (!dateStr) return false;
+          const itemDate = new Date(dateStr);
+          const diff = (now - itemDate) / (1000 * 60 * 60 * 24);
+          return diff > 2;
+        });
+        const container = document.getElementById('archive-container');
+        archiveItems.forEach(item => container.appendChild(item));
+      });
+
+    document.addEventListener('click', function(e) {
+      const modal = document.getElementById('modal');
+      const modalContent = document.getElementById('modal-content');
+      if (e.target.closest('.news-item')) {
+        const clone = e.target.closest('.news-item').cloneNode(true);
+        modalContent.innerHTML = '';
+        modalContent.appendChild(clone);
+        modal.classList.add('show');
+      }
+      if (e.target === modal) {
+        modal.classList.remove('show');
+      }
+    });
+  </script>
+
+  <!-- Yandex.Metrika counter -->
+  <script type="text/javascript">
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]function(){(m[i].a=m[i].a[]).push(arguments)};
+        m[i].l=1*new Date();
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+    ym(104596413, "init", {
+        clickmap:true,
+        trackLinks:true,
+        accurateTrackBounce:true,
+        webvisor:true
+    });
+  </script>
+  <noscript><div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+</body>
+</html>
