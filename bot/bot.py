@@ -1,12 +1,14 @@
 import os
 import telebot
-from datetime import datetime
+from datetime import datetime, timedelta
+import pytz
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = "@newsSVOih"
 SEEN_IDS_FILE = "seen_ids.txt"
 
 bot = telebot.TeleBot(TOKEN)
+moscow = pytz.timezone('Europe/Moscow')
 
 def clean_text(text):
     unwanted = [
@@ -38,12 +40,17 @@ def fetch_latest_posts():
     ]
     return list(reversed(posts[-10:])) if posts else []
 
+def is_older_than_two_days(timestamp):
+    post_time = datetime.fromtimestamp(timestamp, moscow)
+    now = datetime.now(moscow)
+    return now - post_time >= timedelta(days=2)
+
 def format_post(message):
     html = "<article class='news-item'>\n"
 
-    # Время публикации
+    # Время публикации (МСК)
     timestamp = message.date
-    formatted_time = datetime.fromtimestamp(timestamp).strftime("%d.%m.%Y %H:%M")
+    formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
 
     # Текст
     if message.content_type == 'text':
@@ -82,15 +89,25 @@ def main():
     new_ids = set()
 
     os.makedirs("public", exist_ok=True)
-    with open("public/news.html", "w", encoding="utf-8") as f:
+    with open("public/news.html", "w", encoding="utf-8") as news_file, \
+         open("public/archive.html", "w", encoding="utf-8") as archive_file:
+
         if not posts:
-            f.write(f"<p>Нет новых постов — {datetime.now()}</p>")
+            now = datetime.now(moscow).strftime("%d.%m.%Y %H:%M")
+            news_file.write(f"<p>Нет новых постов — {now}</p>")
         else:
             for post in posts:
                 post_id = str(post.message_id)
                 if post_id in seen_ids:
                     continue
-                f.write(format_post(post))
+
+                html = format_post(post)
+
+                if is_older_than_two_days(post.date):
+                    archive_file.write(html)
+                else:
+                    news_file.write(html)
+
                 new_ids.add(post_id)
 
     save_seen_ids(seen_ids.union(new_ids))
