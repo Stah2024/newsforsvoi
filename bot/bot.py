@@ -46,6 +46,10 @@ def is_older_than_two_days(timestamp):
     return now - post_time >= timedelta(days=2)
 
 def format_post(message):
+    # Пропускаем видео без caption — это дубликаты из одного поста
+    if message.content_type == 'video' and not message.caption:
+        return ""
+
     html = "<article class='news-item'>\n"
 
     timestamp = message.date
@@ -100,6 +104,8 @@ def main():
                     continue
 
                 html = format_post(post)
+                if not html:
+                    continue
 
                 if is_older_than_two_days(post.date):
                     archive_file.write(html)
