@@ -60,7 +60,8 @@ def format_post(message):
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
         caption = clean_text(message.caption or "")
         html += f"<img src='{file_url}' alt='Фото' />\n"
-        html += f"<p>{caption}</p>\n"
+        if caption:
+            html += f"<p>{caption}</p>\n"
         if len(photos) > 1:
             html += f"<a class='telegram-video-link' href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>🖼 Смотреть остальные фото в Telegram</a>\n"
 
@@ -69,9 +70,9 @@ def format_post(message):
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
         caption = clean_text(message.caption or "")
         html += f"<video controls src='{file_url}'></video>\n"
-        html += f"<p>{caption}</p>\n"
-        if "ещё" in caption.lower() or "другие" in caption.lower():
-            html += f"<a class='telegram-video-link' href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>📹 Смотреть другие видео в Telegram</a>\n"
+        if caption:
+            html += f"<p>{caption}</p>\n"
+        html += f"<a class='telegram-video-link' href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>📹 Смотреть остальные видео в Telegram</a>\n"
 
     html += f"<p class='timestamp'>🕒 {formatted_time}</p>\n"
     html += f"<a href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
@@ -109,16 +110,13 @@ def main():
 
                 new_ids.add(post_id)
 
-            # Добавляем кнопку и JS в конец news.html
             news_file.write("""
 <button id="show-more">Показать ещё</button>
-
 <script>
 let batchSize = 10;
 document.addEventListener('DOMContentLoaded', () => {
   const showMoreBtn = document.getElementById('show-more');
   if (!showMoreBtn) return;
-
   showMoreBtn.addEventListener('click', () => {
     const hiddenCards = document.querySelectorAll('.news-item.hidden');
     for (let i = 0; i < batchSize && i < hiddenCards.length; i++) {
