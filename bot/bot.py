@@ -2,6 +2,7 @@ import os
 import telebot
 from datetime import datetime, timedelta
 import pytz
+import re
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = "@newsSVOih"
@@ -48,14 +49,12 @@ def is_older_than_two_days(timestamp):
 def format_post(message):
     html = "<article class='news-item'>\n"
 
-    # Время публикации (МСК)
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
 
     caption = clean_text(message.caption or "")
     text = clean_text(message.text or "")
 
-    # Фото
     if message.content_type == 'photo':
         photos = message.photo
         file_info = bot.get_file(photos[-1].file_id)
@@ -66,16 +65,13 @@ def format_post(message):
         if len(photos) > 1 and message.media_group_id:
             html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>📷 Смотреть остальные фото в Telegram</a>\n"
 
-    # Видео
     elif message.content_type == 'video':
         file_info = bot.get_file(message.video.file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
         html += f"<video controls src='{file_url}'></video>\n"
         if caption:
             html += f"<p>{caption}</p>\n"
-        # Если будет несколько видео — можно добавить аналогичную ссылку
 
-    # Текст
     if text and text != caption:
         html += f"<p>{text}</p>\n"
 
@@ -85,32 +81,73 @@ def format_post(message):
     html += "</article>\n"
     return html
 
+def extract_timestamp(html_block):
+    match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
+    if match:
+        try:
+            return datetime.strptime(match.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow)
+        except:
+            return None
+    return None
+
 def main():
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
     new_ids = set()
 
     os.makedirs("public", exist_ok=True)
-    with open("public/news.html", "w", encoding="utf-8") as news_file, \
-         open("public/archive.html", "w", encoding="utf-8") as archive_file:
 
-        if not posts:
-            now = datetime.now(moscow).strftime("%d.%m.%Y %H:%M")
-            news_file.write(f"<p>Нет новых постов — {now}</p>")
+    old_news = []
+    if os.path.exists("public/news.html"):
+        with open("public/news.html", "r", encoding="utf-8") as f:
+            raw = f.read()
+            old_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
+
+    fresh_news = []
+    with open("public/archive.html", "a", encoding="utf-8") as archive_file:
+        for block in old_news:
+            ts = extract_timestamp(block)
+            if ts and is_older_than_two_days(ts.timestamp()):
+                archive_file.write(block + "\n")
+            else:
+                fresh_news.append(block)
+
+    visible_limit = 12
+    visible_count = sum(1 for block in fresh_news if "hidden" not in block)
+
+    for post in posts:
+        post_id = str(post.message_id)
+        if post_id in seen_ids:
+            continue
+
+        html = format_post(post)
+        if not html:
+            continue
+
+        if is_older_than_two_days(post.date):
+            with open("public/archive.html", "a", encoding="utf-8") as archive_file:
+                archive_file.write(html + "\n")
         else:
-            for post in posts:
-                post_id = str(post.message_id)
-                if post_id in seen_ids:
-                    continue
+            if visible_count >= visible_limit:
+                html = html.replace("<article", "<article class='news-item hidden'")
+            fresh_news.append(html)
+            visible_count += 1
+            new_ids.add(post_id)
 
-                html = format_post(post)
+    with open("public/news.html", "w", encoding="utf-8") as news_file:
+        for block in fresh_news:
+            news_file.write(block + "\n")
 
-                if is_older_than_two_days(post.date):
-                    archive_file.write(html)
-                else:
-                    news_file.write(html)
-
-                new_ids.add(post_id)
+        if any("hidden" in block for block in fresh_news):
+            news_file.write("""
+<button id="show-more">Показать ещё</button>
+<script>
+document.getElementById("show-more").onclick = () => {
+  document.querySelectorAll(".news-item.hidden").forEach(el => el.classList.remove("hidden"));
+  document.getElementById("show-more").style.display = "none";
+};
+</script>
+""")
 
     save_seen_ids(seen_ids.union(new_ids))
 
