@@ -45,33 +45,37 @@
   <style>
     body { font-family: Arial, sans-serif; padding: 16px; }
     .post { border-bottom: 1px solid #ddd; padding: 8px 0; }
+
     .date { color: #666; font-size: 0.9em; }
 
-    .news-item {
+    .post {
       transition: transform 0.3s ease, box-shadow 0.3s ease;
       cursor: zoom-in;
     }
 
-    .news-item.expanded-1 {
+    .post.expanded-1 {
       transform: scale(1.05);
       cursor: zoom-out;
       z-index: 5;
       position: relative;
     }
 
-    .news-item.expanded-2 {
+    .post.expanded-2 {
       transform: scale(1.10);
       cursor: zoom-out;
       z-index: 10;
       position: relative;
     }
 
-    .news-item video {
+    .post video,
+    .post img {
       transition: transform 0.3s ease;
     }
 
-    .news-item.expanded-1 video,
-    .news-item.expanded-2 video {
+    .post.expanded-1 video,
+    .post.expanded-2 video,
+    .post.expanded-1 img,
+    .post.expanded-2 img {
       transform: scale(1.10);
     }
   </style>
@@ -88,11 +92,10 @@
         return;
       }
       root.innerHTML = posts.map(p => {
-        const text = (p.text || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
-        return `<div class="post news-item"><div class="date">${new Date(p.date).toLocaleString()}</div><div class="text">${text}</div></div>`;
+        return `<div class="post"><div class="date">${new Date(p.date).toLocaleString()}</div><div class="text">${p.text}</div></div>`;
       }).join('');
 
-      document.querySelectorAll('.news-item').forEach(item => {
+      document.querySelectorAll('.post').forEach(item => {
         item.addEventListener('click', () => {
           if (item.classList.contains('expanded-2')) {
             item.classList.remove('expanded-2');
