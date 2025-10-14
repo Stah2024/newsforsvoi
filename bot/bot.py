@@ -52,30 +52,38 @@ def format_post(message):
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
 
-    # Текст
-    if message.content_type == 'text':
-        html += f"<p>{clean_text(message.text)}</p>\n"
+    # Заголовок и подпись
+    caption = clean_text(message.caption or "")
+    text = clean_text(message.text or "")
 
     # Фото
-    elif message.content_type == 'photo':
+    if message.content_type == 'photo':
         photos = message.photo
         file_info = bot.get_file(photos[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
-        caption = clean_text(message.caption or "")
         html += f"<img src='{file_url}' alt='Фото' />\n"
-        html += f"<p>{caption}</p>\n"
+        if caption:
+            html += f"<p>{caption}</p>\n"
         if len(photos) > 1:
-            html += f"<a class='telegram-video-link' href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>🖼 Смотреть остальные фото в Telegram</a>\n"
+            html += "<div class='extra-media'>\n"
+            for photo in photos[:-1]:
+                extra_info = bot.get_file(photo.file_id)
+                extra_url = f"https://api.telegram.org/file/bot{TOKEN}/{extra_info.file_path}"
+                html += f"<a href='{extra_url}' target='_blank'>📷 Смотреть ещё фото</a>\n"
+            html += "</div>\n"
 
     # Видео
     elif message.content_type == 'video':
         file_info = bot.get_file(message.video.file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
-        caption = clean_text(message.caption or "")
         html += f"<video controls src='{file_url}'></video>\n"
-        html += f"<p>{caption}</p>\n"
-        if "ещё" in caption.lower() or "другие" in caption.lower():
-            html += f"<a class='telegram-video-link' href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>📹 Смотреть другие видео в Telegram</a>\n"
+        if caption:
+            html += f"<p>{caption}</p>\n"
+        # Дополнительные видео можно добавить позже через media_group_id
+
+    # Текст
+    if text and text != caption:
+        html += f"<p>{text}</p>\n"
 
     html += f"<p class='timestamp'>🕒 {formatted_time}</p>\n"
     html += f"<a href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
