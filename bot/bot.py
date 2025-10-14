@@ -34,9 +34,6 @@ def save_seen_ids(seen_ids):
 
 def fetch_latest_posts():
     updates = bot.get_updates()
-    print(f"🔍 Получено обновлений: {len(updates)}")
-    for u in updates:
-        print(f"📦 update_id={u.update_id}, channel_post={bool(u.channel_post)}")
     posts = [
         u.channel_post
         for u in updates
@@ -50,9 +47,6 @@ def is_older_than_two_days(timestamp):
     return now - post_time >= timedelta(days=2)
 
 def format_post(message):
-    if message.content_type == 'video' and not message.caption:
-        return ""
-
     html = "<article class='news-item'>\n"
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
@@ -69,9 +63,13 @@ def format_post(message):
         if caption:
             html += f"<p>{caption}</p>\n"
         if len(photos) > 1:
-            html += f"<a class='telegram-video-link' href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>🖼 Смотреть остальные фото в Telegram</a>\n"
+            html += f"<a class='telegram-video-link' href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>🖼 Смотреть остальные фото в Telegram</a>\n"
 
     elif message.content_type == 'video':
+        if not message.caption:
+            print(f"⚠️ Пропущено видео без caption: {message.message_id}")
+            return ""
+
         try:
             file_info = bot.get_file(message.video.file_id)
             file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
@@ -79,14 +77,13 @@ def format_post(message):
             print(f"⚠️ Ошибка при получении видео {message.message_id}: {e}")
             return ""
 
-        caption = clean_text(message.caption or "")
+        caption = clean_text(message.caption)
         html += f"<video controls src='{file_url}'></video>\n"
-        if caption:
-            html += f"<p>{caption}</p>\n"
-        html += f"<a class='telegram-video-link' href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>📹 Смотреть остальные видео в Telegram</a>\n"
+        html += f"<p>{caption}</p>\n"
+        html += f"<a class='telegram-video-link' href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>📹 Смотреть другие видео в Telegram</a>\n"
 
     html += f"<p class='timestamp'>🕒 {formatted_time}</p>\n"
-    html += f"<a href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
+    html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
     html += f"<p class='source'>Источник: {message.chat.title}</p>\n"
     html += "</article>\n"
     return html
