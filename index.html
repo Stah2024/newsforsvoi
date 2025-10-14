@@ -3,38 +3,60 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Новости для Своих — свежие сводки, фото и видео</title>
-  
-  <!-- Стили и иконка -->
-  <link rel="stylesheet" href="./style.css" />
-  <link rel="icon" type="image/x-icon" href="./favicon.ico" />
+  <title>Новости для Своих — независимые новости России и мира</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
 
   <!-- SEO -->
-  <meta name="description" content="Новости для своих — свежие сводки, фото и видео с места событий." />
-  <meta name="keywords" content="новости, сводка, события, Telegram, для своих, видео, фото" />
-  <meta name="author" content="Новости для своих" />
-
-  <!-- Open Graph -->
-  <meta property="og:title" content="Новости для своих" />
-  <meta property="og:description" content="Сводка событий, фото и видео" />
-  <meta property="og:image" content="/preview.jpg" />
+  <meta name="description" content="Актуальные новости России и мира без фейков и лишнего шума. Главные события, аналитика, обзоры и факты — коротко и по делу.">
+  <meta name="keywords" content="новости, Telegram, SVOih, события, видео, фото, Россия">
+  <meta name="author" content="SVOih News Team">
+  <meta name="yandex-verification" content="3a33e674e5836564">
+  <meta property="og:title" content="Новости для Своих" />
+  <meta property="og:description" content="Честные новости России и мира" />
+  <meta property="og:url" content="https://newsforsvoi.vercel.app/" />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://newsforsvoi.ru" />
 
-  <!-- Twitter Card -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Новости для своих" />
-  <meta name="twitter:description" content="Сводка событий, фото и видео" />
-  <meta name="twitter:image" content="/preview.jpg" />
+  <style>
+    .news-item {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      cursor: zoom-in;
+    }
+
+    .news-item.enlarged-1 {
+      transform: scale(1.05);
+      cursor: zoom-out;
+      z-index: 5;
+      position: relative;
+    }
+
+    .news-item.enlarged-2 {
+      transform: scale(1.10);
+      cursor: zoom-out;
+      z-index: 10;
+      position: relative;
+    }
+
+    .news-item img,
+    .news-item video {
+      transition: transform 0.3s ease;
+    }
+
+    .news-item.enlarged-1 img,
+    .news-item.enlarged-2 img,
+    .news-item.enlarged-1 video,
+    .news-item.enlarged-2 video {
+      transform: scale(1.10);
+    }
+  </style>
 </head>
 <body>
-  <!-- Шапка -->
   <header>
     <div class="header-content">
-      <img src="./rf-flag.svg" alt="Флаг России" class="flag-icon" />
+      <img src="/rf-flag.svg" alt="Флаг России" class="flag-icon" />
       <div class="text-block">
         <h1>Новости для Своих</h1>
-        <h2>Сводка событий, фото и видео</h2>
+        <h2>Честные новости России и мира</h2>
         <p class="tagline">
           Актуальные новости России и мира без фейков и лишнего шума.<br>
           Главные события, аналитика, обзоры и факты — коротко и по делу.<br>
@@ -42,21 +64,82 @@
         </p>
       </div>
     </div>
+
+    <div class="search-wrapper">
+      <input type="search" id="search-box" placeholder="🔍 Поиск по новостям…" />
+    </div>
   </header>
 
-  <!-- Основной контент -->
   <main>
-    <div class="buttons-wrapper">
-      <a href="https://t.me/newsSVOih" class="button" target="_blank">Перейти в Telegram-канал</a>
-      <a href="archive.html" class="button">Архив</a>
-      <a href="news.html" class="button">Последние новости</a>
-    </div>
+    <a href="https://t.me/newsSVOih" class="button" target="_blank">Перейти в Telegram-канал</a>
+    <a href="archive.html" class="button">Архив</a>
+
+    <section id="news-feed">
+      <h3>Последние новости</h3>
+      <div id="news-container" class="news-grid"></div>
+      <button id="load-more" class="button">Показать ещё</button>
+    </section>
   </main>
 
-  <!-- Футер -->
   <footer>
     © 2025 Новости для Своих
   </footer>
+
+  <script>
+    fetch('/news.html')
+      .then(response => response.text())
+      .then(html => {
+        const container = document.getElementById('news-container');
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+
+        const items = Array.from(temp.querySelectorAll('.news-item'));
+        let visibleCount = 9;
+
+        function renderItems() {
+          container.innerHTML = '';
+          items.slice(0, visibleCount).forEach(item => container.appendChild(item));
+          if (visibleCount >= items.length) {
+            document.getElementById('load-more').style.display = 'none';
+          }
+          enableCardEnlargement();
+        }
+
+        document.getElementById('load-more').addEventListener('click', () => {
+          visibleCount += 9;
+          renderItems();
+        });
+
+        renderItems();
+      })
+      .catch(error => {
+        document.getElementById('news-container').innerHTML = '<p>Не удалось загрузить новости.</p>';
+        console.error('Ошибка загрузки news.html:', error);
+      });
+
+    document.getElementById('search-box').addEventListener('input', function(e) {
+      const query = e.target.value.toLowerCase();
+      document.querySelectorAll('.news-item').forEach(item => {
+        item.style.display = item.textContent.toLowerCase().includes(query) ? '' : 'none';
+      });
+    });
+
+    function enableCardEnlargement() {
+      document.querySelectorAll('.news-item').forEach(item => {
+        item.addEventListener('click', () => {
+          if (item.classList.contains('enlarged-2')) {
+            item.classList.remove('enlarged-2');
+            item.classList.remove('enlarged-1');
+          } else if (item.classList.contains('enlarged-1')) {
+            item.classList.remove('enlarged-1');
+            item.classList.add('enlarged-2');
+          } else {
+            item.classList.add('enlarged-1');
+          }
+        });
+      });
+    }
+  </script>
 
   <!-- Yandex.Metrika counter -->
   <script type="text/javascript">
@@ -74,9 +157,6 @@
         webvisor:true
     });
   </script>
-  <noscript>
-    <div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div>
-  </noscript>
-  <!-- /Yandex.Metrika counter -->
+  <noscript><div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 </body>
 </html>
