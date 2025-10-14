@@ -89,10 +89,9 @@
       }
       root.innerHTML = posts.map(p => {
         const text = (p.text || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
-        return `<div class="news-item"><div class="date">${new Date(p.date).toLocaleString()}</div><div class="text">${text}</div></div>`;
+        return `<div class="post news-item"><div class="date">${new Date(p.date).toLocaleString()}</div><div class="text">${text}</div></div>`;
       }).join('');
 
-      // Добавляем обработчик клика после отрисовки
       document.querySelectorAll('.news-item').forEach(item => {
         item.addEventListener('click', () => {
           if (item.classList.contains('expanded-2')) {
