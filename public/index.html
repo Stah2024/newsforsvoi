@@ -28,7 +28,7 @@
     (function(m,e,t,r,i,k,a){
       m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
       m[i].l=1*new Date();
-      k=e.createElement(t),a=e.getElementsByTagName(t)[0],
+      k=e.createElement(t),a=e.getElementsByTagName(t)[0];
       k.async=1;k.src=r;a.parentNode.insertBefore(k,a)
     })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
 
@@ -44,40 +44,13 @@
 
   <style>
     body { font-family: Arial, sans-serif; padding: 16px; }
-    .post { border-bottom: 1px solid #ddd; padding: 8px 0; }
-
+    .post { border-bottom: 1px solid #ddd; padding: 8px 0; cursor: zoom-in; transition: transform 0.3s ease; }
     .date { color: #666; font-size: 0.9em; }
-
-    .post {
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-      cursor: zoom-in;
-    }
-
-    .post.expanded-1 {
-      transform: scale(1.05);
-      cursor: zoom-out;
-      z-index: 5;
-      position: relative;
-    }
-
-    .post.expanded-2 {
-      transform: scale(1.10);
-      cursor: zoom-out;
-      z-index: 10;
-      position: relative;
-    }
-
-    .post video,
-    .post img {
-      transition: transform 0.3s ease;
-    }
-
-    .post.expanded-1 video,
-    .post.expanded-2 video,
-    .post.expanded-1 img,
-    .post.expanded-2 img {
-      transform: scale(1.10);
-    }
+    .post.expanded-1 { transform: scale(1.05); cursor: zoom-out; z-index: 5; position: relative; }
+    .post.expanded-2 { transform: scale(1.10); cursor: zoom-out; z-index: 10; position: relative; }
+    .post img, .post video { transition: transform 0.3s ease; }
+    .post.expanded-1 img, .post.expanded-2 img,
+    .post.expanded-1 video, .post.expanded-2 video { transform: scale(1.10); }
   </style>
 </head>
 <body>
@@ -85,48 +58,47 @@
   <div id="news">Загрузка...</div>
 
   <script>
-    // Отображение новостей
     function renderPosts(posts) {
       const root = document.getElementById('news');
       if (!posts || posts.length === 0) {
         root.innerHTML = '<p>Нет новостей</p>';
         return;
       }
-
-      // Исправлено: экранирование HTML и перевод строк
       root.innerHTML = posts.map(p => {
-        const text = (p.text || '')
-          .replace(/</g, '&lt;')   // экранирование <
-          .replace(/\n/g, '<br>'); // переносы строк
-
-        return `<div class="post">
-                  <div class="date">${new Date(p.date).toLocaleString()}</div>
-                  <div class="text">${text}</div>
-                </div>`;
+        const text = (p.text || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+        return `<div class="post"><div class="date">${new Date(p.date).toLocaleString()}</div><div class="text">${text}</div></div>`;
       }).join('');
 
-      // Анимация увеличения постов при клике
-      document.querySelectorAll('.post').forEach(item => {
-        item.addEventListener('click', () => {
-          if (item.classList.contains('expanded-2')) {
-            item.classList.remove('expanded-2');
-            item.classList.remove('expanded-1');
-          } else if (item.classList.contains('expanded-1')) {
-            item.classList.remove('expanded-1');
-            item.classList.add('expanded-2');
-          } else {
-            item.classList.add('expanded-1');
-          }
+      // Увеличение постов и медиа только на десктопе
+      if (window.innerWidth >= 768) {
+        document.querySelectorAll('.post').forEach(item => {
+          item.addEventListener('click', () => {
+            if (item.classList.contains('expanded-2')) {
+              item.classList.remove('expanded-2');
+              item.classList.remove('expanded-1');
+            } else if (item.classList.contains('expanded-1')) {
+              item.classList.remove('expanded-1');
+              item.classList.add('expanded-2');
+            } else {
+              item.classList.add('expanded-1');
+            }
+          });
         });
-      });
+      }
     }
 
-    // Загрузка новостей с сервера
     async function loadNews() {
       try {
-        const res = await fetch('/api/news', { cache: 'no-store' });
+        const res = await fetch('news.html', { cache: 'no-store' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
-        const posts = await res.json();
+        const html = await res.text();
+        // Превращаем новости в массив объектов для renderPosts
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        const posts = Array.from(tempDiv.querySelectorAll('.post')).map(p => ({
+          date: p.querySelector('.date') ? p.querySelector('.date').innerText : '',
+          text: p.querySelector('.text') ? p.querySelector('.text').innerHTML : ''
+        }));
         renderPosts(posts);
       } catch (err) {
         console.error('Ошибка загрузки новостей:', err);
