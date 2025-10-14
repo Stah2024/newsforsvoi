@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>News</title>
+  <title>Новости для своих</title>
 
   <!-- SEO -->
   <meta name="description" content="Новости для своих — свежие сводки, фото и видео с места событий." />
@@ -12,7 +12,7 @@
 
   <!-- Open Graph -->
   <meta property="og:title" content="Новости для своих" />
-  <meta property="og:description" content="Сводка событий, фото и видео" />
+  <meta property="og:description" content="Сводка событий, фото и видео с места событий" />
   <meta property="og:image" content="/preview.jpg" />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://example.com" />
@@ -20,7 +20,7 @@
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Новости для своих" />
-  <meta name="twitter:description" content="Сводка событий, фото и видео" />
+  <meta name="twitter:description" content="Сводка событий, фото и видео с места событий" />
   <meta name="twitter:image" content="/preview.jpg" />
 
   <!-- Yandex.Metrika counter -->
@@ -66,7 +66,7 @@
       }
       root.innerHTML = posts.map(p => {
         const text = (p.text || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
-        return `<div class="post"><div class="date">${new Date(p.date).toLocaleString()}</div><div class="text">${text}</div></div>`;
+        return `<div class="post"><div class="date">${p.date}</div><div class="text">${text}</div></div>`;
       }).join('');
 
       // Увеличение постов и медиа только на десктопе
@@ -89,15 +89,14 @@
 
     async function loadNews() {
       try {
-        const res = await fetch('news.html', { cache: 'no-store' });
+        const res = await fetch('/news.html', { cache: 'no-store' });
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const html = await res.text();
-        // Превращаем новости в массив объектов для renderPosts
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
         const posts = Array.from(tempDiv.querySelectorAll('.post')).map(p => ({
-          date: p.querySelector('.date') ? p.querySelector('.date').innerText : '',
-          text: p.querySelector('.text') ? p.querySelector('.text').innerHTML : ''
+          date: p.querySelector('.date')?.innerText || '',
+          text: p.querySelector('.text')?.innerHTML || ''
         }));
         renderPosts(posts);
       } catch (err) {
