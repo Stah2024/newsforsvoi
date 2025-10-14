@@ -34,6 +34,9 @@ def save_seen_ids(seen_ids):
 
 def fetch_latest_posts():
     updates = bot.get_updates()
+    print(f"🔍 Получено обновлений: {len(updates)}")
+    for u in updates:
+        print(f"📦 update_id={u.update_id}, channel_post={bool(u.channel_post)}")
     posts = [
         u.channel_post
         for u in updates
@@ -130,6 +133,7 @@ def main():
         if not html:
             continue
 
+        print(f"✅ Добавлена карточка: {post.message_id}")
         if visible_count >= visible_limit:
             html = html.replace("<article", "<article class='news-item hidden'")
         fresh_news.append(html)
