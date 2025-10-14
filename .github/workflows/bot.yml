@@ -2,37 +2,38 @@ name: Run Telegram Bot
 
 on:
   schedule:
-    - cron: '*/10 * * * *'  # каждые 10 минут
-  workflow_dispatch:
+    - cron: '*/10 * * * *'  # ⏰ Запуск каждые 10 минут
+  workflow_dispatch:        # 🖐 Ручной запуск
 
 jobs:
   run-bot:
-    runs-on: ubuntu-22.04  # стабильный образ
+    runs-on: ubuntu-22.04  # ✅ Стабильный образ Ubuntu
 
     steps:
-    - name: Checkout repo
+    - name: 📦 Checkout репозитория
       uses: actions/checkout@v3
       with:
         persist-credentials: false
-        fetch-depth: 0  # ✅ добавлено для доступа к истории
+        fetch-depth: 0  # ✅ Доступ к истории коммитов
 
-    - name: Set up Python
+    - name: 🐍 Установка Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.10'
 
-    - name: Install dependencies
+    - name: 📚 Установка зависимостей
       run: |
         pip install -r bot/requirements.txt
 
-    - name: Run bot
+    - name: 🚀 Запуск bot.py
+      working-directory: .  # ✅ Запускаем из корня, чтобы путь "public/news.html" был корректным
       env:
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
       run: |
         echo "Запуск bot.py..."
         python bot/bot.py || echo "⚠️ bot.py завершился с ошибкой, но workflow продолжается"
 
-    - name: Commit updated site files
+    - name: 💾 Коммит обновлённых файлов сайта
       env:
         GH_PAT: ${{ secrets.GH_PAT }}
       run: |
@@ -40,6 +41,6 @@ jobs:
         git config user.email "github-actions@github.com"
         git remote set-url origin https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}
         git add public/news.html public/archive.html public/sitemap.xml
-        git commit -m "Update site from bot" || echo "No changes"
-        git pull --rebase  # ✅ добавлено для устранения конфликта
+        git commit -m "📰 Обновление новостей: добавлены свежие карточки из Telegram" || echo "Нет изменений для коммита"
+        git pull --rebase
         git push
