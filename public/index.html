@@ -1,127 +1,126 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Новости для Своих — независимые новости России и мира</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>News</title>
 
   <!-- SEO -->
-  <meta name="description" content="Актуальные новости России и мира без фейков и лишнего шума. Главные события, аналитика, обзоры и факты — коротко и по делу.">
-  <meta name="keywords" content="новости, Telegram, SVOih, события, видео, фото, Россия">
-  <meta name="author" content="SVOih News Team">
-  <meta name="yandex-verification" content="3a33e674e5836564">
+  <meta name="description" content="Новости для своих — свежие сводки, фото и видео с места событий." />
+  <meta name="keywords" content="новости, сводка, события, Telegram, для своих, видео, фото" />
+  <meta name="author" content="Новости для своих" />
 
   <!-- Open Graph -->
-  <meta property="og:title" content="Новости для Своих" />
-  <meta property="og:description" content="Честные новости России и мира" />
-  <meta property="og:url" content="https://newsforsvoi.ru" />
+  <meta property="og:title" content="Новости для своих" />
+  <meta property="og:description" content="Сводка событий, фото и видео" />
+  <meta property="og:image" content="/preview.jpg" />
   <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://example.com" />
 
-</head>
-<body>
-  <header>
-    <div class="header-content">
-      <img src="/rf-flag.svg" alt="Флаг России" class="flag-icon" />
-      <div class="text-block">
-        <h1>Новости для Своих</h1>
-        <h2>Честные новости России и мира</h2>
-        <p class="tagline">
-          Актуальные новости России и мира без фейков и лишнего шума.<br>
-          Главные события, аналитика, обзоры и факты — коротко и по делу.<br>
-          Читайте свежие новости, политические и военные сводки, новости экономики, технологий и общества.
-        </p>
-      </div>
-    </div>
-
-    <div class="search-wrapper">
-      <input type="search" id="search-box" placeholder="🔍 Поиск по новостям…" />
-    </div>
-  </header>
-
-  <main>
-    <a href="https://t.me/newsSVOih" class="button" target="_blank">Перейти в Telegram-канал</a>
-    <a href="archive.html" class="button">Архив</a>
-
-    <section id="news-feed">
-      <h3>Последние новости</h3>
-      <div id="news-container" class="news-grid"></div>
-      <button id="load-more" class="button">Смотреть ещё</button>
-    </section>
-  </main>
-
-  <footer>
-    © 2025 Новости для Своих
-  </footer>
-
-  <script>
-    fetch('/news.html')
-      .then(response => response.text())
-      .then(html => {
-        const container = document.getElementById('news-container');
-        const temp = document.createElement('div');
-        temp.innerHTML = html;
-
-        const items = Array.from(temp.querySelectorAll('.news-item'));
-        let visibleCount = 10;
-
-        function renderItems() {
-          container.innerHTML = '';
-          items.slice(0, visibleCount).forEach(item => container.appendChild(item));
-          if (visibleCount >= items.length) {
-            document.getElementById('load-more').style.display = 'none';
-          } else {
-            document.getElementById('load-more').style.display = 'block';
-          }
-          enableCardEnlargement();
-        }
-
-        document.getElementById('load-more').addEventListener('click', () => {
-          visibleCount += 10;
-          renderItems();
-        });
-
-        renderItems();
-      })
-      .catch(error => {
-        document.getElementById('news-container').innerHTML = '<p>Не удалось загрузить новости.</p>';
-        console.error('Ошибка загрузки news.html:', error);
-      });
-
-    document.getElementById('search-box').addEventListener('input', function(e) {
-      const query = e.target.value.toLowerCase();
-      document.querySelectorAll('.news-item').forEach(item => {
-        item.style.display = item.textContent.toLowerCase().includes(query) ? '' : 'none';
-      });
-    });
-
-    function enableCardEnlargement() {
-      document.querySelectorAll('.news-item').forEach(item => {
-        item.addEventListener('click', () => {
-          item.classList.toggle('enlarged');
-        });
-      });
-    }
-  </script>
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Новости для своих" />
+  <meta name="twitter:description" content="Сводка событий, фото и видео" />
+  <meta name="twitter:image" content="/preview.jpg" />
 
   <!-- Yandex.Metrika counter -->
   <script type="text/javascript">
     (function(m,e,t,r,i,k,a){
-        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-        m[i].l=1*new Date();
-        for (var j = 0; j < document.scripts.length; j++) {
-          if (document.scripts[j].src === r) { return; }
-        }
-        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-    })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym');
+      m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+      m[i].l=1*new Date();
+      k=e.createElement(t),a=e.getElementsByTagName(t)[0],
+      k.async=1;k.src=r;a.parentNode.insertBefore(k,a)
+    })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
 
-    ym(104600251, 'init', {
+    ym(104596413, "init", {
         clickmap:true,
         trackLinks:true,
-        accurateTrackBounce:true
+        accurateTrackBounce:true,
+        webvisor:true
     });
   </script>
-  <noscript><div><img src="https://mc.yandex.ru/watch/104600251" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+  <noscript><div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+  <!-- /Yandex.Metrika counter -->
+
+  <style>
+    body { font-family: Arial, sans-serif; padding: 16px; }
+    .post { border-bottom: 1px solid #ddd; padding: 8px 0; }
+    .date { color: #666; font-size: 0.9em; }
+
+    .news-item {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      cursor: zoom-in;
+    }
+
+    .news-item.expanded-1 {
+      transform: scale(1.05);
+      cursor: zoom-out;
+      z-index: 5;
+      position: relative;
+    }
+
+    .news-item.expanded-2 {
+      transform: scale(1.10);
+      cursor: zoom-out;
+      z-index: 10;
+      position: relative;
+    }
+
+    .news-item video {
+      transition: transform 0.3s ease;
+    }
+
+    .news-item.expanded-1 video,
+    .news-item.expanded-2 video {
+      transform: scale(1.10);
+    }
+  </style>
+</head>
+<body>
+  <h1>Новости</h1>
+  <div id="news">Загрузка...</div>
+
+  <script>
+    function renderPosts(posts) {
+      const root = document.getElementById('news');
+      if (!posts || posts.length === 0) {
+        root.innerHTML = '<p>Нет новостей</p>';
+        return;
+      }
+      root.innerHTML = posts.map(p => {
+        const text = (p.text || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+        return `<div class="news-item"><div class="date">${new Date(p.date).toLocaleString()}</div><div class="text">${text}</div></div>`;
+      }).join('');
+
+      // Добавляем обработчик клика после отрисовки
+      document.querySelectorAll('.news-item').forEach(item => {
+        item.addEventListener('click', () => {
+          if (item.classList.contains('expanded-2')) {
+            item.classList.remove('expanded-2');
+            item.classList.remove('expanded-1');
+          } else if (item.classList.contains('expanded-1')) {
+            item.classList.remove('expanded-1');
+            item.classList.add('expanded-2');
+          } else {
+            item.classList.add('expanded-1');
+          }
+        });
+      });
+    }
+
+    async function loadNews() {
+      try {
+        const res = await fetch('/api/news', { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const posts = await res.json();
+        renderPosts(posts);
+      } catch (err) {
+        console.error('Ошибка загрузки новостей:', err);
+        document.getElementById('news').innerText = 'Ошибка загрузки новостей';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadNews);
+  </script>
 </body>
 </html>
