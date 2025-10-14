@@ -1,9 +1,13 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>News</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Новости для Своих — свежие сводки, фото и видео</title>
+  
+  <!-- Стили и иконка -->
+  <link rel="stylesheet" href="./style.css" />
+  <link rel="icon" type="image/x-icon" href="./favicon.ico" />
 
   <!-- SEO -->
   <meta name="description" content="Новости для своих — свежие сводки, фото и видео с места событий." />
@@ -15,18 +19,49 @@
   <meta property="og:description" content="Сводка событий, фото и видео" />
   <meta property="og:image" content="/preview.jpg" />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://example.com" />
+  <meta property="og:url" content="https://newsforsvoi.ru" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Новости для своих" />
   <meta name="twitter:description" content="Сводка событий, фото и видео" />
   <meta name="twitter:image" content="/preview.jpg" />
+</head>
+<body>
+  <!-- Шапка -->
+  <header>
+    <div class="header-content">
+      <img src="./rf-flag.svg" alt="Флаг России" class="flag-icon" />
+      <div class="text-block">
+        <h1>Новости для Своих</h1>
+        <h2>Сводка событий, фото и видео</h2>
+        <p class="tagline">
+          Актуальные новости России и мира без фейков и лишнего шума.<br>
+          Главные события, аналитика, обзоры и факты — коротко и по делу.<br>
+          Читайте свежие новости, политические и военные сводки, новости экономики, технологий и общества.
+        </p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Основной контент -->
+  <main>
+    <div class="buttons-wrapper">
+      <a href="https://t.me/newsSVOih" class="button" target="_blank">Перейти в Telegram-канал</a>
+      <a href="archive.html" class="button">Архив</a>
+      <a href="news.html" class="button">Последние новости</a>
+    </div>
+  </main>
+
+  <!-- Футер -->
+  <footer>
+    © 2025 Новости для Своих
+  </footer>
 
   <!-- Yandex.Metrika counter -->
   <script type="text/javascript">
     (function(m,e,t,r,i,k,a){
-      m[i]=m[i]function(){(m[i].a=m[i].a[]).push(arguments)};
+      m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
       m[i].l=1*new Date();
       k=e.createElement(t),a=e.getElementsByTagName(t)[0],
       k.async=1;k.src=r;a.parentNode.insertBefore(k,a)
@@ -39,45 +74,9 @@
         webvisor:true
     });
   </script>
-  <noscript><div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+  <noscript>
+    <div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div>
+  </noscript>
   <!-- /Yandex.Metrika counter -->
-
-  <style>
-    body { font-family: Arial, sans-serif; padding: 16px; }
-    .post { border-bottom: 1px solid #ddd; padding: 8px 0; }
-    .date { color: #666; font-size: 0.9em; }
-  </style>
-</head>
-<body>
-  <h1>Новости</h1>
-  <div id="news">Загрузка...</div>
-
-  <script>
-    function renderPosts(posts) {
-      const root = document.getElementById('news');
-      if (!posts || posts.length === 0) {
-        root.innerHTML = '<p>Нет новостей</p>';
-        return;
-      }
-      root.innerHTML = posts.map(p => {
-        const text = (p.text || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
-        return <div class="post"><div class="date">${new Date(p.date).toLocaleString()}</div><div class="text">${text}</div></div>;
-      }).join('');
-    }
-
-    async function loadNews() {
-      try {
-        const res = await fetch('/api/news', { cache: 'no-store' });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const posts = await res.json();
-        renderPosts(posts);
-      } catch (err) {
-        console.error('Ошибка загрузки новостей:', err);
-        document.getElementById('news').innerText = 'Ошибка загрузки новостей';
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', loadNews);
-  </script>
 </body>
 </html>
