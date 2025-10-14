@@ -52,7 +52,6 @@ def format_post(message):
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
 
-    # Заголовок и подпись
     caption = clean_text(message.caption or "")
     text = clean_text(message.text or "")
 
@@ -64,13 +63,8 @@ def format_post(message):
         html += f"<img src='{file_url}' alt='Фото' />\n"
         if caption:
             html += f"<p>{caption}</p>\n"
-        if len(photos) > 1:
-            html += "<div class='extra-media'>\n"
-            for photo in photos[:-1]:
-                extra_info = bot.get_file(photo.file_id)
-                extra_url = f"https://api.telegram.org/file/bot{TOKEN}/{extra_info.file_path}"
-                html += f"<a href='{extra_url}' target='_blank'>📷 Смотреть ещё фото</a>\n"
-            html += "</div>\n"
+        if len(photos) > 1 and message.media_group_id:
+            html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>📷 Смотреть остальные фото в Telegram</a>\n"
 
     # Видео
     elif message.content_type == 'video':
@@ -79,14 +73,14 @@ def format_post(message):
         html += f"<video controls src='{file_url}'></video>\n"
         if caption:
             html += f"<p>{caption}</p>\n"
-        # Дополнительные видео можно добавить позже через media_group_id
+        # Если будет несколько видео — можно добавить аналогичную ссылку
 
     # Текст
     if text and text != caption:
         html += f"<p>{text}</p>\n"
 
     html += f"<p class='timestamp'>🕒 {formatted_time}</p>\n"
-    html += f"<a href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
+    html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
     html += f"<p class='source'>Источник: {message.chat.title}</p>\n"
     html += "</article>\n"
     return html
