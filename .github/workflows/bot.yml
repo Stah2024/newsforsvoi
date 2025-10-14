@@ -1,4 +1,4 @@
-name: Run Telegram Bot
+name: Run Telegram Bot and Deploy
 
 on:
   schedule:
@@ -7,14 +7,14 @@ on:
 
 jobs:
   run-bot:
-    runs-on: ubuntu-22.04  # ✅ Стабильный образ Ubuntu
+    runs-on: ubuntu-22.04
 
     steps:
     - name: 📦 Checkout репозитория
       uses: actions/checkout@v3
       with:
         persist-credentials: false
-        fetch-depth: 0  # ✅ Доступ к истории коммитов
+        fetch-depth: 0
 
     - name: 🐍 Установка Python
       uses: actions/setup-python@v4
@@ -22,11 +22,10 @@ jobs:
         python-version: '3.10'
 
     - name: 📚 Установка зависимостей
-      run: |
-        pip install -r bot/requirements.txt
+      run: pip install -r bot/requirements.txt
 
     - name: 🚀 Запуск bot.py
-      working-directory: .  # ✅ Запускаем из корня, чтобы путь "public/news.html" был корректным
+      working-directory: .
       env:
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
       run: |
@@ -44,3 +43,30 @@ jobs:
         git commit -m "📰 Обновление новостей: добавлены свежие карточки из Telegram" || echo "Нет изменений для коммита"
         git pull --ff-only || echo "Нет изменений на сервере"
         git push
+
+  deploy:
+    needs: run-bot
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+    - name: 📦 Checkout репозитория
+      uses: actions/checkout@v4
+
+    - name: 🛠 Сборка сайта с Jekyll
+      uses: actions/jekyll-build-pages@v1
+      with:
+        source: .
+        destination: ./_site
+
+    - name: 📤 Загрузка артефакта
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ./_site
+
+    - name: 🚀 Публикация на GitHub Pages
+      uses: actions/deploy-pages@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
