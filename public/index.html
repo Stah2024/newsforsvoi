@@ -85,16 +85,27 @@
   <div id="news">Загрузка...</div>
 
   <script>
+    // Отображение новостей
     function renderPosts(posts) {
       const root = document.getElementById('news');
       if (!posts || posts.length === 0) {
         root.innerHTML = '<p>Нет новостей</p>';
         return;
       }
+
+      // Исправлено: экранирование HTML и перевод строк
       root.innerHTML = posts.map(p => {
-        return `<div class="post"><div class="date">${new Date(p.date).toLocaleString()}</div><div class="text">${p.text}</div></div>`;
+        const text = (p.text || '')
+          .replace(/</g, '&lt;')   // экранирование <
+          .replace(/\n/g, '<br>'); // переносы строк
+
+        return `<div class="post">
+                  <div class="date">${new Date(p.date).toLocaleString()}</div>
+                  <div class="text">${text}</div>
+                </div>`;
       }).join('');
 
+      // Анимация увеличения постов при клике
       document.querySelectorAll('.post').forEach(item => {
         item.addEventListener('click', () => {
           if (item.classList.contains('expanded-2')) {
@@ -110,6 +121,7 @@
       });
     }
 
+    // Загрузка новостей с сервера
     async function loadNews() {
       try {
         const res = await fetch('/api/news', { cache: 'no-store' });
