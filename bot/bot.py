@@ -2,7 +2,6 @@ import os
 import telebot
 from datetime import datetime, timedelta
 import pytz
-import re
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = "@newsSVOih"
@@ -39,7 +38,7 @@ def fetch_latest_posts():
         for u in updates
         if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
     ]
-    return list(reversed(posts[-100:])) if posts else []
+    return list(reversed(posts[-10:])) if posts else []
 
 def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
@@ -48,54 +47,41 @@ def is_older_than_two_days(timestamp):
 
 def format_post(message):
     html = "<article class='news-item'>\n"
+
+    # Время публикации (МСК)
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
 
+    # Текст
     if message.content_type == 'text':
         html += f"<p>{clean_text(message.text)}</p>\n"
 
+    # Фото
     elif message.content_type == 'photo':
         photos = message.photo
         file_info = bot.get_file(photos[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
         caption = clean_text(message.caption or "")
         html += f"<img src='{file_url}' alt='Фото' />\n"
-        if caption:
-            html += f"<p>{caption}</p>\n"
+        html += f"<p>{caption}</p>\n"
         if len(photos) > 1:
-            html += f"<a class='telegram-video-link' href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>🖼 Смотреть остальные фото в Telegram</a>\n"
+            html += f"<a class='telegram-video-link' href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>🖼 Смотреть остальные фото в Telegram</a>\n"
 
+    # Видео
     elif message.content_type == 'video':
-        if not message.caption:
-            print(f"⚠️ Пропущено видео без caption: {message.message_id}")
-            return ""
-
-        try:
-            file_info = bot.get_file(message.video.file_id)
-            file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
-        except Exception as e:
-            print(f"⚠️ Ошибка при получении видео {message.message_id}: {e}")
-            return ""
-
-        caption = clean_text(message.caption)
+        file_info = bot.get_file(message.video.file_id)
+        file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
+        caption = clean_text(message.caption or "")
         html += f"<video controls src='{file_url}'></video>\n"
         html += f"<p>{caption}</p>\n"
-        html += f"<a class='telegram-video-link' href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>📹 Смотреть другие видео в Telegram</a>\n"
+        if "ещё" in caption.lower() or "другие" in caption.lower():
+            html += f"<a class='telegram-video-link' href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>📹 Смотреть другие видео в Telegram</a>\n"
 
     html += f"<p class='timestamp'>🕒 {formatted_time}</p>\n"
-    html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
+    html += f"<a href='https://t.me/newsSVOih/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
     html += f"<p class='source'>Источник: {message.chat.title}</p>\n"
     html += "</article>\n"
     return html
-
-def extract_timestamp(html_block):
-    match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
-    if match:
-        try:
-            return datetime.strptime(match.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow)
-        except:
-            return None
-    return None
 
 def main():
     posts = fetch_latest_posts()
@@ -103,64 +89,26 @@ def main():
     new_ids = set()
 
     os.makedirs("public", exist_ok=True)
+    with open("public/news.html", "w", encoding="utf-8") as news_file, \
+         open("public/archive.html", "w", encoding="utf-8") as archive_file:
 
-    old_news = []
-    if os.path.exists("public/news.html"):
-        with open("public/news.html", "r", encoding="utf-8") as f:
-            raw = f.read()
-            old_news = re.findall(r"<article class='news-item'>.*?</article>", raw, re.DOTALL)
+        if not posts:
+            now = datetime.now(moscow).strftime("%d.%m.%Y %H:%M")
+            news_file.write(f"<p>Нет новых постов — {now}</p>")
+        else:
+            for post in posts:
+                post_id = str(post.message_id)
+                if post_id in seen_ids:
+                    continue
 
-    fresh_news = []
-    with open("public/archive.html", "a", encoding="utf-8") as archive_file:
-        for block in old_news:
-            ts = extract_timestamp(block)
-            if ts and is_older_than_two_days(ts.timestamp()):
-                archive_file.write(block + "\n")
-            else:
-                fresh_news.append(block)
+                html = format_post(post)
 
-    visible_limit = 12
-    visible_count = 0
-    for post in posts:
-        post_id = str(post.message_id)
-        if post_id in seen_ids:
-            continue
+                if is_older_than_two_days(post.date):
+                    archive_file.write(html)
+                else:
+                    news_file.write(html)
 
-        html = format_post(post)
-        if not html:
-            continue
-
-        print(f"✅ Добавлена карточка: {post.message_id}")
-        if visible_count >= visible_limit:
-            html = html.replace("<article", "<article class='news-item hidden'")
-        fresh_news.append(html)
-        visible_count += 1
-        new_ids.add(post_id)
-
-    with open("public/news.html", "w", encoding="utf-8") as news_file:
-        for block in fresh_news:
-            news_file.write(block + "\n")
-
-        if any("hidden" in block for block in fresh_news):
-            news_file.write("""
-<button id="show-more">Показать ещё</button>
-<script>
-let batchSize = 10;
-document.addEventListener('DOMContentLoaded', () => {
-  const showMoreBtn = document.getElementById('show-more');
-  if (!showMoreBtn) return;
-  showMoreBtn.addEventListener('click', () => {
-    const hiddenCards = document.querySelectorAll('.news-item.hidden');
-    for (let i = 0; i < batchSize && i < hiddenCards.length; i++) {
-      hiddenCards[i].classList.remove('hidden');
-    }
-    if (document.querySelectorAll('.news-item.hidden').length === 0) {
-      showMoreBtn.style.display = 'none';
-    }
-  });
-});
-</script>
-""")
+                new_ids.add(post_id)
 
     save_seen_ids(seen_ids.union(new_ids))
 
