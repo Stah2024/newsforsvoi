@@ -29,8 +29,7 @@ jobs:
       env:
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
       run: |
-        echo "✅ bot.yml v2 активен"
-        echo "Запуск bot.py..."
+        echo "✅ bot.yml v3 активен"
         python bot/bot.py || echo "⚠️ bot.py завершился с ошибкой, но workflow продолжается"
 
     - name: 💾 Коммит обновлённых файлов сайта
@@ -49,5 +48,5 @@ jobs:
         git status
 
         git add public/news.html public/archive.html public/sitemap.xml seen_ids.txt
-        git commit -m "🧠 Обновление новостей и базы ID — автобот" || echo "Нет изменений для коммита"
+        git commit -m "🧠 Обновление новостей и базы ID — autobot" || echo "Нет изменений для коммита"
         git push || echo "❌ Push не прошёл"
