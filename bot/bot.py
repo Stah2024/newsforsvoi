@@ -186,4 +186,4 @@ document.getElementById("show-more").onclick = () => {
     save_seen_ids(seen_ids.union(new_ids))
 
 if __name__ == "__main__":
-    main()
+    main()удалить
