@@ -142,7 +142,7 @@ def main():
         else:
             if visible_count >= visible_limit:
                 html = html.replace("<article", "<article class='news-item hidden'")
-            fresh_news.append(html)
+            fresh_news.insert(0, html)  # 🔼 Новые карточки теперь сверху
             visible_count += 1
             new_ids.add(post_id)
 
