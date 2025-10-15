@@ -47,15 +47,17 @@ def is_older_than_two_days(timestamp):
     return now - post_time >= timedelta(days=2)
 
 def format_post(message, caption_override=None, group_size=1):
-    html = "<article class='news-item'>\n"
+    if message.content_type == 'video' and message.video.file_size > 20_000_000:
+        print(f"⛔ Пропускаем пост {message.message_id} — видео > 20MB")
+        return ""
 
+    html = "<article class='news-item'>\n"
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
 
     caption = clean_text(caption_override or message.caption or "")
     text = clean_text(message.text or "")
-
-    if message.content_type == 'photo':
+if message.content_type == 'photo':
         photos = message.photo
         file_info = bot.get_file(photos[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
@@ -82,6 +84,7 @@ def format_post(message, caption_override=None, group_size=1):
     html += f"<p class='source'>Источник: {message.chat.title}</p>\n"
     html += "</article>\n"
     return html
+
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
