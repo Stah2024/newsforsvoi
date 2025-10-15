@@ -147,6 +147,7 @@ def main():
             new_ids.add(post_id)
 
     with open("public/news.html", "w", encoding="utf-8") as news_file:
+        news_file.write(f"<!-- Обновлено: {datetime.now(moscow)} -->\n")
         for block in fresh_news:
             news_file.write(block + "\n")
 
@@ -161,6 +162,7 @@ document.getElementById("show-more").onclick = () => {
 </script>
 """)
 
+    print("✅ news.html записан")
     print("🆕 Новые ID для сохранения:", new_ids)
     save_seen_ids(seen_ids.union(new_ids))
 
