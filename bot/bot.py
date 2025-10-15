@@ -46,13 +46,13 @@ def is_older_than_two_days(timestamp):
     now = datetime.now(moscow)
     return now - post_time >= timedelta(days=2)
 
-def format_post(message):
+def format_post(message, caption_override=None, group_size=1):
     html = "<article class='news-item'>\n"
 
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
 
-    caption = clean_text(message.caption or "")
+    caption = clean_text(caption_override or message.caption or "")
     text = clean_text(message.text or "")
 
     if message.content_type == 'photo':
@@ -62,8 +62,8 @@ def format_post(message):
         html += f"<img src='{file_url}' alt='Фото' />\n"
         if caption:
             html += f"<p>{caption}</p>\n"
-        if len(photos) > 1 and message.media_group_id:
-            html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>📷 Смотреть остальные фото в Telegram</a>\n"
+        if group_size > 1:
+            html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>📷 Смотреть все фото в Telegram</a>\n"
 
     elif message.content_type == 'video':
         file_info = bot.get_file(message.video.file_id)
@@ -71,6 +71,8 @@ def format_post(message):
         html += f"<video controls src='{file_url}'></video>\n"
         if caption:
             html += f"<p>{caption}</p>\n"
+        if group_size > 1:
+            html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>🎥 Смотреть все видео в Telegram</a>\n"
 
     if text and text != caption:
         html += f"<p>{text}</p>\n"
@@ -80,7 +82,6 @@ def format_post(message):
     html += f"<p class='source'>Источник: {message.chat.title}</p>\n"
     html += "</article>\n"
     return html
-
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
@@ -118,31 +119,39 @@ def main():
     visible_limit = 12
     visible_count = sum(1 for block in fresh_news if "hidden" not in block)
 
+    grouped = {}
     for post in posts:
-        post_id = str(post.message_id)
-        print(f"🔍 Проверка поста {post_id} — {'новый' if post_id not in seen_ids else 'уже был'}")
+        key = post.media_group_id or post.message_id
+        grouped.setdefault(key, []).append(post)
+
+    for group_id, group_posts in grouped.items():
+        first = group_posts[0]
+        last = group_posts[-1]
+        post_id = str(first.message_id)
+
+        print(f"🔍 Проверка группы {group_id} — {'новая' if post_id not in seen_ids else 'уже была'}")
 
         if post_id in seen_ids:
             continue
 
-        print(f"📦 Пост {post_id} тип: {post.content_type}, текст: {post.text}, caption: {post.caption}")
-        print("🕒 Пост:", post_id, "Дата:", datetime.fromtimestamp(post.date, moscow))
+        print(f"📦 Пост {post_id} тип: {last.content_type}, caption: {first.caption}")
+        print("🕒 Дата:", datetime.fromtimestamp(last.date, moscow))
         print("📆 Сейчас:", datetime.now(moscow))
-        print("⏳ Старше 2 дней:", is_older_than_two_days(post.date))
+        print("⏳ Старше 2 дней:", is_older_than_two_days(last.date))
 
-        html = format_post(post)
+        html = format_post(last, caption_override=first.caption, group_size=len(group_posts))
         print(f"🧾 Сформирован HTML для {post_id}: {'да' if html else 'нет'}")
 
         if not html:
             continue
 
-        if is_older_than_two_days(post.date):
+        if is_older_than_two_days(last.date):
             with open("public/archive.html", "a", encoding="utf-8") as archive_file:
                 archive_file.write(html + "\n")
         else:
             if visible_count >= visible_limit:
                 html = html.replace("<article", "<article class='news-item hidden'")
-            fresh_news.insert(0, html)  # 🔼 Новые карточки теперь сверху
+            fresh_news.insert(0, html)
             visible_count += 1
             new_ids.add(post_id)
 
