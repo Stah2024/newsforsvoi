@@ -125,7 +125,14 @@ def main():
         if post_id in seen_ids:
             continue
 
+        print(f"📦 Пост {post_id} тип: {post.content_type}, текст: {post.text}, caption: {post.caption}")
+        print("🕒 Пост:", post_id, "Дата:", datetime.fromtimestamp(post.date, moscow))
+        print("📆 Сейчас:", datetime.now(moscow))
+        print("⏳ Старше 2 дней:", is_older_than_two_days(post.date))
+
         html = format_post(post)
+        print(f"🧾 Сформирован HTML для {post_id}: {'да' if html else 'нет'}")
+
         if not html:
             continue
 
