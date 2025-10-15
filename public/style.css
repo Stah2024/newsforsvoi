@@ -129,6 +129,20 @@ footer {
   animation: fadeIn 0.6s ease;
   break-inside: avoid;
   text-align: left;
+  transition: transform 0.3s ease;
+  cursor: pointer;
+}
+
+.news-item.scale-1 {
+  transform: scale(1.05);
+}
+
+.news-item.scale-2 {
+  transform: scale(1.10);
+}
+
+.news-item.scale-reset {
+  transform: scale(1);
 }
 
 .news-item img,
@@ -137,11 +151,28 @@ footer {
   height: auto;
   border-radius: 8px;
   margin-bottom: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.news-item img:hover,
+.news-item video:hover {
+  transform: scale(1.05);
+  cursor: zoom-in;
+}
+
+.news-item video.clicked {
+  transform: scale(1.10);
 }
 
 .news-item p {
   margin-bottom: 0.8rem;
   font-size: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.news-item p:hover {
+  transform: scale(1.02);
+  cursor: zoom-in;
 }
 
 .timestamp {
