@@ -95,6 +95,9 @@ def main():
     seen_ids = load_seen_ids()
     new_ids = set()
 
+    print("📥 Получено постов:", len(posts))
+    print("📄 Уже обработанные ID:", seen_ids)
+
     os.makedirs("public", exist_ok=True)
 
     old_news = []
@@ -117,6 +120,8 @@ def main():
 
     for post in posts:
         post_id = str(post.message_id)
+        print(f"🔍 Проверка поста {post_id} — {'новый' if post_id not in seen_ids else 'уже был'}")
+
         if post_id in seen_ids:
             continue
 
@@ -149,6 +154,7 @@ document.getElementById("show-more").onclick = () => {
 </script>
 """)
 
+    print("🆕 Новые ID для сохранения:", new_ids)
     save_seen_ids(seen_ids.union(new_ids))
 
 if __name__ == "__main__":
