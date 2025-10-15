@@ -39,7 +39,7 @@ jobs:
       env:
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
       run: |
-        echo "✅ bot.yml v5 активен"
+        echo "✅ bot.yml v6 активен"
         python bot/bot.py || echo "⚠️ bot.py завершился с ошибкой, но workflow продолжается"
 
     - name: 💾 Коммит обновлённых файлов сайта
