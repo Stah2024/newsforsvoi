@@ -57,7 +57,8 @@ def format_post(message, caption_override=None, group_size=1):
 
     caption = clean_text(caption_override or message.caption or "")
     text = clean_text(message.text or "")
-if message.content_type == 'photo':
+
+    if message.content_type == 'photo':
         photos = message.photo
         file_info = bot.get_file(photos[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
@@ -143,7 +144,7 @@ def main():
         print("⏳ Старше 2 дней:", is_older_than_two_days(last.date))
 
         html = format_post(last, caption_override=first.caption, group_size=len(group_posts))
-        print(f"🧾 Сформирован HTML для {post_id}: {'да' if html else 'нет'}")
+        print(f"🗾 Сформирован HTML для {post_id}: {'да' if html else 'нет'}")
 
         if not html:
             continue
@@ -182,8 +183,8 @@ document.getElementById("show-more").onclick = () => {
         print("📄 Превью news.html:")
         print(preview if preview else "⚠️ news.html пустой")
 
-    print("🆕 Новые ID для сохранения:", new_ids)
+    print("🌟 Новые ID для сохранения:", new_ids)
     save_seen_ids(seen_ids.union(new_ids))
 
 if __name__ == "__main__":
-    main() 
+    main()
