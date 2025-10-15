@@ -67,7 +67,7 @@ if message.content_type == 'photo':
         if group_size > 1:
             html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>📷 Смотреть все фото в Telegram</a>\n"
 
-elif message.content_type == 'video':
+    elif message.content_type == 'video':
         file_info = bot.get_file(message.video.file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
         html += f"<video controls src='{file_url}'></video>\n"
