@@ -3,7 +3,7 @@ name: Run Telegram Bot
 on:
   schedule:
     - cron: '*/10 * * * *'  # ⏰ Запуск каждые 10 минут
-  workflow_dispatch:        # 🖐 Ручной запуск
+  workflow_dispatch:
 
 jobs:
   run-bot:
@@ -40,8 +40,14 @@ jobs:
         git config user.email "github-actions@github.com"
         git remote set-url origin https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}
 
+        echo "📂 Изменения в репозитории:"
+        git status
+
         git add public/news.html public/archive.html public/sitemap.xml seen_ids.txt
         git commit -m "🧠 Автообновление новостей и базы seen_ids" || echo "Нет изменений для коммита"
 
+        git stash --include-untracked || echo "Нечего stash'ить"
         git pull --rebase || exit 1
+        git stash pop || echo "Нечего возвращать из stash"
+
         git push || echo "❌ Push не прошёл"
