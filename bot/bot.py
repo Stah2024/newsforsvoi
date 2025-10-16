@@ -70,20 +70,14 @@ def save_seen_ids(seen_ids):
             f.write(f"{post_id}\n")
 
 def fetch_latest_posts():
-    try:
-        return bot.get_chat_history(CHANNEL_ID, limit=10)
-    except Exception as e:
-        print("⚠️ Ошибка при получении истории канала:", e)
-        return []
+    updates = bot.get_updates()
+    posts = [
+        u.channel_post
+        for u in updates
+        if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
+    ]
+    return list(reversed(posts[-10:])) if posts else []
 
-def update_sitemap():
-    today = datetime.now(moscow).strftime("%Y-%m-%d")
-    with open(SITEMAP_PATH, "r+", encoding="utf-8") as f:
-        content = f.read()
-        content = re.sub(r"<lastmod>\d{4}-\d{2}-\d{2}</lastmod>", f"<lastmod>{today}</lastmod>", content)
-        f.seek(0)
-        f.write(content)
-        f.truncate()
 def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
     now = datetime.now(moscow)
@@ -151,6 +145,32 @@ def append_to_archive(blocks):
             f.write(updated)
             f.truncate()
 
+def update_sitemap():
+    now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
+    sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://newsforsvoi.ru/index.html</loc>
+    <lastmod>{now}</lastmod>
+    <changefreq>always</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://newsforsvoi.ru/news.html</loc>
+    <lastmod>{now}</lastmod>
+    <changefreq>always</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://newsforsvoi.ru/archive.html</loc>
+    <lastmod>{now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+</urlset>
+"""
+    with open(SITEMAP_PATH, "w", encoding="utf-8") as f:
+        f.write(sitemap)
 def main():
     ensure_archive_exists()
     posts = fetch_latest_posts()
@@ -227,6 +247,7 @@ document.getElementById("show-more").onclick = () => {
     print("✅ news.html обновлён")
     print("📦 Перенесено в архив:", len(archive_blocks))
     print("🌟 Новые ID:", new_ids)
+    print("🗂 sitemap.xml обновлён")
 
 if __name__ == "__main__":
     main()
