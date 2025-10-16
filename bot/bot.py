@@ -60,14 +60,19 @@ def format_post(message, caption_override=None, group_size=1):
         html += f"<img src='{file_url}' alt='Фото' />\n"
 
     elif message.content_type == 'video':
-        size = getattr(message.video, 'file_size', 0)
-        print(f"📹 Размер видео: {size} байт")
-        if size and size > 20_000_000:
-            html += f"<p>🎥 Видео слишком большое для предпросмотра. <a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Смотреть в Telegram</a></p>\n"
-        else:
+        try:
             file_info = bot.get_file(message.video.file_id)
             file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
-            html += f"<video controls src='{file_url}'></video>\n"
+            size = getattr(message.video, 'file_size', 0)
+            print(f"📹 Размер видео: {size} байт")
+
+            if size == 0 or size <= 20_000_000:
+                html += f"<video controls src='{file_url}'></video>\n"
+            else:
+                html += f"<p>🎥 Видео слишком большое для предпросмотра. <a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Смотреть в Telegram</a></p>\n"
+        except Exception as e:
+            print(f"⚠️ Ошибка при вставке видео: {e}")
+            html += f"<p>🎥 Видео недоступно. <a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Смотреть в Telegram</a></p>\n"
 
     if caption:
         html += f"<p>{caption}</p>\n"
@@ -115,7 +120,6 @@ def update_sitemap():
 """
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
-
 def main():
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
