@@ -67,6 +67,59 @@ def save_seen_ids(seen_ids):
     with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
         for post_id in seen_ids:
             f.write(f"{post_id}\n")
+
+def fetch_latest_posts():
+    updates = bot.get_updates()
+    posts = [
+        u.channel_post
+        for u in updates
+        if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
+    ]
+    return list(reversed(posts[-10:])) if posts else []
+
+def is_older_than_two_days(timestamp):
+    post_time = datetime.fromtimestamp(timestamp, moscow)
+    now = datetime.now(moscow)
+    return now - post_time >= timedelta(days=2)
+
+def format_post(message, caption_override=None, group_size=1):
+    if message.content_type == 'video' and message.video.file_size > 20_000_000:
+        return ""
+
+    html = "<article class='news-item'>\n"
+    timestamp = message.date
+    formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
+
+    caption = clean_text(caption_override or message.caption or "")
+    text = clean_text(message.text or "")
+
+    if message.content_type == 'photo':
+        photos = message.photo
+        file_info = bot.get_file(photos[-1].file_id)
+        file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
+        html += f"<img src='{file_url}' alt='Фото' />\n"
+        if caption:
+            html += f"<p>{caption}</p>\n"
+        if group_size > 1:
+            html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>📷 Смотреть все фото в Telegram</a>\n"
+
+    elif message.content_type == 'video':
+        file_info = bot.get_file(message.video.file_id)
+        file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
+        html += f"<video controls src='{file_url}'></video>\n"
+        if caption:
+            html += f"<p>{caption}</p>\n"
+        if group_size > 1:
+            html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>🎥 Смотреть все видео в Telegram</a>\n"
+
+    if text and text != caption:
+        html += f"<p>{text}</p>\n"
+
+    html += f"<p class='timestamp'>🕒 {formatted_time}</p>\n"
+    html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
+    html += f"<p class='source'>Источник: {message.chat.title}</p>\n"
+    html += "</article>\n"
+    return html
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
@@ -79,7 +132,7 @@ def extract_timestamp(html_block):
 def ensure_archive_exists():
     if not os.path.exists(ARCHIVE_PATH):
         with open(ARCHIVE_PATH, "w", encoding="utf-8") as f:
-            f.write(ARCHIVE_TEMPLATE)
+            f.write(ARCHIVE_TEMPLATE + "\n</main>\n</body>\n</html>")
 
 def append_to_archive(blocks):
     with open(ARCHIVE_PATH, "r+", encoding="utf-8") as f:
@@ -95,9 +148,6 @@ def main():
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
     new_ids = set()
-
-    print("📥 Получено постов:", len(posts))
-    print("📄 Уже обработанные ID:", seen_ids)
 
     os.makedirs("public", exist_ok=True)
 
