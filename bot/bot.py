@@ -1,4 +1,3 @@
-Сайты:
 import os
 import telebot
 from datetime import datetime, timedelta
