@@ -34,13 +34,19 @@ jobs:
     - name: 📚 Установка зависимостей
       run: pip install -r bot/requirements.txt
 
+    - name: 🕒 Лог времени запуска
+      run: echo "⏰ Запуск: $(date)"
+
     - name: 🚀 Запуск bot.py
       working-directory: .
       env:
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
       run: |
-        echo "✅ bot.yml v7 активен"
+        echo "✅ bot.yml v8 активен"
         python bot/bot.py || echo "⚠️ bot.py завершился с ошибкой, но workflow продолжается"
+
+    - name: 📝 Обновление метки времени
+      run: echo "Последний запуск: $(date)" > public/last-run.txt
 
     - name: 💾 Коммит обновлённых файлов сайта
       env:
@@ -49,6 +55,11 @@ jobs:
         echo "📂 Изменения в репозитории:"
         git status
 
-        git add public/news.html public/archive.html public/sitemap.xml seen_ids.txt
-        git commit -m "🧠 Обновление новостей и базы ID — autobot" || echo "Нет изменений для коммита"
-        git push || echo "❌ Push не прошёл"
+        git add public/news.html public/archive.html public/sitemap.xml seen_ids.txt public/last-run.txt
+
+        if git diff --cached --quiet; then
+          echo "⚠️ Нет изменений — коммит пропущен"
+        else
+          git commit -m "🧠 Обновление новостей и базы ID — autobot"
+          git push || echo "❌ Push не прошёл"
+        fi
