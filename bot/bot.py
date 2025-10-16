@@ -95,6 +95,32 @@ def extract_timestamp(html_block):
             return None
     return None
 
+def update_sitemap():
+    now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
+    sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://newsforsvoi.ru/index.html</loc>
+    <lastmod>{now}</lastmod>
+    <changefreq>always</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://newsforsvoi.ru/news.html</loc>
+    <lastmod>{now}</lastmod>
+    <changefreq>always</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://newsforsvoi.ru/archive.html</loc>
+    <lastmod>{now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+</urlset>
+"""
+    with open("public/sitemap.xml", "w", encoding="utf-8") as f:
+        f.write(sitemap)
 def main():
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
@@ -111,7 +137,7 @@ def main():
             raw = f.read()
             old_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
 
-fresh_news = []
+    fresh_news = []
     with open("public/archive.html", "a", encoding="utf-8") as archive_file:
         for block in old_news:
             ts = extract_timestamp(block)
@@ -159,7 +185,7 @@ fresh_news = []
             visible_count += 1
             new_ids.add(post_id)
 
-with open("public/news.html", "w", encoding="utf-8") as news_file:
+    with open("public/news.html", "w", encoding="utf-8") as news_file:
         news_file.write(f"<!-- Обновлено: {datetime.now(moscow)} -->\n")
         for block in fresh_news:
             news_file.write(block + "\n")
@@ -179,12 +205,15 @@ document.getElementById("show-more").onclick = () => {
     print("📦 Количество блоков в fresh_news:", len(fresh_news))
 
     with open("public/news.html", "r", encoding="utf-8") as f:
-        preview = f.read(300)
+        preview = f.read
+preview = f.read(300)
         print("📄 Превью news.html:")
         print(preview if preview else "⚠️ news.html пустой")
 
     print("🌟 Новые ID для сохранения:", new_ids)
     save_seen_ids(seen_ids.union(new_ids))
+    update_sitemap()
+    print("🗂 sitemap.xml обновлён")
 
 if __name__ == "__main__":
     main()
