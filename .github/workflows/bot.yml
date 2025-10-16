@@ -41,5 +41,8 @@ jobs:
           git add public/news.html public/sitemap.xml
           git commit -m "Update news.html and sitemap.xml from bot" || echo "No changes"
 
+          git stash
           git pull --rebase
-          git push || echo "❌ Push не прошёл" 
+          git stash pop || echo "⚠️ Нет изменений для восстановления"
+
+          git push || echo "❌ Push не прошёл"
