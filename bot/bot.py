@@ -69,14 +69,11 @@ def save_seen_ids(seen_ids):
             f.write(f"{post_id}\n")
 
 def fetch_latest_posts():
-    updates = bot.get_updates()
-    posts = [
-        u.channel_post
-        for u in updates
-        if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
-    ]
-    return list(reversed(posts[-10:])) if posts else []
-
+    try:
+        return bot.get_chat_history(CHANNEL_ID, limit=10)
+    except Exception as e:
+        print("⚠️ Ошибка при получении истории канала:", e)
+        return []
 def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
     now = datetime.now(moscow)
@@ -120,6 +117,7 @@ def format_post(message, caption_override=None, group_size=1):
     html += f"<p class='source'>Источник: {message.chat.title}</p>\n"
     html += "</article>\n"
     return html
+
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
