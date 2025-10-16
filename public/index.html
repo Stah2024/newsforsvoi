@@ -16,6 +16,35 @@
   <meta property="og:description" content="Честные новости России и мира" />
   <meta property="og:url" content="https://newsforsvoi.vercel.app/" />
   <meta property="og:type" content="website" />
+
+  <style>
+    .news-item {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      cursor: zoom-in;
+    }
+    .news-item.enlarged-1 {
+      transform: scale(1.05);
+      cursor: zoom-out;
+      z-index: 5;
+      position: relative;
+    }
+    .news-item.enlarged-2 {
+      transform: scale(1.10);
+      cursor: zoom-out;
+      z-index: 10;
+      position: relative;
+    }
+    .news-item img,
+    .news-item video {
+      transition: transform 0.3s ease;
+    }
+    .news-item.enlarged-1 img,
+    .news-item.enlarged-2 img,
+    .news-item.enlarged-1 video,
+    .news-item.enlarged-2 video {
+      transform: scale(1.10);
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -24,25 +53,23 @@
       <div class="text-block">
         <h1>Новости для Своих</h1>
         <h2>Честные новости России и мира</h2>
+        <p class="tagline">
+          Актуальные новости России и мира без фейков и лишнего шума.<br>
+          Главные события, аналитика, обзоры и факты — коротко и по делу.<br>
+          Читайте свежие новости, политические и военные сводки, новости экономики, технологий и общества.
+        </p>
       </div>
     </div>
 
-    <div class="quick-links">
-      <a href="https://t.me/newsSVOih" target="_blank">
-        <img src="/telegram-icon.svg" alt="Telegram" />
-        Telegram
-      </a>
-      <a href="https://dzen.ru/britancirazvedos" target="_blank">
-        <img src="/zen-icon.svg" alt="Дзен" />
-        Дзен
-      </a>
-      <div class="search-inline">
-        <input type="search" id="search-box" placeholder="Поиск" />
-      </div>
+    <div class="search-wrapper">
+      <input type="search" id="search-box" placeholder="🔍 Поиск по новостям…" />
     </div>
   </header>
 
   <main>
+    <a href="https://t.me/newsSVOih" class="button" target="_blank">Перейти в Telegram-канал</a>
+    <a href="archive.html" class="button">Архив</a>
+
     <section id="news-feed">
       <h3>Последние новости</h3>
       <div id="news-container" class="news-grid"></div>
@@ -113,7 +140,7 @@
   <!-- Yandex.Metrika counter -->
   <script type="text/javascript">
     (function(m,e,t,r,i,k,a){
-      m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+      m[i]=m[i]function(){(m[i].a=m[i].a[]).push(arguments)};
       m[i].l=1*new Date();
       k=e.createElement(t),a=e.getElementsByTagName(t)[0],
       k.async=1;k.src=r;a.parentNode.insertBefore(k,a)
