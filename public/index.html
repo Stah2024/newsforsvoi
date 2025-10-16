@@ -88,9 +88,7 @@
       if (video) {
         video.addEventListener('click', (e) => {
           e.stopPropagation();
-          if (!video.classList.contains('clicked')) {
-            video.classList.add('clicked');
-          }
+          video.classList.toggle('clicked');
         });
       }
     });
