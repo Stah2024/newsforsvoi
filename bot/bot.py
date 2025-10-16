@@ -45,12 +45,7 @@ def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
     now = datetime.now(moscow)
     return now - post_time >= timedelta(days=2)
-
 def format_post(message, caption_override=None, group_size=1):
-    if message.content_type == 'video' and message.video.file_size > 20_000_000:
-        print(f"⛔ Пропускаем пост {message.message_id} — видео > 20MB")
-        return ""
-
     html = "<article class='news-item'>\n"
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
@@ -63,20 +58,19 @@ def format_post(message, caption_override=None, group_size=1):
         file_info = bot.get_file(photos[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
         html += f"<img src='{file_url}' alt='Фото' />\n"
-        if caption:
-            html += f"<p>{caption}</p>\n"
-        if group_size > 1:
-            html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>📷 Смотреть все фото в Telegram</a>\n"
 
     elif message.content_type == 'video':
-        file_info = bot.get_file(message.video.file_id)
-        file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
-        html += f"<video controls src='{file_url}'></video>\n"
-        if caption:
-            html += f"<p>{caption}</p>\n"
-        if group_size > 1:
-            html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>🎥 Смотреть все видео в Telegram</a>\n"
+        size = getattr(message.video, 'file_size', 0)
+        print(f"📹 Размер видео: {size} байт")
+        if size and size > 20_000_000:
+            html += f"<p>🎥 Видео слишком большое для предпросмотра. <a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Смотреть в Telegram</a></p>\n"
+        else:
+            file_info = bot.get_file(message.video.file_id)
+            file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
+            html += f"<video controls src='{file_url}'></video>\n"
 
+    if caption:
+        html += f"<p>{caption}</p>\n"
     if text and text != caption:
         html += f"<p>{text}</p>\n"
 
@@ -121,6 +115,7 @@ def update_sitemap():
 """
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
+
 def main():
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
