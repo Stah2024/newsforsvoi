@@ -13,6 +13,7 @@ moscow = pytz.timezone('Europe/Moscow')
 
 ARCHIVE_PATH = "public/archive.html"
 NEWS_PATH = "public/news.html"
+SITEMAP_PATH = "public/sitemap.xml"
 
 ARCHIVE_TEMPLATE = """<!DOCTYPE html>
 <html lang="ru">
@@ -74,6 +75,15 @@ def fetch_latest_posts():
     except Exception as e:
         print("⚠️ Ошибка при получении истории канала:", e)
         return []
+
+def update_sitemap():
+    today = datetime.now(moscow).strftime("%Y-%m-%d")
+    with open(SITEMAP_PATH, "r+", encoding="utf-8") as f:
+        content = f.read()
+        content = re.sub(r"<lastmod>\d{4}-\d{2}-\d{2}</lastmod>", f"<lastmod>{today}</lastmod>", content)
+        f.seek(0)
+        f.write(content)
+        f.truncate()
 def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
     now = datetime.now(moscow)
@@ -213,6 +223,7 @@ document.getElementById("show-more").onclick = () => {
 """)
 
     save_seen_ids(seen_ids.union(new_ids))
+    update_sitemap()
     print("✅ news.html обновлён")
     print("📦 Перенесено в архив:", len(archive_blocks))
     print("🌟 Новые ID:", new_ids)
