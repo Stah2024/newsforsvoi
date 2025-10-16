@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
-          persist-credentials: false  # отключает github-actions[bot]
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -39,7 +39,7 @@ jobs:
           git config user.email "github-actions@github.com"
           git remote set-url origin https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}
 
-          git add public/news.html public/sitemap.xml seen_ids.txt public/archive.html public/last-run.txt
+          git add public/news.html public/sitemap.xml seen_ids.txt public/archive.html
           git commit -m "Update news.html and sitemap.xml from bot" || echo "No changes"
 
           git stash
