@@ -1,3 +1,4 @@
+Сайты:
 import os
 import telebot
 from datetime import datetime, timedelta
@@ -10,43 +11,6 @@ SEEN_IDS_FILE = "seen_ids.txt"
 
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone('Europe/Moscow')
-
-ARCHIVE_PATH = "public/archive.html"
-NEWS_PATH = "public/news.html"
-SITEMAP_PATH = "public/sitemap.xml"
-
-ARCHIVE_TEMPLATE = """<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <title>Архив новостей</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    body { margin: 0; font-family: system-ui, sans-serif; background: #1c1c1c; color: #e0e0e0; }
-    .news-item { background: #2a2a2a; margin: 1rem auto; padding: 1rem; border-radius: 8px; max-width: 800px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
-    .news-item img, .news-item video { max-width: 100%; border-radius: 6px; }
-    .timestamp, .source { font-size: 0.9rem; color: #aaa; }
-    .button { display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #2F4F4F; color: #fff; text-decoration: none; border-radius: 4px; }
-    .flag-icon { width: 48px; margin-bottom: 1rem; }
-    header h1, header h2 { margin: 0.2rem 0; }
-    input[type="search"] { margin-top: 1rem; padding: 0.5rem; width: 80%; max-width: 400px; border-radius: 4px; border: none; }
-  </style>
-</head>
-<body>
-<header style="background: linear-gradient(135deg, #444, #2f2f2f); color: #e0e0e0; text-align: center; padding: 3rem 1rem 2rem; border-bottom: 4px solid #2F4F4F; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
-  <div class="header-content">
-    <img src="rf-flag.svg" alt="Флаг" class="flag-icon">
-    <div>
-      <h1>Архив новостей</h1>
-      <h2>Посты старше двух дней</h2>
-      <a href="index.html" class="button">← Вернуться на главную</a>
-      <br>
-      <input type="search" placeholder="Поиск по архиву...">
-    </div>
-  </div>
-</header>
-<main>
-"""
 
 def clean_text(text):
     unwanted = [
@@ -85,6 +49,7 @@ def is_older_than_two_days(timestamp):
 
 def format_post(message, caption_override=None, group_size=1):
     if message.content_type == 'video' and message.video.file_size > 20_000_000:
+        print(f"⛔ Пропускаем пост {message.message_id} — видео > 20MB")
         return ""
 
     html = "<article class='news-item'>\n"
@@ -131,71 +96,30 @@ def extract_timestamp(html_block):
             return None
     return None
 
-def ensure_archive_exists():
-    if not os.path.exists(ARCHIVE_PATH):
-        with open(ARCHIVE_PATH, "w", encoding="utf-8") as f:
-            f.write(ARCHIVE_TEMPLATE + "\n</main>\n</body>\n</html>")
-
-def append_to_archive(blocks):
-    with open(ARCHIVE_PATH, "r+", encoding="utf-8") as f:
-        content = f.read()
-        if "</main>" in content:
-            updated = content.replace("</main>", "\n" + "\n".join(blocks) + "\n</main>")
-            f.seek(0)
-            f.write(updated)
-            f.truncate()
-
-def update_sitemap():
-    now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
-    sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://newsforsvoi.ru/index.html</loc>
-    <lastmod>{now}</lastmod>
-    <changefreq>always</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://newsforsvoi.ru/news.html</loc>
-    <lastmod>{now}</lastmod>
-    <changefreq>always</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://newsforsvoi.ru/archive.html</loc>
-    <lastmod>{now}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-</urlset>
-"""
-    with open(SITEMAP_PATH, "w", encoding="utf-8") as f:
-        f.write(sitemap)
 def main():
-    ensure_archive_exists()
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
     new_ids = set()
 
+    print("📥 Получено постов:", len(posts))
+    print("📄 Уже обработанные ID:", seen_ids)
+
     os.makedirs("public", exist_ok=True)
 
     old_news = []
-    if os.path.exists(NEWS_PATH):
-        with open(NEWS_PATH, "r", encoding="utf-8") as f:
+    if os.path.exists("public/news.html"):
+        with open("public/news.html", "r", encoding="utf-8") as f:
             raw = f.read()
             old_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
 
-    fresh_news = []
-    archive_blocks = []
-    for block in old_news:
-        ts = extract_timestamp(block)
-        if ts and is_older_than_two_days(ts.timestamp()):
-            archive_blocks.append(block)
-        else:
-            fresh_news.append(block)
-
-    if archive_blocks:
-        append_to_archive(archive_blocks)
+fresh_news = []
+    with open("public/archive.html", "a", encoding="utf-8") as archive_file:
+        for block in old_news:
+            ts = extract_timestamp(block)
+            if ts and is_older_than_two_days(ts.timestamp()):
+                archive_file.write(block + "\n")
+            else:
+                fresh_news.append(block)
 
     visible_limit = 12
     visible_count = sum(1 for block in fresh_news if "hidden" not in block)
@@ -210,15 +134,25 @@ def main():
         last = group_posts[-1]
         post_id = str(first.message_id)
 
+        print(f"🔍 Проверка группы {group_id} — {'новая' if post_id not in seen_ids else 'уже была'}")
+
         if post_id in seen_ids:
             continue
 
+        print(f"📦 Пост {post_id} тип: {last.content_type}, caption: {first.caption}")
+        print("🕒 Дата:", datetime.fromtimestamp(last.date, moscow))
+        print("📆 Сейчас:", datetime.now(moscow))
+        print("⏳ Старше 2 дней:", is_older_than_two_days(last.date))
+
         html = format_post(last, caption_override=first.caption, group_size=len(group_posts))
+        print(f"🗾 Сформирован HTML для {post_id}: {'да' if html else 'нет'}")
+
         if not html:
             continue
 
         if is_older_than_two_days(last.date):
-            append_to_archive([html])
+            with open("public/archive.html", "a", encoding="utf-8") as archive_file:
+                archive_file.write(html + "\n")
         else:
             if visible_count >= visible_limit:
                 html = html.replace("<article", "<article class='news-item hidden'")
@@ -226,7 +160,7 @@ def main():
             visible_count += 1
             new_ids.add(post_id)
 
-    with open(NEWS_PATH, "w", encoding="utf-8") as news_file:
+    with open("public/news.html", "w", encoding="utf-8") as news_file:
         news_file.write(f"<!-- Обновлено: {datetime.now(moscow)} -->\n")
         for block in fresh_news:
             news_file.write(block + "\n")
@@ -242,12 +176,16 @@ document.getElementById("show-more").onclick = () => {
 </script>
 """)
 
+    print("✅ news.html записан")
+    print("📦 Количество блоков в fresh_news:", len(fresh_news))
+
+    with open("public/news.html", "r", encoding="utf-8") as f:
+        preview = f.read(300)
+        print("📄 Превью news.html:")
+        print(preview if preview else "⚠️ news.html пустой")
+
+    print("🌟 Новые ID для сохранения:", new_ids)
     save_seen_ids(seen_ids.union(new_ids))
-    update_sitemap()
-    print("✅ news.html обновлён")
-    print("📦 Перенесено в архив:", len(archive_blocks))
-    print("🌟 Новые ID:", new_ids)
-    print("🗂 sitemap.xml обновлён")
 
 if __name__ == "__main__":
     main()
