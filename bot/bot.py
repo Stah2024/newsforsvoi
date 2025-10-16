@@ -205,8 +205,7 @@ document.getElementById("show-more").onclick = () => {
     print("📦 Количество блоков в fresh_news:", len(fresh_news))
 
     with open("public/news.html", "r", encoding="utf-8") as f:
-        preview = f.read
-preview = f.read(300)
+        preview = f.read(300)
         print("📄 Превью news.html:")
         print(preview if preview else "⚠️ news.html пустой")
 
