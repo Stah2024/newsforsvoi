@@ -42,4 +42,4 @@ jobs:
           git commit -m "Update news.html and sitemap.xml from bot" || echo "No changes"
 
           git pull --rebase
-          git push || echo "❌ Push не прошёл"
+          git push || echo "❌ Push не прошёл" 
