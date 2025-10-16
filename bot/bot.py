@@ -159,7 +159,7 @@ fresh_news = []
             visible_count += 1
             new_ids.add(post_id)
 
-    with open("public/news.html", "w", encoding="utf-8") as news_file:
+with open("public/news.html", "w", encoding="utf-8") as news_file:
         news_file.write(f"<!-- Обновлено: {datetime.now(moscow)} -->\n")
         for block in fresh_news:
             news_file.write(block + "\n")
