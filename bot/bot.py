@@ -215,6 +215,7 @@ visible_limit = 12
         for block in fresh_news:
             news_file.write(block + "\n")
 
+
         if any("hidden" in block for block in fresh_news):
             news_file.write("""
 <button id="show-more">Показать ещё</button>
