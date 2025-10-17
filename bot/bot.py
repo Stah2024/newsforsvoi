@@ -211,10 +211,9 @@ visible_limit = 12
         return
 
     with open("public/news.html", "w", encoding="utf-8") as news_file:
-            with open("public/news.html", "w", encoding="utf-8") as news_file:
         news_file.write(f"<!-- Обновлено: {datetime.now(moscow)} -->\n")
         for block in fresh_news:
-            if block:  # защита от None
+            if block:
                 news_file.write(block + "\n")
 
         if any("hidden" in block for block in fresh_news):
