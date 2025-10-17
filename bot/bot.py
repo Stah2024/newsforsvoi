@@ -124,7 +124,6 @@ def update_sitemap():
 """
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
-
 def main():
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
@@ -156,7 +155,8 @@ def main():
                     seen_html_blocks.add(block)
             else:
                 fresh_news.append(block)
-visible_limit = 12
+
+    visible_limit = 12
     visible_count = sum(1 for block in fresh_news if "hidden" not in block)
 
     grouped = {}
