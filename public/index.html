@@ -86,6 +86,14 @@
         temp.innerHTML = html;
 
         const items = Array.from(temp.querySelectorAll('.news-item'));
+
+        // 🔄 Сортировка по времени от новых к старым
+        items.sort((a, b) => {
+          const timeA = a.querySelector('.timestamp')?.textContent;
+          const timeB = b.querySelector('.timestamp')?.textContent;
+          return new Date(timeB) - new Date(timeA);
+        });
+
         let visibleCount = 9;
 
         function renderItems() {
