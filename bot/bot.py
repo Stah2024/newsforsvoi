@@ -45,6 +45,7 @@ def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
     now = datetime.now(moscow)
     return now - post_time >= timedelta(days=2)
+
 def format_post(message, caption_override=None, group_size=1):
     html = "<article class='news-item'>\n"
     timestamp = message.date
@@ -88,7 +89,6 @@ def format_post(message, caption_override=None, group_size=1):
 
     html += "</article>\n"
     return html
-
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
@@ -124,10 +124,12 @@ def update_sitemap():
 """
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
+
 def main():
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
     new_ids = set()
+    seen_html_blocks = set()
 
     print("📥 Получено постов:", len(posts))
     print("📄 Уже обработанные ID:", seen_ids)
@@ -141,15 +143,20 @@ def main():
             old_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
 
     fresh_news = []
+    if os.path.exists("public/archive.html"):
+        with open("public/archive.html", "r", encoding="utf-8") as f:
+            seen_html_blocks.update(re.findall(r"<article class='news-item.*?>.*?</article>", f.read(), re.DOTALL))
+
     with open("public/archive.html", "a", encoding="utf-8") as archive_file:
         for block in old_news:
             ts = extract_timestamp(block)
             if ts and is_older_than_two_days(ts.timestamp()):
-                archive_file.write(block + "\n")
+                if block not in seen_html_blocks:
+                    archive_file.write(block + "\n")
+                    seen_html_blocks.add(block)
             else:
                 fresh_news.append(block)
-
-    visible_limit = 12
+visible_limit = 12
     visible_count = sum(1 for block in fresh_news if "hidden" not in block)
 
     grouped = {}
@@ -163,27 +170,21 @@ def main():
         post_id = str(group_id)
 
         print(f"🔍 Проверка группы {group_id} — {'новая' if post_id not in seen_ids else 'уже была'}")
-
-        if post_id in seen_ids:
+        if post_id in seen_ids or post_id in new_ids:
             continue
 
-        print(f"📦 Пост {post_id} тип: {last.content_type}, caption: {first.caption}")
-        print("🕒 Дата:", datetime.fromtimestamp(last.date, moscow))
-        print("📆 Сейчас:", datetime.now(moscow))
-        print("⏳ Старше 2 дней:", is_older_than_two_days(last.date))
-
         html = format_post(last, caption_override=first.caption, group_size=len(group_posts))
-        print(f"🗾 Сформирован HTML для {post_id}: {'да' if html else 'нет'}")
-
-        if not html:
+        if not html or html in fresh_news:
             continue
 
         if is_older_than_two_days(last.date):
             with open("public/archive.html", "a", encoding="utf-8") as archive_file:
-                archive_file.write(html + "\n")
+                if html not in seen_html_blocks:
+                    archive_file.write(html + "\n")
+                    seen_html_blocks.add(html)
         else:
             if visible_count >= visible_limit:
-                html = html.replace("<article", "<article class='news-item hidden'")
+                html = html.replace("<article class='news-item'>", "<article class='news-item hidden'>")
             fresh_news.insert(0, html)
             visible_count += 1
             new_ids.add(post_id)
@@ -193,6 +194,10 @@ def main():
         key=lambda block: extract_timestamp(block) or datetime.min,
         reverse=True
     )
+
+    if not fresh_news:
+        print("⚠️ Нет свежих новостей — news.html не обновлён")
+        return
 
     with open("public/news.html", "w", encoding="utf-8") as news_file:
         news_file.write(f"<!-- Обновлено: {datetime.now(moscow)} -->\n")
