@@ -229,4 +229,4 @@ document.getElementById("show-more").onclick = () => {
     print("🗂 sitemap.xml обновлён")
 
 if __name__ == "__main__":
-    main()
+    main() 
