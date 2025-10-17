@@ -62,15 +62,17 @@ def format_post(message, caption_override=None, group_size=1):
 
     elif message.content_type == 'video':
         try:
-            file_info = bot.get_file(message.video.file_id)
-            file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
             size = getattr(message.video, 'file_size', 0)
             if size == 0 or size <= 20_000_000:
+                file_info = bot.get_file(message.video.file_id)
+                file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
                 html += f"<video controls src='{file_url}'></video>\n"
             else:
-                html += f"<p>🎥 Видео слишком большое для предпросмотра. <a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Смотреть в Telegram</a></p>\n"
+                print(f"⛔️ Пропущено видео >20MB: {size} байт")
+                return ""
         except Exception as e:
-            html += f"<p>🎥 Видео недоступно. <a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Смотреть в Telegram</a></p>\n"
+            print(f"⚠️ Ошибка при обработке видео: {e}")
+            return ""
 
     if caption:
         html += f"<p>{caption}</p>\n"
@@ -173,8 +175,10 @@ def main():
             continue
 
         html = format_post(last, caption_override=first.caption, group_size=len(group_posts))
-        html_hash = hash_html_block(html)
+        if not html:
+            continue
 
+        html_hash = hash_html_block(html)
         if html_hash in seen_html_hashes:
             continue
 
