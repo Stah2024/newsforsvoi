@@ -57,6 +57,7 @@ def format_post(message, caption_override=None, group_size=1):
     html = "<article class='news-item'>\n"
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
+    iso_time = datetime.fromtimestamp(timestamp, moscow).isoformat()
 
     caption = clean_text(caption_override or message.caption or "")
     text = clean_text(message.text or "")
@@ -86,7 +87,7 @@ def format_post(message, caption_override=None, group_size=1):
     if text and text != caption:
         html += f"<p>{text}</p>\n"
 
-    html += f"<p class='timestamp'>🕒 {formatted_time}</p>\n"
+    html += f"<p class='timestamp' data-ts='{iso_time}'>🕒 {formatted_time}</p>\n"
     html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
     html += f"<p class='source'>Источник: {message.chat.title}</p>\n"
 
@@ -112,6 +113,8 @@ def extract_timestamp(html_block):
 
 def hash_html_block(html):
     return hashlib.md5(html.encode("utf-8")).hexdigest()
+
+
 def update_sitemap():
     now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
     sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
