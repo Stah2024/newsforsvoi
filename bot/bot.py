@@ -170,6 +170,7 @@ def main():
             else:
                 fresh_news.append(block)
 
+    # ⚙️ Исправленный участок — без лишнего отступа
     visible_limit = 12
     visible_count = sum(1 for block in fresh_news if "hidden" not in block)
 
