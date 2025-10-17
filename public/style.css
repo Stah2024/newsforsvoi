@@ -68,6 +68,38 @@ h2 {
   color: #666;
 }
 
+.button-bar {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.button.small {
+  font-size: 14px;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  font-weight: bold;
+  border-radius: 10px;
+  background: #3C3B32;
+  color: white;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.button.small:hover {
+  background: #556B2F;
+  transform: scale(1.03);
+}
+
+.button.small img.icon {
+  height: 16px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
 main {
   max-width: 1200px;
   margin: 3rem auto;
