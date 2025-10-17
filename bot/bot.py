@@ -45,7 +45,6 @@ def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
     now = datetime.now(moscow)
     return now - post_time >= timedelta(days=2)
-
 def format_post(message, caption_override=None, group_size=1):
     html = "<article class='news-item'>\n"
     timestamp = message.date
@@ -83,6 +82,10 @@ def format_post(message, caption_override=None, group_size=1):
     html += f"<p class='timestamp'>🕒 {formatted_time}</p>\n"
     html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
     html += f"<p class='source'>Источник: {message.chat.title}</p>\n"
+
+    if group_size > 1:
+        html += f"<p><a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>📷 Смотреть остальные фото/видео в Telegram</a></p>\n"
+
     html += "</article>\n"
     return html
 
@@ -157,7 +160,7 @@ def main():
     for group_id, group_posts in grouped.items():
         first = group_posts[0]
         last = group_posts[-1]
-        post_id = str(first.message_id)
+        post_id = str(group_id)
 
         print(f"🔍 Проверка группы {group_id} — {'новая' if post_id not in seen_ids else 'уже была'}")
 
@@ -184,7 +187,7 @@ def main():
             fresh_news.insert(0, html)
             visible_count += 1
             new_ids.add(post_id)
-# Сортировка всех карточек по дате (свежие сверху)
+
     fresh_news = sorted(
         fresh_news,
         key=lambda block: extract_timestamp(block) or datetime.min,
