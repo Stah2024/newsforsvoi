@@ -143,6 +143,7 @@ def update_sitemap():
         f.write(sitemap)
 
 
+# ✅ Обновлённая функция main()
 def main():
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
@@ -201,7 +202,7 @@ def main():
         first = group_posts[0]
         last = group_posts[-1]
 
-        if post_id in seen_ids or post_id in new_ids:
+        if post_id in new_ids:
             continue
 
         html = format_post(last, caption_override=first.caption, group_size=len(group_posts))
@@ -218,7 +219,10 @@ def main():
             html = html.replace("<article class='news-item'>", "<article class='news-item hidden'>")
         fresh_news.insert(0, html)
         visible_count += 1
-        new_ids.add(post_id)
+
+        if post_id not in seen_ids:
+            new_ids.add(post_id)
+
         seen_html_hashes.add(html_hash)
         any_new = True
 
