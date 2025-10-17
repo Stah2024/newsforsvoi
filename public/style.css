@@ -148,13 +148,14 @@ footer {
 }
 
 .news-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
+  column-count: 3;
+  column-gap: 1.5rem;
   padding-top: 1rem;
 }
 
 .news-item {
+  break-inside: avoid;
+  margin-bottom: 1.5rem;
   background-color: #f9f9f9;
   padding: 1.5rem;
   border-radius: 12px;
@@ -230,13 +231,13 @@ footer {
 
 @media (max-width: 900px) {
   .news-grid {
-    grid-template-columns: repeat(2, 1fr);
+    column-count: 2;
   }
 }
 
 @media (max-width: 600px) {
   .news-grid {
-    grid-template-columns: 1fr;
+    column-count: 1;
     padding: 0 1rem;
   }
 
