@@ -3,6 +3,7 @@ import telebot
 from datetime import datetime, timedelta
 import pytz
 import re
+import hashlib
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = "@newsSVOih"
@@ -31,7 +32,6 @@ def save_seen_ids(seen_ids):
     with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
         for post_id in seen_ids:
             f.write(f"{post_id}\n")
-
 def fetch_latest_posts():
     updates = bot.get_updates()
     posts = [
@@ -65,14 +65,11 @@ def format_post(message, caption_override=None, group_size=1):
             file_info = bot.get_file(message.video.file_id)
             file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
             size = getattr(message.video, 'file_size', 0)
-            print(f"📹 Размер видео: {size} байт")
-
             if size == 0 or size <= 20_000_000:
                 html += f"<video controls src='{file_url}'></video>\n"
             else:
                 html += f"<p>🎥 Видео слишком большое для предпросмотра. <a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Смотреть в Telegram</a></p>\n"
         except Exception as e:
-            print(f"⚠️ Ошибка при вставке видео: {e}")
             html += f"<p>🎥 Видео недоступно. <a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Смотреть в Telegram</a></p>\n"
 
     if caption:
@@ -89,6 +86,7 @@ def format_post(message, caption_override=None, group_size=1):
 
     html += "</article>\n"
     return html
+
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
@@ -98,6 +96,8 @@ def extract_timestamp(html_block):
             return None
     return None
 
+def hash_html_block(html):
+    return hashlib.md5(html.encode("utf-8")).hexdigest()
 def update_sitemap():
     now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
     sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -124,14 +124,12 @@ def update_sitemap():
 """
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
+
 def main():
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
     new_ids = set()
-    seen_html_blocks = set()
-
-    print("📥 Получено постов:", len(posts))
-    print("📄 Уже обработанные ID:", seen_ids)
+    seen_html_hashes = set()
 
     os.makedirs("public", exist_ok=True)
 
@@ -144,15 +142,17 @@ def main():
     fresh_news = []
     if os.path.exists("public/archive.html"):
         with open("public/archive.html", "r", encoding="utf-8") as f:
-            seen_html_blocks.update(re.findall(r"<article class='news-item.*?>.*?</article>", f.read(), re.DOTALL))
+            for block in re.findall(r"<article class='news-item.*?>.*?</article>", f.read(), re.DOTALL):
+                seen_html_hashes.add(hash_html_block(block))
 
     with open("public/archive.html", "a", encoding="utf-8") as archive_file:
         for block in old_news:
             ts = extract_timestamp(block)
+            block_hash = hash_html_block(block)
             if ts and is_older_than_two_days(ts.timestamp()):
-                if block not in seen_html_blocks:
+                if block_hash not in seen_html_hashes:
                     archive_file.write(block + "\n")
-                    seen_html_blocks.add(block)
+                    seen_html_hashes.add(block_hash)
             else:
                 fresh_news.append(block)
 
@@ -169,25 +169,26 @@ def main():
         last = group_posts[-1]
         post_id = str(group_id)
 
-        print(f"🔍 Проверка группы {group_id} — {'новая' if post_id not in seen_ids else 'уже была'}")
         if post_id in seen_ids or post_id in new_ids:
             continue
 
         html = format_post(last, caption_override=first.caption, group_size=len(group_posts))
-        if not html or html in fresh_news:
+        html_hash = hash_html_block(html)
+
+        if html_hash in seen_html_hashes:
             continue
 
         if is_older_than_two_days(last.date):
             with open("public/archive.html", "a", encoding="utf-8") as archive_file:
-                if html not in seen_html_blocks:
-                    archive_file.write(html + "\n")
-                    seen_html_blocks.add(html)
+                archive_file.write(html + "\n")
+                seen_html_hashes.add(html_hash)
         else:
             if visible_count >= visible_limit:
                 html = html.replace("<article class='news-item'>", "<article class='news-item hidden'>")
             fresh_news.insert(0, html)
             visible_count += 1
             new_ids.add(post_id)
+            seen_html_hashes.add(html_hash)
 
     fresh_news = sorted(
         fresh_news,
@@ -217,16 +218,10 @@ document.getElementById("show-more").onclick = () => {
 
     print("✅ news.html записан")
     print("📦 Количество блоков в fresh_news:", len(fresh_news))
-
-    with open("public/news.html", "r", encoding="utf-8") as f:
-        preview = f.read(300)
-        print("📄 Превью news.html:")
-        print(preview if preview else "⚠️ news.html пустой")
-
     print("🌟 Новые ID для сохранения:", new_ids)
     save_seen_ids(seen_ids.union(new_ids))
     update_sitemap()
     print("🗂 sitemap.xml обновлён")
 
 if __name__ == "__main__":
-    main() 
+    main()
