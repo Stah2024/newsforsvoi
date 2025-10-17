@@ -264,10 +264,13 @@ footer {
   }
 
   .search-wrapper {
-    position: static;
-    width: 90%;
-    margin: 0 auto 1rem;
-    text-align: center;
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    width: auto;
+    margin: 0;
+    text-align: left;
+    z-index: 10;
   }
 
   #search-box {
