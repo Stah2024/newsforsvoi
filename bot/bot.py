@@ -112,8 +112,6 @@ def extract_timestamp(html_block):
 
 def hash_html_block(html):
     return hashlib.md5(html.encode("utf-8")).hexdigest()
-
-
 def update_sitemap():
     now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
     sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -148,46 +146,57 @@ def main():
     new_ids = set()
     seen_html_hashes = set()
 
+    if not posts:
+        print("⚠️ Новых постов нет — выходим")
+        return
+
     os.makedirs("public", exist_ok=True)
 
-    old_news = []
+    # Загружаем старые новости
+    fresh_news = []
     if os.path.exists("public/news.html"):
         with open("public/news.html", "r", encoding="utf-8") as f:
             raw = f.read()
-            old_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
+            fresh_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
+            for block in fresh_news:
+                seen_html_hashes.add(hash_html_block(block))
 
-    fresh_news = []
+    # Загружаем архивные новости
     if os.path.exists("public/archive.html"):
         with open("public/archive.html", "r", encoding="utf-8") as f:
             for block in re.findall(r"<article class='news-item.*?>.*?</article>", f.read(), re.DOTALL):
                 seen_html_hashes.add(hash_html_block(block))
 
-    with open("public/archive.html", "a", encoding="utf-8") as archive_file:
-        for block in old_news:
-            ts = extract_timestamp(block)
-            block_hash = hash_html_block(block)
-            if ts and is_older_than_two_days(ts.timestamp()):
-                if block_hash not in seen_html_hashes:
-                    archive_file.write(block + "\n")
-                    seen_html_hashes.add(block_hash)
-            else:
-                fresh_news.append(block)
-
-    # === исправленный участок ===
-    visible_limit = 12
-    visible_count = sum(1 for block in fresh_news if "hidden" not in block)
-
     grouped = {}
     for post in posts:
         key = getattr(post, "media_group_id", None) or post.message_id
-        grouped.setdefault(key, []).append(post)
+        grouped.setdefault(str(key), []).append(post)
 
+    visible_limit = 12
+    visible_count = sum(1 for block in fresh_news if "hidden" not in block)
+
+    any_new = False
+
+    # Переносим старые новости старше 2 дней в архив
+    archive_file = open("public/archive.html", "a", encoding="utf-8")
+    retained_news = []
+    for block in fresh_news:
+        ts = extract_timestamp(block)
+        block_hash = hash_html_block(block)
+        if ts and is_older_than_two_days(ts.timestamp()):
+            if block_hash not in seen_html_hashes:
+                archive_file.write(block + "\n")
+                seen_html_hashes.add(block_hash)
+        else:
+            retained_news.append(block)
+    archive_file.close()
+    fresh_news = retained_news
+
+    # Обрабатываем новые посты
     for group_id, group_posts in grouped.items():
+        post_id = str(group_id)
         first = group_posts[0]
         last = group_posts[-1]
-        post_id = str(group_id)
-
-        print(f"🔍 Проверка группы {group_id} — {'новая' if post_id not in seen_ids else 'уже была'}")
 
         if post_id in seen_ids or post_id in new_ids:
             continue
@@ -198,38 +207,26 @@ def main():
 
         html_hash = hash_html_block(html)
         if html_hash in seen_html_hashes:
-            print(f"🔁 Повтор по хешу: {html_hash}")
             continue
         if html in fresh_news:
-            print("🔁 Повтор по содержимому")
             continue
 
-        if is_older_than_two_days(last.date):
-            with open("public/archive.html", "a", encoding="utf-8") as archive_file:
-                archive_file.write(html + "\n")
-                seen_html_hashes.add(html_hash)
-        else:
-            if visible_count >= visible_limit:
-                html = html.replace("<article class='news-item'>", "<article class='news-item hidden'>")
-            fresh_news.insert(0, html)
-            visible_count += 1
-            new_ids.add(post_id)
-            seen_html_hashes.add(html_hash)
+        if visible_count >= visible_limit:
+            html = html.replace("<article class='news-item'>", "<article class='news-item hidden'>")
+        fresh_news.insert(0, html)
+        visible_count += 1
+        new_ids.add(post_id)
+        seen_html_hashes.add(html_hash)
+        any_new = True
 
-    fresh_news = sorted(
-        fresh_news,
-        key=lambda block: extract_timestamp(block) or datetime.min,
-        reverse=True
-    )
-
-    if not fresh_news:
-        print("⚠️ Нет свежих новостей — news.html не обновлён")
+    if not any_new:
+        print("⚠️ Новых карточек нет — news.html не изменен")
         return
 
+    # Записываем news.html
     with open("public/news.html", "w", encoding="utf-8") as news_file:
         for block in fresh_news:
-            if block:
-                news_file.write(block + "\n")
+            news_file.write(block + "\n")
 
         if any("hidden" in block for block in fresh_news):
             news_file.write("""
@@ -242,10 +239,8 @@ document.getElementById("show-more").onclick = () => {
 </script>
 """)
 
-    print("✅ news.html записан")
-    print("📦 Количество блоков в fresh_news:", len(fresh_news))
-    print("🌟 Новые ID для сохранения:", new_ids)
     save_seen_ids(seen_ids.union(new_ids))
+    print(f"✅ news.html обновлен, добавлено новых карточек: {len(new_ids)}")
     update_sitemap()
     print("🗂 sitemap.xml обновлён")
 
