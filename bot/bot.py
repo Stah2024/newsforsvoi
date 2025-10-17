@@ -12,6 +12,7 @@ SEEN_IDS_FILE = "seen_ids.txt"
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone('Europe/Moscow')
 
+
 def clean_text(text):
     unwanted = [
         "💪Подписаться на новости для своих🇷🇺",
@@ -22,16 +23,19 @@ def clean_text(text):
         text = text.replace(phrase, "")
     return text.strip()
 
+
 def load_seen_ids():
     if not os.path.exists(SEEN_IDS_FILE):
         return set()
     with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
         return set(line.strip() for line in f)
 
+
 def save_seen_ids(seen_ids):
     with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
         for post_id in seen_ids:
             f.write(f"{post_id}\n")
+
 
 def fetch_latest_posts():
     updates = bot.get_updates()
@@ -42,10 +46,12 @@ def fetch_latest_posts():
     ]
     return list(reversed(posts[-10:])) if posts else []
 
+
 def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
     now = datetime.now(moscow)
     return now - post_time >= timedelta(days=2)
+
 
 def format_post(message, caption_override=None, group_size=1):
     html = "<article class='news-item'>\n"
@@ -89,6 +95,8 @@ def format_post(message, caption_override=None, group_size=1):
 
     html += "</article>\n"
     return html
+
+
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
@@ -98,8 +106,10 @@ def extract_timestamp(html_block):
             return None
     return None
 
+
 def hash_html_block(html):
     return hashlib.md5(html.encode("utf-8")).hexdigest()
+
 
 def update_sitemap():
     now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -127,6 +137,7 @@ def update_sitemap():
 """
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
+
 
 def main():
     posts = fetch_latest_posts()
@@ -158,7 +169,8 @@ def main():
                     seen_html_hashes.add(block_hash)
             else:
                 fresh_news.append(block)
-visible_limit = 12
+
+    visible_limit = 12
     visible_count = sum(1 for block in fresh_news if "hidden" not in block)
 
     grouped = {}
@@ -210,8 +222,8 @@ visible_limit = 12
         print("⚠️ Нет свежих новостей — news.html не обновлён")
         return
 
-    with open("public/news.html", "w", encoding="utf-8") as news
-for block in fresh_news:
+    with open("public/news.html", "w", encoding="utf-8") as news_file:
+        for block in fresh_news:
             if block:
                 news_file.write(block + "\n")
 
@@ -232,6 +244,7 @@ document.getElementById("show-more").onclick = () => {
     save_seen_ids(seen_ids.union(new_ids))
     update_sitemap()
     print("🗂 sitemap.xml обновлён")
+
 
 if __name__ == "__main__":
     main()
