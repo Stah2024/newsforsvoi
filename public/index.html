@@ -87,11 +87,11 @@
 
         const items = Array.from(temp.querySelectorAll('.news-item'));
 
-        // 🔄 Сортировка по времени от новых к старым
+        // 🔄 Сортировка по ISO-дате от новых к старым
         items.sort((a, b) => {
-          const timeA = a.querySelector('.timestamp')?.textContent;
-          const timeB = b.querySelector('.timestamp')?.textContent;
-          return new Date(timeB) - new Date(timeA);
+          const timeA = new Date(a.querySelector('.timestamp')?.dataset.ts);
+          const timeB = new Date(b.querySelector('.timestamp')?.dataset.ts);
+          return timeB - timeA;
         });
 
         let visibleCount = 9;
