@@ -11,11 +11,27 @@
   <meta name="description" content="Актуальные новости России и мира без фейков и лишнего шума. Главные события, аналитика, обзоры и факты — коротко и по делу.">
   <meta name="keywords" content="новости, Telegram, SVOih, события, видео, фото, Россия">
   <meta name="author" content="SVOih News Team">
-  <meta name="yandex-verification" content="3a33e674e5836564">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://newsforsvoi.ru/" />
+
+  <!-- Open Graph -->
   <meta property="og:title" content="Новости для Своих" />
   <meta property="og:description" content="Честные новости России и мира" />
-  <meta property="og:url" content="https://newsforsvoi.vercel.app/" />
+  <meta property="og:url" content="https://newsforsvoi.ru/" />
   <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://newsforsvoi.ru/preview.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <!-- Yandex -->
+  <meta name="yandex-verification" content="3a33e674e5836564">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Новости для Своих" />
+  <meta name="twitter:description" content="Честные новости России и мира" />
+  <meta name="twitter:image" content="https://newsforsvoi.ru/preview.jpg" />
 
   <style>
     .news-item {
@@ -44,6 +60,24 @@
     .news-item.enlarged-2 video {
       transform: scale(1.10);
     }
+    .button-bar {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .button.small {
+      font-size: 14px;
+      padding: 6px 12px;
+      display: inline-flex;
+      align-items: center;
+    }
+    .button.small img.icon {
+      height: 16px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
   </style>
 </head>
 <body>
@@ -61,15 +95,23 @@
       </div>
     </div>
 
+    <div class="button-bar">
+      <a href="https://t.me/newsSVOih" class="button small" target="_blank">
+        <img src="/tg-icon.svg" alt="Telegram" class="icon" /> Telegram
+      </a>
+      <a href="archive.html" class="button small">
+        <img src="/archive-icon.svg" alt="Архив" class="icon" /> Архив
+      </a>
+      <a href="https://dzen.ru/britancirazvedos" class="button small" target="_blank">
+        <img src="/zen-icon.svg" alt="Дзен" class="icon" /> Дзен
+      </a>
+    </div>
+
     <div class="search-wrapper">
       <input type="search" id="search-box" placeholder="🔍 Поиск по новостям…" />
     </div>
   </header>
-
-  <main>
-    <a href="https://t.me/newsSVOih" class="button" target="_blank">Перейти в Telegram-канал</a>
-    <a href="archive.html" class="button">Архив</a>
-
+<main>
     <section id="news-feed">
       <h3>Последние новости</h3>
       <div id="news-container" class="news-grid"></div>
