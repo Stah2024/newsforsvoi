@@ -173,13 +173,13 @@ def main():
             else:
                 fresh_news.append(block)
 
-    # Исправленный участок — без лишнего отступа
+    # === исправленный участок ===
     visible_limit = 12
     visible_count = sum(1 for block in fresh_news if "hidden" not in block)
 
     grouped = {}
     for post in posts:
-        key = post.media_group_id or post.message_id
+        key = getattr(post, "media_group_id", None) or post.message_id
         grouped.setdefault(key, []).append(post)
 
     for group_id, group_posts in grouped.items():
