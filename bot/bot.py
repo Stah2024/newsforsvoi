@@ -32,6 +32,7 @@ def save_seen_ids(seen_ids):
     with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
         for post_id in seen_ids:
             f.write(f"{post_id}\n")
+
 def fetch_latest_posts():
     updates = bot.get_updates()
     posts = [
@@ -88,7 +89,6 @@ def format_post(message, caption_override=None, group_size=1):
 
     html += "</article>\n"
     return html
-
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
@@ -100,6 +100,7 @@ def extract_timestamp(html_block):
 
 def hash_html_block(html):
     return hashlib.md5(html.encode("utf-8")).hexdigest()
+
 def update_sitemap():
     now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
     sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -157,8 +158,7 @@ def main():
                     seen_html_hashes.add(block_hash)
             else:
                 fresh_news.append(block)
-
-    visible_limit = 12
+visible_limit = 12
     visible_count = sum(1 for block in fresh_news if "hidden" not in block)
 
     grouped = {}
@@ -211,7 +211,8 @@ def main():
         return
 
     with open("public/news.html", "w", encoding="utf-8") as news_file:
-        news_file.write(f"<!-- Обновлено: {datetime.now(moscow)} -->\for block in fresh_news:
+        news_file.write(f"<!-- Обновлено: {datetime.now(moscow)} -->\n")
+        for block in fresh_news:
             news_file.write(block + "\n")
 
         if any("hidden" in block for block in fresh_news):
