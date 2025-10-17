@@ -210,9 +210,8 @@ visible_limit = 12
         print("⚠️ Нет свежих новостей — news.html не обновлён")
         return
 
-    with open("public/news.html", "w", encoding="utf-8") as news_file:
-        news_file.write(f"<!-- Обновлено: {datetime.now(moscow)} -->\n")
-        for block in fresh_news:
+    with open("public/news.html", "w", encoding="utf-8") as news
+for block in fresh_news:
             if block:
                 news_file.write(block + "\n")
 
