@@ -171,6 +171,8 @@ def main():
         last = group_posts[-1]
         post_id = str(group_id)
 
+        print(f"🔍 Проверка группы {group_id} — {'новая' if post_id not in seen_ids else 'уже была'}")
+
         if post_id in seen_ids or post_id in new_ids:
             continue
 
@@ -180,6 +182,10 @@ def main():
 
         html_hash = hash_html_block(html)
         if html_hash in seen_html_hashes:
+            print(f"🔁 Повтор по хешу: {html_hash}")
+            continue
+        if html in fresh_news:
+            print("🔁 Повтор по содержимому")
             continue
 
         if is_older_than_two_days(last.date):
@@ -205,8 +211,7 @@ def main():
         return
 
     with open("public/news.html", "w", encoding="utf-8") as news_file:
-        news_file.write(f"<!-- Обновлено: {datetime.now(moscow)} -->\n")
-        for block in fresh_news:
+        news_file.write(f"<!-- Обновлено: {datetime.now(moscow)} -->\for block in fresh_news:
             news_file.write(block + "\n")
 
         if any("hidden" in block for block in fresh_news):
