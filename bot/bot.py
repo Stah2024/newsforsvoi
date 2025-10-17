@@ -57,7 +57,7 @@ def format_post(message, caption_override=None, group_size=1):
     html = "<article class='news-item'>\n"
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
-    iso_time = datetime.fromtimestamp(timestamp, moscow).isoformat()
+    iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S")
 
     caption = clean_text(caption_override or message.caption or "")
     text = clean_text(message.text or "")
