@@ -91,7 +91,10 @@ def format_post(message, caption_override=None, group_size=1):
     html += f"<p class='source'>Источник: {message.chat.title}</p>\n"
 
     if group_size > 1:
-        html += f"<p><a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>📷 Смотреть остальные фото/видео в Telegram</a></p>\n"
+        html += (
+            f"<p><a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' "
+            f"target='_blank'>📷 Смотреть остальные фото/видео в Telegram</a></p>\n"
+        )
 
     html += "</article>\n"
     return html
@@ -102,7 +105,7 @@ def extract_timestamp(html_block):
     if match:
         try:
             return datetime.strptime(match.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow)
-        except:
+        except Exception:
             return None
     return None
 
@@ -170,7 +173,7 @@ def main():
             else:
                 fresh_news.append(block)
 
-    # ⚙️ Исправленный участок — без лишнего отступа
+    # Исправленный участок — без лишнего отступа
     visible_limit = 12
     visible_count = sum(1 for block in fresh_news if "hidden" not in block)
 
