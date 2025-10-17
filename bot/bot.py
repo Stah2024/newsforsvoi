@@ -45,6 +45,7 @@ def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
     now = datetime.now(moscow)
     return now - post_time >= timedelta(days=2)
+
 def format_post(message, caption_override=None, group_size=1):
     html = "<article class='news-item'>\n"
     timestamp = message.date
@@ -183,6 +184,12 @@ def main():
             fresh_news.insert(0, html)
             visible_count += 1
             new_ids.add(post_id)
+# Сортировка всех карточек по дате (свежие сверху)
+    fresh_news = sorted(
+        fresh_news,
+        key=lambda block: extract_timestamp(block) or datetime.min,
+        reverse=True
+    )
 
     with open("public/news.html", "w", encoding="utf-8") as news_file:
         news_file.write(f"<!-- Обновлено: {datetime.now(moscow)} -->\n")
