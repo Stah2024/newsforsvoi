@@ -220,8 +220,8 @@ def main():
         fresh_news.insert(0, html)
         visible_count += 1
 
-        if post_id not in seen_ids:
-            new_ids.add(post_id)
+        # ✅ заменено: теперь ID всегда добавляется в new_ids
+        new_ids.add(post_id)
 
         seen_html_hashes.add(html_hash)
         any_new = True
