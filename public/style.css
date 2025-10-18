@@ -152,7 +152,6 @@ footer {
   column-gap: 1.5rem;
   padding-top: 1rem;
 }
-
 .news-item {
   break-inside: avoid;
   margin-bottom: 1.5rem;
@@ -256,16 +255,17 @@ footer {
   .search-wrapper {
     position: absolute;
     top: 1rem;
-    left: 1rem;
-    width: auto;
+    right: 1rem;
+    width: 65%;
     margin: 0;
-    text-align: left;
+    text-align: right;
     z-index: 10;
   }
 
   #search-box {
     font-size: 0.9rem;
     padding: 10px 36px 10px 12px;
+    width: 100%;
   }
 
   .search-wrapper::after {
@@ -281,7 +281,6 @@ footer {
     width: 36px;
   }
 }
-
 /* 🔍 Модальное увеличение карточки */
 .card-overlay {
   position: fixed;
