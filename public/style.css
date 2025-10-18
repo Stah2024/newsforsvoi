@@ -166,16 +166,6 @@ footer {
   cursor: zoom-in;
 }
 
-.news-item.zoom-100 {
-  transform: scale(1.0);
-  z-index: 5;
-}
-
-.news-item.zoom-150 {
-  transform: scale(1.5);
-  z-index: 10;
-}
-
 .news-item img,
 .news-item video {
   max-width: 100%;
@@ -292,14 +282,40 @@ footer {
   }
 }
 
-@media (min-width: 900px) {
-  .news-item.zoom-100 {
-    transform: scale(1.0);
-    z-index: 5;
-  }
+/* 🔍 Модальное увеличение карточки */
+.card-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
 
-  .news-item.zoom-150 {
-    transform: scale(1.5);
-    z-index: 10;
-  }
+.card-overlay .news-item {
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
+  cursor: default;
+}
+
+.card-overlay .news-item:hover {
+  transform: scale(1.05);
+}
+
+.card-overlay .news-item p:hover,
+.card-overlay .news-item img:hover,
+.card-overlay .news-item video:hover {
+  transform: none;
+  cursor: default;
 }
