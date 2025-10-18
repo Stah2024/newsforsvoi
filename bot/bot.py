@@ -143,7 +143,6 @@ def update_sitemap():
         f.write(sitemap)
 
 
-# ✅ Обновлённая функция main()
 def main():
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
@@ -156,7 +155,6 @@ def main():
 
     os.makedirs("public", exist_ok=True)
 
-    # Загружаем старые новости
     fresh_news = []
     if os.path.exists("public/news.html"):
         with open("public/news.html", "r", encoding="utf-8") as f:
@@ -165,7 +163,6 @@ def main():
             for block in fresh_news:
                 seen_html_hashes.add(hash_html_block(block))
 
-    # Загружаем архивные новости
     if os.path.exists("public/archive.html"):
         with open("public/archive.html", "r", encoding="utf-8") as f:
             for block in re.findall(r"<article class='news-item.*?>.*?</article>", f.read(), re.DOTALL):
@@ -178,12 +175,11 @@ def main():
 
     visible_limit = 12
     visible_count = sum(1 for block in fresh_news if "hidden" not in block)
-
     any_new = False
 
-    # Переносим старые новости старше 2 дней в архив
     archive_file = open("public/archive.html", "a", encoding="utf-8")
     retained_news = []
+
     for block in fresh_news:
         ts = extract_timestamp(block)
         block_hash = hash_html_block(block)
@@ -196,13 +192,13 @@ def main():
     archive_file.close()
     fresh_news = retained_news
 
-    # Обрабатываем новые посты
     for group_id, group_posts in grouped.items():
         post_id = str(group_id)
         first = group_posts[0]
         last = group_posts[-1]
 
-        if post_id in new_ids:
+        # ✅ проверяем ID на наличие в seen_ids и new_ids
+        if post_id in seen_ids or post_id in new_ids:
             continue
 
         html = format_post(last, caption_override=first.caption, group_size=len(group_posts))
@@ -220,9 +216,7 @@ def main():
         fresh_news.insert(0, html)
         visible_count += 1
 
-        # ✅ заменено: теперь ID всегда добавляется в new_ids
         new_ids.add(post_id)
-
         seen_html_hashes.add(html_hash)
         any_new = True
 
@@ -230,7 +224,6 @@ def main():
         print("⚠️ Новых карточек нет — news.html не изменен")
         return
 
-    # Записываем news.html
     with open("public/news.html", "w", encoding="utf-8") as news_file:
         for block in fresh_news:
             news_file.write(block + "\n")
