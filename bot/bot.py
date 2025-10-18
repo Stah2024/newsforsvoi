@@ -7,7 +7,7 @@ import hashlib
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = "@newsSVOih"
-SEEN_IDS_FILE = "seen_ids.txt"  # существующий файл в корне проекта
+SEEN_IDS_FILE = "seen_ids.txt"
 
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone('Europe/Moscow')
@@ -180,13 +180,38 @@ def main():
     archive_file = open("public/archive.html", "a", encoding="utf-8")
     retained_news = []
 
-    # Переносим старые новости в архив, если старше 2 дней
+    # Переносим старые новости в архив с удалением медиа и созданием превью
     for block in fresh_news:
         ts = extract_timestamp(block)
         block_hash = hash_html_block(block)
         if ts and is_older_than_two_days(ts.timestamp()):
             if block_hash not in seen_html_hashes:
-                archive_file.write(block + "\n")
+                media_paths = re.findall(r"src=['\"](.*?)['\"]", block)
+                for path in media_paths:
+                    local_path = os.path.join("public", os.path.basename(path))
+                    if os.path.exists(local_path):
+                        try:
+                            os.remove(local_path)
+                            print(f"🧹 Удалён медиафайл: {local_path}")
+                        except Exception as e:
+                            print(f"⚠️ Не удалось удалить {local_path}: {e}")
+
+                link_match = re.search(r"<a href='(https://t\.me/[^']+)'", block)
+                caption_match = re.search(r"<p>(.*?)</p>", block)
+                date_str = ts.strftime("%d.%m.%Y")
+                caption = caption_match.group(1) if caption_match else "Без описания"
+
+                if link_match:
+                    link = link_match.group(1)
+                    preview_html = f"""
+<article class='news-preview'>
+  <p>🗓 {date_str}</p>
+  <p>📎 {caption}</p>
+  <a href='{link}' target='_blank'>Смотреть в Telegram</a>
+</article>
+"""
+                    archive_file.write(preview_html + "\n")
+
                 seen_html_hashes.add(block_hash)
         else:
             retained_news.append(block)
