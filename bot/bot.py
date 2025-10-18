@@ -7,7 +7,7 @@ import hashlib
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = "@newsSVOih"
-SEEN_IDS_FILE = "seen_ids.txt"
+SEEN_IDS_FILE = "seen_ids.txt"  # существующий файл в корне проекта
 
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone('Europe/Moscow')
@@ -180,6 +180,7 @@ def main():
     archive_file = open("public/archive.html", "a", encoding="utf-8")
     retained_news = []
 
+    # Переносим старые новости в архив, если старше 2 дней
     for block in fresh_news:
         ts = extract_timestamp(block)
         block_hash = hash_html_block(block)
@@ -192,12 +193,12 @@ def main():
     archive_file.close()
     fresh_news = retained_news
 
+    # Добавляем новые посты
     for group_id, group_posts in grouped.items():
         post_id = str(group_id)
         first = group_posts[0]
         last = group_posts[-1]
 
-        # ✅ проверяем ID на наличие в seen_ids и new_ids
         if post_id in seen_ids or post_id in new_ids:
             continue
 
@@ -224,6 +225,7 @@ def main():
         print("⚠️ Новых карточек нет — news.html не изменен")
         return
 
+    # Записываем обновленный news.html
     with open("public/news.html", "w", encoding="utf-8") as news_file:
         for block in fresh_news:
             news_file.write(block + "\n")
