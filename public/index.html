@@ -32,6 +32,33 @@
   <meta name="twitter:title" content="Новости для Своих" />
   <meta name="twitter:description" content="Честные новости России и мира" />
   <meta name="twitter:image" content="https://newsforsvoi.ru/preview.jpg" />
+
+  <style>
+    .card-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .card-overlay .news-item {
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      transform: scale(1.05);
+      transition: transform 0.3s ease;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -77,6 +104,8 @@
     © 2025 Новости для Своих | Сделано: <a href="https://t.me/Artstah" target="_blank">@Artstah</a>, email: <a href="mailto:art364@yandex.ru">art364@yandex.ru</a>
   </footer>
 
+  <div id="modal" class="card-overlay" style="display:none;"></div>
+
   <script>
     fetch('/news.html')
       .then(response => response.text())
@@ -87,7 +116,6 @@
 
         const items = Array.from(temp.querySelectorAll('.news-item'));
 
-        // 🔄 Сортировка по ISO-дате от новых к старым
         items.sort((a, b) => {
           const timeA = new Date(a.querySelector('.timestamp')?.dataset.ts);
           const timeB = new Date(b.querySelector('.timestamp')?.dataset.ts);
@@ -125,13 +153,18 @@
     });
 
     function enableCardEnlargement() {
+      const modal = document.getElementById('modal');
+      modal.onclick = (e) => {
+        if (e.target === modal) {
+          modal.style.display = 'none';
+          modal.innerHTML = '';
+        }
+      };
+
       document.querySelectorAll('.news-item').forEach(item => {
-        let zoomState = 0;
         item.addEventListener('click', () => {
-          item.classList.remove('zoom-100', 'zoom-150');
-          zoomState = (zoomState + 1) % 3;
-          if (zoomState === 1) item.classList.add('zoom-100');
-          if (zoomState === 2) item.classList.add('zoom-150');
+          modal.innerHTML = item.outerHTML;
+          modal.style.display = 'flex';
         });
       });
     }
