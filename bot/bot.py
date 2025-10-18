@@ -125,6 +125,8 @@ def format_post(message, caption_override=None, group_size=1):
     html += f"<script type='application/ld+json'>\n{json.dumps(microdata, ensure_ascii=False)}\n</script>\n"
     html += "</article>\n"
     return html
+
+
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
@@ -203,7 +205,7 @@ def main():
 
     archive_file = open("public/archive.html", "a", encoding="utf-8")
     retained_news = []
-for block in fresh_news:
+    for block in fresh_news:
         ts = extract_timestamp(block)
         block_hash = hash_html_block(block)
         if ts and is_older_than_two_days(ts.timestamp()):
