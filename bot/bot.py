@@ -93,9 +93,32 @@ def format_post(message, caption_override=None, group_size=1):
             f"target='_blank'>📷 Смотреть остальные фото/видео в Telegram</a></p>\n"
         )
 
+    microdata = {
+        "@context": "https://schema.org",
+        "@type": "NewsArticle",
+        "headline": caption or text or "Новость",
+        "datePublished": iso_time,
+        "author": {
+            "@type": "Organization",
+            "name": "Новости для Своих"
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "Новости для Своих",
+            "logo": {
+                "@type": "ImageObject",
+                "url": "https://newsforsvoi.ru/logo.png"
+            }
+        },
+        "articleBody": (caption + "\n" + text).strip()
+    }
+
+    if file_url:
+        microdata["image"] = file_url
+
+    html += f"<script type='application/ld+json'>\n{json.dumps(microdata, ensure_ascii=False)}\n</script>\n"
     html += "</article>\n"
     return html
-
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
@@ -165,11 +188,82 @@ def generate_rss(fresh_news):
   </channel>
 </rss>
 """
-
     with open("public/rss.xml", "w", encoding="utf-8") as f:
         f.write(rss)
     print("📰 rss.xml обновлён")
-    for group_id, group_posts in grouped.items():
+
+def main():
+    posts = fetch_latest_posts()
+    seen_ids = load_seen_ids()
+    new_ids = set()
+    seen_html_hashes = set()
+
+    if not posts:
+        print("⚠️ Новых постов нет — выходим")
+        return
+
+    os.makedirs("public", exist_ok=True)
+
+    fresh_news = []
+    if os.path.exists("public/news.html"):
+        with open("public/news.html", "r", encoding="utf-8") as f:
+            raw = f.read()
+            fresh_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
+            for block in fresh_news:
+                seen_html_hashes.add(hash_html_block(block))
+
+    if os.path.exists("public/archive.html"):
+        with open("public/archive.html", "r", encoding="utf-8") as f:
+            for block in re.findall(r"<article class='news-item.*?>.*?</article>", f.read(), re.DOTALL):
+                seen_html_hashes.add(hash_html_block(block))
+
+    grouped = {}
+    for post in posts:
+        key = getattr(post, "media_group_id", None) or post.message_id
+        grouped.setdefault(str(key), []).append(post)
+
+    visible_limit = 12
+    visible_count = sum(1 for block in fresh_news if "hidden" not in block)
+    any_new = False
+
+    archive_file = open("public/archive.html", "a", encoding="utf-8")
+    retained_news = []
+    for block in fresh_news:
+        ts = extract_timestamp(block)
+        block_hash = hash_html_block(block)
+        if ts and is_older_than_two_days(ts.timestamp()):
+            if block_hash not in seen_html_hashes:
+                media_paths = re.findall(r"src=['\"](.*?)['\"]", block)
+                for path in media_paths:
+                    local_path = os.path.join("public", os.path.basename(path))
+                    if os.path.exists(local_path):
+                        try:
+                            os.remove(local_path)
+                            print(f"🧹 Удалён медиафайл: {local_path}")
+                        except Exception as e:
+                            print(f"⚠️ Не удалось удалить {local_path}: {e}")
+
+                link_match = re.search(r"<a href='(https://t\.me/[^']+)'", block)
+                caption_match = re.search(r"<p>(.*?)</p>", block)
+                date_str = ts.strftime("%d.%m.%Y")
+                caption = caption_match.group(1) if caption_match else "Без описания"
+
+                if link_match:
+                    link = link_match.group(1)
+                    preview_html = f"""
+<article class='news-preview'>
+  <p>🗓 {date_str}</p>
+  <p>📎 {caption}</p>
+  <a href='{link}' target='_blank'>Смотреть в Telegram</a>
+</article>
+"""
+                    archive_file.write(preview_html + "\n")
+                    seen_html_hashes.add(block_hash)
+        else:
+            retained_news.append(block)
+    archive_file.close()
+    fresh_news = retained_news
+for group_id, group_posts in grouped.items():
         post_id = str(group_id)
         first = group_posts[0]
         last = group_posts[-1]
