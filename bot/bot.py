@@ -13,6 +13,7 @@ SEEN_IDS_FILE = "seen_ids.txt"
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone('Europe/Moscow')
 
+
 def clean_text(text):
     unwanted = [
         "💪Подписаться на новости для своих🇷🇺",
@@ -23,16 +24,19 @@ def clean_text(text):
         text = text.replace(phrase, "")
     return text.strip()
 
+
 def load_seen_ids():
     if not os.path.exists(SEEN_IDS_FILE):
         return set()
     with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
         return set(line.strip() for line in f)
 
+
 def save_seen_ids(seen_ids):
     with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
         for post_id in seen_ids:
             f.write(f"{post_id}\n")
+
 
 def fetch_latest_posts():
     updates = bot.get_updates()
@@ -43,10 +47,12 @@ def fetch_latest_posts():
     ]
     return list(reversed(posts[-10:])) if posts else []
 
+
 def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
     now = datetime.now(moscow)
     return now - post_time >= timedelta(days=2)
+
 
 def format_post(message, caption_override=None, group_size=1):
     html = "<article class='news-item'>\n"
@@ -98,19 +104,13 @@ def format_post(message, caption_override=None, group_size=1):
         "@type": "NewsArticle",
         "headline": caption or text or "Новость",
         "datePublished": iso_time,
-        "author": {
-            "@type": "Organization",
-            "name": "Новости для Своих"
-        },
+        "author": {"@type": "Organization", "name": "Новости для Своих"},
         "publisher": {
             "@type": "Organization",
             "name": "Новости для Своих",
-            "logo": {
-                "@type": "ImageObject",
-                "url": "https://newsforsvoi.ru/logo.png"
-            }
+            "logo": {"@type": "ImageObject", "url": "https://newsforsvoi.ru/logo.png"},
         },
-        "articleBody": (caption + "\n" + text).strip()
+        "articleBody": (caption + "\n" + text).strip(),
     }
 
     if file_url:
@@ -128,35 +128,23 @@ def extract_timestamp(html_block):
             return None
     return None
 
+
 def hash_html_block(html):
     return hashlib.md5(html.encode("utf-8")).hexdigest()
+
 
 def update_sitemap():
     now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
     sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://newsforsvoi.ru/index.html</loc>
-    <lastmod>{now}</lastmod>
-    <changefreq>always</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://newsforsvoi.ru/news.html</loc>
-    <lastmod>{now}</lastmod>
-    <changefreq>always</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://newsforsvoi.ru/archive.html</loc>
-    <lastmod>{now}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
+  <url><loc>https://newsforsvoi.ru/index.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>
+  <url><loc>https://newsforsvoi.ru/news.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>0.9</priority></url>
+  <url><loc>https://newsforsvoi.ru/archive.html</loc><lastmod>{now}</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>
 </urlset>
 """
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
+
 
 def generate_rss(fresh_news):
     rss_items = ""
@@ -167,7 +155,11 @@ def generate_rss(fresh_news):
 
         title = title_match.group(1) if title_match else "Без заголовка"
         link = link_match.group(1) if link_match else "https://t.me/newsSVOih"
-        pub_date = datetime.strptime(date_match.group(1), "%Y-%m-%dT%H:%M:%S").strftime("%a, %d %b %Y %H:%M:%S +0300") if date_match else ""
+        pub_date = (
+            datetime.strptime(date_match.group(1), "%Y-%m-%dT%H:%M:%S").strftime("%a, %d %b %Y %H:%M:%S +0300")
+            if date_match
+            else ""
+        )
 
         rss_items += f"""
 <item>
@@ -191,6 +183,7 @@ def generate_rss(fresh_news):
     with open("public/rss.xml", "w", encoding="utf-8") as f:
         f.write(rss)
     print("📰 rss.xml обновлён")
+
 
 def main():
     posts = fetch_latest_posts()
@@ -263,7 +256,8 @@ def main():
             retained_news.append(block)
     archive_file.close()
     fresh_news = retained_news
-for group_id, group_posts in grouped.items():
+
+    for group_id, group_posts in grouped.items():
         post_id = str(group_id)
         first = group_posts[0]
         last = group_posts[-1]
@@ -276,16 +270,14 @@ for group_id, group_posts in grouped.items():
             continue
 
         html_hash = hash_html_block(html)
-        if html_hash in seen_html_hashes:
-            continue
-        if html in fresh_news:
+        if html_hash in seen_html_hashes or html in fresh_news:
             continue
 
         if visible_count >= visible_limit:
             html = html.replace("<article class='news-item'>", "<article class='news-item hidden'>")
+
         fresh_news.insert(0, html)
         visible_count += 1
-
         new_ids.add(post_id)
         seen_html_hashes.add(html_hash)
         any_new = True
@@ -315,6 +307,7 @@ document.getElementById("show-more").onclick = () => {
     print("🗂 sitemap.xml обновлён")
     generate_rss(fresh_news)
     print("📰 RSS-файл создан")
+
 
 if __name__ == "__main__":
     main()
