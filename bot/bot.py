@@ -25,37 +25,7 @@ def clean_text(text):
     return text.strip()
 
 
-def load_seen_ids():
-    if not os.path.exists(SEEN_IDS_FILE):
-        return set()
-    with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
-        return set(line.strip() for line in f)
-
-
-def save_seen_ids(seen_ids):
-    with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
-        for post_id in seen_ids:
-            f.write(f"{post_id}\n")
-
-
-def fetch_latest_posts():
-    updates = bot.get_updates()
-    posts = [
-        u.channel_post
-        for u in updates
-        if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
-    ]
-    return list(reversed(posts[-10:])) if posts else []
-
-
-def is_older_than_two_days(timestamp):
-    post_time = datetime.fromtimestamp(timestamp, moscow)
-    now = datetime.now(moscow)
-    return now - post_time >= timedelta(days=2)
-
-
 def format_post(message, caption_override=None, group_size=1):
-    html = "<article class='news-item'>\n"
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
     iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S")
@@ -63,6 +33,18 @@ def format_post(message, caption_override=None, group_size=1):
     caption = clean_text(caption_override or message.caption or "")
     text = clean_text(message.text or "")
     file_url = None
+
+    html = ""
+
+    # Тематические заголовки
+    if "Россия" in caption or "Россия" in text:
+        html += "<h2>Россия</h2>\n"
+    elif "Космос" in caption or "Космос" in text:
+        html += "<h2>Космос</h2>\n"
+    elif any(word in caption + text for word in ["Израиль", "Газа", "Мексика", "США", "Китай", "Тайвань", "Мир"]):
+        html += "<h2>Мир</h2>\n"
+
+    html += "<article class='news-item'>\n"
 
     if message.content_type == 'photo':
         photos = message.photo
@@ -85,9 +67,9 @@ def format_post(message, caption_override=None, group_size=1):
             return ""
 
     if caption:
-        html += f"<p>{caption}</p>\n"
+        html += f"<div class='text-block'><p>{caption}</p></div>\n"
     if text and text != caption:
-        html += f"<p>{text}</p>\n"
+        html += f"<div class='text-block'><p>{text}</p></div>\n"
 
     html += f"<p class='timestamp' data-ts='{iso_time}'>🕒 {formatted_time}</p>\n"
     html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
@@ -139,7 +121,7 @@ def update_sitemap():
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://newsforsvoi.ru/index.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>
   <url><loc>https://newsforsvoi.ru/news.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>0.9</priority></url>
-  <url><loc>https://newsforsvoi.ru/archive.html</loc><lastmod>{now}</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://newsforsvoi.ru/archive.html</loc><lastmod>{now}</lastmod><changefreq=weekly</changefreq><priority>0.5</priority></url>
 </urlset>
 """
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
@@ -183,6 +165,33 @@ def generate_rss(fresh_news):
     with open("public/rss.xml", "w", encoding="utf-8") as f:
         f.write(rss)
     print("📰 rss.xml обновлён")
+def load_seen_ids():
+    if not os.path.exists(SEEN_IDS_FILE):
+        return set()
+    with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
+        return set(line.strip() for line in f)
+
+
+def save_seen_ids(seen_ids):
+    with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
+        for post_id in seen_ids:
+            f.write(f"{post_id}\n")
+
+
+def fetch_latest_posts():
+    updates = bot.get_updates()
+    posts = [
+        u.channel_post
+        for u in updates
+        if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
+    ]
+    return list(reversed(posts[-10:])) if posts else []
+
+
+def is_older_than_two_days(timestamp):
+    post_time = datetime.fromtimestamp(timestamp, moscow)
+    now = datetime.now(moscow)
+    return now - post_time >= timedelta(days=2)
 
 
 def main():
@@ -287,6 +296,48 @@ def main():
         return
 
     with open("public/news.html", "w", encoding="utf-8") as news_file:
+        # Вставляем стили в начало
+        news_file.write("""
+<style>
+  body {
+    font-family: sans-serif;
+    line-height: 1.6;
+    padding: 10px;
+    background: #f9f9f9;
+  }
+  .news-item {
+    margin-bottom: 30px;
+    padding: 15px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.05);
+    border-left: 4px solid #0077cc;
+  }
+  .news-item img, .news-item video {
+    max-width: 100%;
+    margin: 10px 0;
+    border-radius: 4px;
+  }
+  .timestamp {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 10px;
+  }
+  .source {
+    font-size: 0.85em;
+    color: #999;
+  }
+  h2 {
+    margin-top: 40px;
+    font-size: 22px;
+    border-bottom: 2px solid #ccc;
+    padding-bottom: 5px;
+  }
+  .text-block p {
+    margin-bottom: 10px;
+  }
+</style>
+""")
         for block in fresh_news:
             news_file.write(block + "\n")
 
