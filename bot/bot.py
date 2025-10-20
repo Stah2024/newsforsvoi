@@ -99,8 +99,6 @@ def format_post(message, caption_override=None, group_size=1):
     html += f"<script type='application/ld+json'>\n{json.dumps(microdata, ensure_ascii=False)}\n</script>\n"
     html += "</article>\n"
     return html
-
-
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
@@ -165,6 +163,8 @@ def generate_rss(fresh_news):
     with open("public/rss.xml", "w", encoding="utf-8") as f:
         f.write(rss)
     print("📰 rss.xml обновлён")
+
+
 def load_seen_ids():
     if not os.path.exists(SEEN_IDS_FILE):
         return set()
@@ -192,8 +192,6 @@ def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
     now = datetime.now(moscow)
     return now - post_time >= timedelta(days=2)
-
-
 def main():
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
@@ -262,7 +260,8 @@ def main():
             retained_news.append(block)
     archive_file.close()
     fresh_news = retained_news
-for group_id, group_posts in grouped.items():
+
+    for group_id, group_posts in grouped.items():
         post_id = str(group_id)
         first = group_posts[0]
         last = group_posts[-1]
