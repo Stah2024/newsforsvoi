@@ -33,10 +33,8 @@ def format_post(message, caption_override=None, group_size=1):
     caption = clean_text(caption_override or message.caption or "")
     text = clean_text(message.text or "")
     file_url = None
-
     html = ""
 
-    # Тематические заголовки
     if "Россия" in caption or "Россия" in text:
         html += "<h2>Россия</h2>\n"
     elif "Космос" in caption or "Космос" in text:
@@ -101,6 +99,8 @@ def format_post(message, caption_override=None, group_size=1):
     html += f"<script type='application/ld+json'>\n{json.dumps(microdata, ensure_ascii=False)}\n</script>\n"
     html += "</article>\n"
     return html
+
+
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
@@ -121,7 +121,7 @@ def update_sitemap():
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://newsforsvoi.ru/index.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>
   <url><loc>https://newsforsvoi.ru/news.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>0.9</priority></url>
-  <url><loc>https://newsforsvoi.ru/archive.html</loc><lastmod>{now}</lastmod><changefreq=weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://newsforsvoi.ru/archive.html</loc><lastmod>{now}</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>
 </urlset>
 """
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
@@ -232,41 +232,37 @@ def main():
     retained_news = []
     for block in fresh_news:
         ts = extract_timestamp(block)
-        block_hash = hash_html_block(block)
         if ts and is_older_than_two_days(ts.timestamp()):
-            if block_hash not in seen_html_hashes:
-                media_paths = re.findall(r"src=['\"](.*?)['\"]", block)
-                for path in media_paths:
-                    local_path = os.path.join("public", os.path.basename(path))
-                    if os.path.exists(local_path):
-                        try:
-                            os.remove(local_path)
-                            print(f"🧹 Удалён медиафайл: {local_path}")
-                        except Exception as e:
-                            print(f"⚠️ Не удалось удалить {local_path}: {e}")
+            media_paths = re.findall(r"src=['\"](.*?)['\"]", block)
+            for path in media_paths:
+                local_path = os.path.join("public", os.path.basename(path))
+                if os.path.exists(local_path):
+                    try:
+                        os.remove(local_path)
+                        print(f"🧹 Удалён медиафайл: {local_path}")
+                    except Exception as e:
+                        print(f"⚠️ Не удалось удалить {local_path}: {e}")
 
-                link_match = re.search(r"<a href='(https://t\.me/[^']+)'", block)
-                caption_match = re.search(r"<p>(.*?)</p>", block)
-                date_str = ts.strftime("%d.%m.%Y")
-                caption = caption_match.group(1) if caption_match else "Без описания"
+            link_match = re.search(r"<a href='(https://t\.me/[^']+)'", block)
+            caption_match = re.search(r"<p>(.*?)</p>", block)
+            date_str = ts.strftime("%d.%m.%Y")
+            caption = caption_match.group(1) if caption_match else "Без описания"
 
-                if link_match:
-                    link = link_match.group(1)
-                    preview_html = f"""
+            if link_match:
+                link = link_match.group(1)
+                preview_html = f"""
 <article class='news-preview'>
   <p>🗓 {date_str}</p>
   <p>📎 {caption}</p>
   <a href='{link}' target='_blank'>Смотреть в Telegram</a>
 </article>
 """
-                    archive_file.write(preview_html + "\n")
-                    seen_html_hashes.add(block_hash)
+                archive_file.write(preview_html + "\n")
         else:
             retained_news.append(block)
     archive_file.close()
     fresh_news = retained_news
-
-    for group_id, group_posts in grouped.items():
+for group_id, group_posts in grouped.items():
         post_id = str(group_id)
         first = group_posts[0]
         last = group_posts[-1]
@@ -296,7 +292,6 @@ def main():
         return
 
     with open("public/news.html", "w", encoding="utf-8") as news_file:
-        # Вставляем стили в начало
         news_file.write("""
 <style>
   body {
