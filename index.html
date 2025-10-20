@@ -17,37 +17,22 @@
   <meta property="og:url" content="https://newsforsvoi.vercel.app/" />
   <meta property="og:type" content="website" />
 
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#ff0000">
+  <link rel="prefetch" href="/archive.html">
+  <link rel="prefetch" href="/news.html">
+
   <style>
     .news-item {
       transition: transform 0.3s ease, box-shadow 0.3s ease;
       cursor: zoom-in;
     }
-
-    .news-item.enlarged-1 {
-      transform: scale(1.05);
-      cursor: zoom-out;
-      z-index: 5;
-      position: relative;
-    }
-
-    .news-item.enlarged-2 {
-      transform: scale(1.10);
-      cursor: zoom-out;
-      z-index: 10;
-      position: relative;
-    }
-
-    .news-item img,
-    .news-item video {
-      transition: transform 0.3s ease;
-    }
-
-    .news-item.enlarged-1 img,
-    .news-item.enlarged-2 img,
-    .news-item.enlarged-1 video,
-    .news-item.enlarged-2 video {
-      transform: scale(1.10);
-    }
+    .news-item.enlarged-1 { transform: scale(1.05); cursor: zoom-out; z-index: 5; position: relative; }
+    .news-item.enlarged-2 { transform: scale(1.10); cursor: zoom-out; z-index: 10; position: relative; }
+    .news-item img, .news-item video { transition: transform 0.3s ease; }
+    .news-item.enlarged-1 img, .news-item.enlarged-2 img,
+    .news-item.enlarged-1 video, .news-item.enlarged-2 video { transform: scale(1.10); }
   </style>
 </head>
 <body>
@@ -59,8 +44,7 @@
         <h2>Честные новости России и мира</h2>
         <p class="tagline">
           Актуальные новости России и мира без фейков и лишнего шума.<br>
-          Главные события, аналитика, обзоры и факты — коротко и по делу.<br>
-          Читайте свежие новости, политические и военные сводки, новости экономики, технологий и общества.
+          Главные события, аналитика, обзоры и факты — коротко и по делу.
         </p>
       </div>
     </div>
@@ -68,94 +52,132 @@
     <div class="search-wrapper">
       <input type="search" id="search-box" placeholder="🔍 Поиск по новостям…" />
     </div>
+
+    <div class="category-tabs">
+      <button class="tab active" data-cat="Все">Все</button>
+      <button class="tab" data-cat="Россия">Россия</button>
+      <button class="tab" data-cat="Космос">Космос</button>
+      <button class="tab" data-cat="Мир">Мир</button>
+    </div>
   </header>
 
   <main>
-    <a href="https://t.me/newsSVOih" class="button" target="_blank">Перейти в Telegram-канал</a>
-    <a href="archive.html" class="button">Архив</a>
+    <div class="buttons">
+      <a href="https://t.me/newsSVOih" class="button primary" target="_blank">📱 Telegram</a>
+      <a href="archive.html" class="button secondary">📂 Архив</a>
+      <a href="rss.xml" class="button" target="_blank">📰 RSS</a>
+    </div>
 
     <section id="news-feed">
       <h3>Последние новости</h3>
-      <div id="news-container" class="news-grid"></div>
-      <button id="load-more" class="button">Показать ещё</button>
+      <div id="news-container" class="news-grid">
+        <div class="loading">⏳ Загружаем новости...</div>
+      </div>
+      <button id="load-more" class="button">📄 Показать ещё</button>
     </section>
   </main>
 
   <footer>
-    © 2025 Новости для Своих
+    © 2025 Новости для Своих | <a href="https://t.me/newsSVOih">Telegram</a>
   </footer>
 
   <script>
-    fetch('/news.html')
-      .then(response => response.text())
-      .then(html => {
-        const container = document.getElementById('news-container');
+    let allItems = [];
+    let visibleCount = 9;
+    let currentCategory = 'Все';
+
+    async function loadNews() {
+      try {
+        const response = await fetch('/news.html');
+        const html = await response.text();
+        
         const temp = document.createElement('div');
         temp.innerHTML = html;
-
-        const items = Array.from(temp.querySelectorAll('.news-item'));
-        let visibleCount = 9;
-
-        function renderItems() {
-          container.innerHTML = '';
-          items.slice(0, visibleCount).forEach(item => container.appendChild(item));
-          if (visibleCount >= items.length) {
-            document.getElementById('load-more').style.display = 'none';
-          }
-          enableCardEnlargement();
-        }
-
-        document.getElementById('load-more').addEventListener('click', () => {
-          visibleCount += 9;
-          renderItems();
-        });
-
+        allItems = Array.from(temp.querySelectorAll('.news-item'));
+        
         renderItems();
-      })
-      .catch(error => {
-        document.getElementById('news-container').innerHTML = '<p>Не удалось загрузить новости.</p>';
-        console.error('Ошибка загрузки news.html:', error);
-      });
+        setupSearch();
+        setupCategories();
+        setupEnlargement();
+        
+      } catch (error) {
+        document.getElementById('news-container').innerHTML = 
+          '<p class="error">❌ Не удалось загрузить новости</p>';
+      }
+    }
 
-    document.getElementById('search-box').addEventListener('input', function(e) {
-      const query = e.target.value.toLowerCase();
-      document.querySelectorAll('.news-item').forEach(item => {
-        item.style.display = item.textContent.toLowerCase().includes(query) ? '' : 'none';
+    function renderItems() {
+      const container = document.getElementById('news-container');
+      const filteredItems = currentCategory === 'Все' ? allItems : 
+        allItems.filter(item => item.querySelector('h2')?.textContent === currentCategory);
+      
+      container.innerHTML = filteredItems.slice(0, visibleCount).map(item => {
+        const clone = item.cloneNode(true);
+        const category = item.querySelector('h2')?.textContent || 'Мир';
+        clone.insertAdjacentHTML('afterbegin', `<span class="category-badge">${category}</span>`);
+        return clone;
       });
+      
+      document.getElementById('load-more').style.display = 
+        visibleCount < filteredItems.length ? 'block' : 'none';
+    }
+
+    document.getElementById('load-more').addEventListener('click', () => {
+      visibleCount += 9;
+      renderItems();
     });
 
-    function enableCardEnlargement() {
-      document.querySelectorAll('.news-item').forEach(item => {
-        item.addEventListener('click', () => {
-          if (item.classList.contains('enlarged-2')) {
-            item.classList.remove('enlarged-2');
-            item.classList.remove('enlarged-1');
-          } else if (item.classList.contains('enlarged-1')) {
-            item.classList.remove('enlarged-1');
-            item.classList.add('enlarged-2');
-          } else {
-            item.classList.add('enlarged-1');
-          }
+    function setupCategories() {
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          e.target.classList.add('active');
+          currentCategory = e.target.dataset.cat;
+          visibleCount = 9;
+          renderItems();
         });
       });
     }
+
+    function setupSearch() {
+      document.getElementById('search-box').addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase();
+        const filtered = allItems.filter(item => 
+          item.textContent.toLowerCase().includes(query)
+        );
+        currentCategory = 'Все';
+        document.querySelector('.tab[data-cat="Все"]').classList.add('active');
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector('.tab[data-cat="Все"]').classList.add('active');
+        
+        allItems = filtered;
+        visibleCount = 9;
+        renderItems();
+      });
+    }
+
+    function setupEnlargement() {
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('.news-item') && !e.target.closest('a')) {
+          const item = e.target.closest('.news-item');
+          const classes = item.className;
+          item.className = classes.includes('enlarged-2') ? classes.replace('enlarged-2', '') : 
+                          classes.includes('enlarged-1') ? classes.replace('enlarged-1', '') + ' enlarged-2' : 
+                          classes + ' enlarged-1';
+        }
+      });
+    }
+
+    loadNews();
   </script>
 
-  <!-- Yandex.Metrika counter -->
-<script type="text/javascript">
-    (function(m,e,t,r,i,k,a){
-        m[i]=m[i]function(){(m[i].a=m[i].a[]).push(arguments)};
-        m[i].l=1*new Date();
-        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=104694411', 'ym');
-
-    ym(104694411, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", accurateTrackBounce:true, trackLinks:true});
-</script>
-<noscript><div><img src="https://mc.yandex.ru/watch/104694411" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-<!-- /Yandex.Metrika counter -->
-    });
+  <!-- Yandex.Metrika -->
+  <script type="text/javascript">
+    (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+    m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+    (window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym');
+    ym(104694411, 'init', {ssr:true, webvisor:true, clickmap:true, accurateTrackBounce:true});
   </script>
-  <noscript><div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+  <noscript><div><img src="https://mc.yandex.ru/watch/104694411" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 </body>
 </html>
