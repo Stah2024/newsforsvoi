@@ -99,6 +99,8 @@ def format_post(message, caption_override=None, group_size=1):
     html += f"<script type='application/ld+json'>\n{json.dumps(microdata, ensure_ascii=False)}\n</script>\n"
     html += "</article>\n"
     return html
+
+
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
@@ -124,6 +126,8 @@ def update_sitemap():
 """
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
+
+
 def generate_rss(fresh_news):
     rss_items = ""
     for block in fresh_news:
@@ -226,41 +230,102 @@ def main():
     visible_count = sum(1 for block in fresh_news if "hidden" not in block)
     any_new = False
 
-    archive_file = open("public/archive.html", "a", encoding="utf-8")
-    retained_news = []
-    for block in fresh_news:
-        ts = extract_timestamp(block)
-        if ts and is_older_than_two_days(ts.timestamp()):
-            media_paths = re.findall(r"src=['\"](.*?)['\"]", block)
-            for path in media_paths:
-                local_path = os.path.join("public", os.path.basename(path))
-                if os.path.exists(local_path):
-                    try:
-                        os.remove(local_path)
-                        print(f"🧹 Удалён медиафайл: {local_path}")
-                    except Exception as e:
-                        print(f"⚠️ Не удалось удалить {local_path}: {e}")
+    # ✅ ПЕРЕСОЗДАЁМ archive.html С СТИЛЯМИ
+    with open("public/archive.html", "w", encoding="utf-8") as archive_file:
+        archive_file.write("""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Архив новостей - Новости для Своих</title>
+    <meta charset="UTF-8">
+    <style>
+        body { 
+            font-family: sans-serif; 
+            padding: 20px; 
+            background: #f9f9f9; 
+            line-height: 1.6;
+        }
+        h1 { 
+            color: #333; 
+            text-align: center; 
+            margin-bottom: 30px;
+        }
+        .news-preview { 
+            background: #fff; 
+            margin: 20px 0; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #0077cc;
+        }
+        .news-preview p { 
+            margin: 8px 0; 
+            color: #333;
+        }
+        .news-preview a { 
+            color: #0077cc; 
+            text-decoration: none; 
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: #f0f8ff;
+            border-radius: 4px;
+        }
+        .news-preview a:hover { 
+            background: #e6f3ff; 
+            text-decoration: underline; 
+        }
+    </style>
+</head>
+<body>
+    <h1>🗂 Архив новостей</h1>
+        """)
 
-            link_match = re.search(r"<a href='(https://t\.me/[^']+)'", block)
-            caption_match = re.search(r"<p>(.*?)</p>", block)
-            date_str = ts.strftime("%d.%m.%Y")
-            caption = caption_match.group(1) if caption_match else "Без описания"
+        # ✅ ПЕРЕМЕЩАЕМ СТАРЫЕ КАРТОЧКИ В АРХИВ
+        retained_news = []
+        for block in fresh_news:
+            ts = extract_timestamp(block)
+            
+            if ts and is_older_than_two_days(ts.timestamp()):
+                # 1. УДАЛЯЕМ МЕДИА ФАЙЛЫ
+                media_paths = re.findall(r"src=['\"](.*?)['\"]", block)
+                for path in media_paths:
+                    local_path = os.path.join("public", os.path.basename(path))
+                    if os.path.exists(local_path):
+                        try:
+                            os.remove(local_path)
+                            print(f"🧹 Удалён медиафайл: {local_path}")
+                        except Exception as e:
+                            print(f"⚠️ Ошибка удаления {local_path}: {e}")
 
-            if link_match:
-                link = link_match.group(1)
-                preview_html = f"""
+                # 2. ИЗВЛЕКАЕМ ДАННЫЕ ДЛЯ PREVIEW
+                link_match = re.search(r"<a href='(https://t\.me/[^']+)'", block)
+                text_match = re.search(r"<div class='text-block'><p>(.*?)</p></div>", block, re.DOTALL)
+                
+                link = link_match.group(1) if link_match else f"https://t.me/{CHANNEL_ID[1:]}"
+                preview_text = text_match.group(1).strip()[:100] + "..." if text_match else "Новость"
+                date_str = ts.strftime("%d.%m.%Y %H:%M")
+                
+                # 3. ФОРМИРУЕМ КАРТОЧКУ АРХИВА
+                archive_card = f"""
 <article class='news-preview'>
-  <p>🗓 {date_str}</p>
-  <p>📎 {caption}</p>
-  <a href='{link}' target='_blank'>Смотреть в Telegram</a>
+  <p><strong>🗓 {date_str}</strong></p>
+  <p>{preview_text}</p>
+  <a href='{link}' target='_blank'>🔗 Читать полный пост в Telegram</a>
 </article>
 """
-                archive_file.write(preview_html + "\n")
-        else:
-            retained_news.append(block)
-    archive_file.close()
+                archive_file.write(archive_card + "\n")
+                print(f"📁 АРХИВ: {preview_text[:30]}...")
+                
+            else:
+                retained_news.append(block)
+        
+        archive_file.write("</body></html>")
+    
     fresh_news = retained_news
 
+    # ✅ НОВЫЕ КАРТОЧКИ
     for group_id, group_posts in grouped.items():
         post_id = str(group_id)
         first = group_posts[0]
@@ -290,6 +355,7 @@ def main():
         print("⚠️ Новых карточек нет — news.html не изменен")
         return
 
+    # ✅ СОЗДАЁМ news.html
     with open("public/news.html", "w", encoding="utf-8") as news_file:
         news_file.write("""
 <style>
