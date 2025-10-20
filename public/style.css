@@ -1,3 +1,4 @@
+/* 🆕 СОВРЕМЕННЫЙ ДИЗАЙН 2025 - ВАШИ СТИЛИ + УЛУЧШЕНИЯ */
 body {
   margin: 0;
   padding: 0;
@@ -9,12 +10,13 @@ body {
   flex-direction: column;
 }
 
+/* 🇷🇺 НОВАЯ ПАТРИОТИЧЕСКАЯ ШАПКА */
 header {
-  background: linear-gradient(135deg, #556B2F, #3C3B32);
+  background: linear-gradient(135deg, #ff0000, #0038a8);
   color: white;
   text-align: center;
   padding: 3rem 1rem 2rem;
-  border-bottom: 4px solid #2F4F4F;
+  border-bottom: 4px solid #ffc107;
   box-shadow: 0 4px 10px rgba(0,0,0,0.3);
   position: relative;
 }
@@ -37,28 +39,66 @@ h1 {
   margin-bottom: 0.3rem;
   text-transform: uppercase;
   letter-spacing: 1px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
 h2 {
   font-size: 1.2rem;
   font-weight: normal;
-  color: #d8e0d8;
+  color: #fff;
 }
 
+/* 🆕 КАТЕГОРИИ */
+.category-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+}
+
+.tab {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.tab.active, .tab:hover {
+  background: #ffc107;
+  color: #0038a8;
+  transform: translateY(-2px);
+}
+
+/* 🆕 SEARCH - АДАПТИРОВАЛ ПОД НОВУЮ ШАПКУ */
 .search-wrapper {
   position: absolute;
   top: 20px;
   right: 20px;
   max-width: 280px;
   margin: 0;
+  background: rgba(255,255,255,0.15);
+  border-radius: 25px;
+  padding: 5px;
+  backdrop-filter: blur(10px);
 }
 
 #search-box {
   width: 100%;
   padding: 12px 40px 12px 16px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+  border-radius: 20px;
+  border: none;
+  background: transparent;
+  color: white;
   font-size: 1rem;
+}
+
+#search-box::placeholder { 
+  color: rgba(255,255,255,0.8); 
 }
 
 .search-wrapper::after {
@@ -68,45 +108,46 @@ h2 {
   top: 50%;
   transform: translateY(-50%);
   font-size: 1.2rem;
-  color: #666;
+  color: rgba(255,255,255,0.8);
 }
 
-.button-bar {
+/* 🆕 КНОПКИ */
+.buttons {
   display: flex;
   gap: 10px;
   justify-content: center;
-  margin-top: 10px;
+  margin: 2rem 0;
   flex-wrap: wrap;
 }
 
-.button.small {
-  font-size: 14px;
-  padding: 6px 12px;
-  display: inline-flex;
-  align-items: center;
+.button {
+  display: inline-block;
+  background: linear-gradient(135deg, #ff0000, #0038a8);
+  color: white;
   text-decoration: none;
   font-weight: bold;
-  border-radius: 10px;
-  background: #3C3B32;
-  color: white;
-  transition: background 0.3s, transform 0.2s;
+  padding: 14px 28px;
+  border-radius: 25px;
+  transition: all 0.3s ease;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
 }
 
-.button.small:hover {
-  background: #556B2F;
-  transform: scale(1.03);
+.button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.3);
 }
 
-.button.small img.icon {
-  height: 16px;
-  margin-right: 6px;
-  vertical-align: middle;
+.button.secondary {
+  background: linear-gradient(135deg, #ffc107, #ff8c00);
+  color: #0038a8;
 }
 
+/* 🆕 ОСНОВНОЙ КОНТЕЙНЕР */
 main {
   max-width: 1200px;
   margin: 3rem auto;
-  background: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.95);
   padding: 2rem;
   border-radius: 16px;
   text-align: center;
@@ -115,54 +156,43 @@ main {
   animation: fadeIn 1s ease;
 }
 
-a.button {
-  display: inline-block;
-  background: #3C3B32;
-  color: white;
-  text-decoration: none;
-  font-weight: bold;
-  padding: 14px 28px;
-  border-radius: 10px;
-  transition: background 0.3s, transform 0.2s;
-  margin-top: 1rem;
-  font-size: 1.1rem;
-}
-
-a.button:hover {
-  background: #556B2F;
-  transform: scale(1.03);
-}
-
-footer {
-  text-align: center;
-  font-size: 0.9rem;
-  color: #ddd;
-  padding: 2rem 0;
-  background: rgba(0,0,0,0.6);
-  margin-top: auto;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
+/* 🆕 NEWS GRID - МУЛЬТИКОЛОНКА + ГРИД */
 .news-grid {
   column-count: 3;
   column-gap: 1.5rem;
   padding-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
 }
+
 .news-item {
   break-inside: avoid;
   margin-bottom: 1.5rem;
-  background-color: #f9f9f9;
+  background-color: #fff;
   padding: 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   animation: fadeIn 0.6s ease;
   text-align: left;
   transition: transform 0.3s ease;
   cursor: zoom-in;
+  border-left: 4px solid #ff0000;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 🆕 БЕДЖ КАТЕГОРИИ */
+.category-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #ffc107;
+  color: #0038a8;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 .news-item img,
@@ -207,8 +237,17 @@ footer {
   display: inline-block;
   margin-top: 0.5rem;
   font-size: 0.95rem;
-  color: #3C3B32;
-  text-decoration: underline;
+  color: #ff0000;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 6px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.news-item a:hover {
+  background: #ff0000;
+  color: white;
 }
 
 .telegram-video-link {
@@ -218,15 +257,53 @@ footer {
   font-size: 0.95rem;
 }
 
+/* 🆕 LOADING & ERROR */
+.loading, .error {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.error { 
+  color: #dc3545; 
+  grid-column: 1 / -1;
+}
+
+/* FOOTER */
+footer {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #fff;
+  padding: 2rem 0;
+  background: linear-gradient(135deg, #ff0000, #0038a8);
+  margin-top: auto;
+}
+
+footer a { 
+  color: #ffc107; 
+  text-decoration: underline; 
+}
+
+/* АНИМАЦИИ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* МОБИЛЬНАЯ ВЕРСИЯ */
 @media (max-width: 900px) {
   .news-grid {
     column-count: 2;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
 }
 
 @media (max-width: 600px) {
   .news-grid {
     column-count: 1;
+    grid-template-columns: 1fr;
     padding: 0 1rem;
   }
 
@@ -240,55 +317,69 @@ footer {
     align-items: center;
   }
 
-  h1 {
-    font-size: 1.6rem;
-  }
-
-  h2 {
-    font-size: 1rem;
-  }
-
-  .tagline {
-    font-size: 0.95rem;
-  }
+  h1 { font-size: 1.8rem; }
+  h2 { font-size: 1rem; }
 
   .search-wrapper {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    width: 65%;
-    margin: 0;
-    text-align: right;
-    z-index: 10;
-  }
-
-  #search-box {
-    font-size: 0.9rem;
-    padding: 10px 36px 10px 12px;
-    width: 100%;
-  }
-
-  .search-wrapper::after {
-    right: 10px;
-    font-size: 1rem;
+    position: static;
+    margin: 1rem auto;
+    max-width: 90%;
   }
 
   .flag-icon {
-    position: absolute;
-    left: 10px;
-    top: 10px;
-    z-index: 10;
+    position: static;
     width: 36px;
   }
+
+  .buttons {
+    flex-direction: column;
+  }
+
+  .button {
+    margin: 5px 0;
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .category-tabs {
+    gap: 5px;
+  }
+
+  .tab {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
 }
-/* 🔍 Модальное увеличение карточки */
+
+/* 🔍 МОДАЛЬНОЕ УВЕЛИЧЕНИЕ КАРТОЧКИ */
+.news-item.enlarged-1 {
+  transform: scale(1.05);
+  z-index: 5;
+  position: relative;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
+.news-item.enlarged-2 {
+  transform: scale(1.10);
+  z-index: 10;
+  position: relative;
+  box-shadow: 0 12px 35px rgba(0,0,0,0.3);
+}
+
+.news-item.enlarged-1 img,
+.news-item.enlarged-2 img,
+.news-item.enlarged-1 video,
+.news-item.enlarged-2 video {
+  transform: scale(1.10);
+}
+
 .card-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -296,25 +387,12 @@ footer {
 }
 
 .card-overlay .news-item {
-  max-width: 600px;
+  max-width: 90vw;
   max-height: 90vh;
   overflow-y: auto;
   background: #fff;
-  padding: 1.5rem;
+  padding: 2rem;
   border-radius: 12px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  box-shadow: 0 0 30px rgba(0,0,0,0.5);
   transform: scale(1.05);
-  transition: transform 0.3s ease;
-  cursor: default;
-}
-
-.card-overlay .news-item:hover {
-  transform: scale(1.05);
-}
-
-.card-overlay .news-item p:hover,
-.card-overlay .news-item img:hover,
-.card-overlay .news-item video:hover {
-  transform: none;
-  cursor: default;
 }
