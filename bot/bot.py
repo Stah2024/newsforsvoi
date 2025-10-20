@@ -11,14 +11,14 @@ CHANNEL_ID = "@newsSVOih"
 SEEN_IDS_FILE = "seen_ids.txt"
 
 bot = telebot.TeleBot(TOKEN)
-moscow = pytz.timezone('Europe/Moscow')
+moscow = pytz.timezone("Europe/Moscow")
 
 
 def clean_text(text):
     unwanted = [
         "💪Подписаться на новости для своих🇷🇺",
         "Подписаться на новости для своих",
-        "https://t.me/newsSVOih"
+        "https://t.me/newsSVOih",
     ]
     for phrase in unwanted:
         text = text.replace(phrase, "")
@@ -44,15 +44,15 @@ def format_post(message, caption_override=None, group_size=1):
 
     html += "<article class='news-item'>\n"
 
-    if message.content_type == 'photo':
+    if message.content_type == "photo":
         photos = message.photo
         file_info = bot.get_file(photos[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
         html += f"<img src='{file_url}' alt='Фото' />\n"
 
-    elif message.content_type == 'video':
+    elif message.content_type == "video":
         try:
-            size = getattr(message.video, 'file_size', 0)
+            size = getattr(message.video, "file_size", 0)
             if size == 0 or size <= 20_000_000:
                 file_info = bot.get_file(message.video.file_id)
                 file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
@@ -124,8 +124,6 @@ def update_sitemap():
 """
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
-
-
 def generate_rss(fresh_news):
     rss_items = ""
     for block in fresh_news:
@@ -192,6 +190,8 @@ def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
     now = datetime.now(moscow)
     return now - post_time >= timedelta(days=2)
+
+
 def main():
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
