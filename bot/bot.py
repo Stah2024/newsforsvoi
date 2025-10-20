@@ -183,7 +183,7 @@ def fetch_latest_posts():
         for u in updates
         if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
     ]
-    return list(reversed(posts[-10:])) if posts else []
+    return list(reversed(posts[-12:])) if posts else []
 
 
 def is_older_than_two_days(timestamp):
