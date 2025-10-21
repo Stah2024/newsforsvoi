@@ -117,6 +117,17 @@
       <div id="news-container" class="news-grid"></div>
       <button id="load-more" class="button">Показать ещё</button>
     </section>
+
+    <!-- 🆕 Форма подписки Unisender -->
+    <section class="subscribe-wrapper">
+      <h3>Подпишись на новости!</h3>
+      <form action="https://api.unisender.com/ru/api/subscribe" method="post" class="subscribe-form">
+        <input type="hidden" name="api_key" value="6jhinetoegc4sgwdpc1x44k3wk1gpqjyhn5bqiwe">
+        <input type="hidden" name="list_ids" value="1">
+        <input type="email" name="email" placeholder="Ваш email" required>
+        <button type="submit" class="button small">Подписаться</button>
+      </form>
+    </section>
   </main>
 
   <footer>
