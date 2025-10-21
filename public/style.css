@@ -88,7 +88,7 @@ h2 {
 }
 
 #search-box {
-  width: 100%;
+  width: 100;
   padding: 12px 40px 12px 16px;
   border-radius: 20px;
   border: none;
@@ -395,4 +395,55 @@ footer a {
   border-radius: 12px;
   box-shadow: 0 0 30px rgba(0,0,0,0.5);
   transform: scale(1.05);
+}
+
+/* 🆕 СТИЛИ ДЛЯ ФОРМЫ UNISENDER */
+.subscribe-wrapper {
+  max-width: 500px;
+  margin: 2rem auto;
+  text-align: center;
+}
+
+.subscribe-form {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.subscribe-form input[type="email"] {
+  padding: 12px;
+  border-radius: 25px;
+  border: none;
+  width: 250px;
+  font-size: 1rem;
+  background: #f8f9fa;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.subscribe-form .button {
+  background: linear-gradient(135deg, #ff0000, #0038a8);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.subscribe-form .button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+}
+
+@media (max-width: 600px) {
+  .subscribe-form {
+    flex-direction: column;
+    align-items: center;
+  }
+  .subscribe-form input[type="email"] {
+    width: 100%;
+    max-width: 300px;
+  }
 }
