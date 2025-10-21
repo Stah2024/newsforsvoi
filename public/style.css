@@ -88,7 +88,7 @@ h2 {
 }
 
 #search-box {
-  width: 100;
+  width: 100%;
   padding: 12px 40px 12px 16px;
   border-radius: 20px;
   border: none;
@@ -111,15 +111,42 @@ h2 {
   color: rgba(255,255,255,0.8);
 }
 
-/* 🆕 КНОПКИ */
-.buttons {
+/* 🆕 КНОПКИ В ШАПКЕ */
+.button-bar {
   display: flex;
   gap: 10px;
   justify-content: center;
-  margin: 2rem 0;
+  margin-top: 10px;
   flex-wrap: wrap;
 }
 
+.button.small {
+  font-size: 14px;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  font-weight: bold;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff0000, #0038a8);
+  color: white;
+  transition: background 0.3s, transform 0.2s;
+  max-width: 150px; /* Фикс ширины, как у Дзен */
+  white-space: nowrap; /* Без переноса текста */
+}
+
+.button.small:hover {
+  background: linear-gradient(135deg, #cc0000, #00288f); /* Темнее при наведении */
+  transform: scale(1.03);
+}
+
+.button.small img.icon {
+  height: 16px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* 🆕 ОСНОВНОЙ КНОПКИ (ДЛЯ ДРУГИХ МЕСТ) */
 .button {
   display: inline-block;
   background: linear-gradient(135deg, #ff0000, #0038a8);
@@ -348,6 +375,17 @@ footer a {
   .tab {
     padding: 8px 12px;
     font-size: 14px;
+  }
+
+  .button-bar {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .button.small {
+    margin: 5px 0;
+    max-width: 150px; /* Фикс ширины на мобильных */
+    width: auto;
   }
 }
 
