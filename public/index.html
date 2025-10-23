@@ -160,14 +160,14 @@
     // ✅ UNISENDER FORM — РАБОЧИЙ JavaScript
     document.getElementById('unisender-form').addEventListener('submit', async function(e) {
       e.preventDefault();
-      
+
       const email = document.getElementById('email-input').value;
       const messageEl = document.getElementById('subscribe-message');
-      
+
       // Очистка
       messageEl.innerHTML = '<p>Подписываемся...</p>';
       messageEl.className = '';
-      
+
       try {
         const response = await fetch('https://api.unisender.com/ru/api/subscribe', {
           method: 'POST',
@@ -181,9 +181,9 @@
             'double_optin': '2'      // Без подтверждения
           })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.code === 'success') {
           messageEl.innerHTML = '<p>✅ Подписка оформлена! Вы получите новости на ' + email + '</p>';
           messageEl.className = 'subscribe-success';
@@ -284,5 +284,68 @@
       <img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" />
     </div>
   </noscript>
+
+  <!-- 🍪 БАННЕР СОГЛАСИЯ НА COOKIES -->
+  <div id="cookie-consent" style="
+    position: fixed; bottom: 0; left: 0; right: 0; 
+    background: #333; color: white; padding: 20px; z-index: 10001; 
+    font-family: sans-serif; box-shadow: 0 -2px 20px rgba(0,0,0,0.3);
+    display: none;
+  ">
+    <div style="max-width: 800px; margin: 0 auto;">
+      <p style="margin: 0 0 10px 0; font-size: 14px;">
+        Мы используем <strong>cookies</strong> и передаём данные Яндексу для персонализированной рекламы и аналитики. 
+        <a href="/privacy.html" style="color: #0077cc;" target="_blank">Подробнее</a>
+      </p>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="acceptCookies()" style="
+          background: #0077cc; color: white; border: none; padding: 12px 24px; 
+          border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;
+        ">✅ Принять</button>
+        <button onclick="rejectCookies()" style="
+          background: transparent; color: white; border: 2px solid white; 
+          padding: 10px 20px; border-radius: 6px; cursor: pointer;
+        ">❌ Отклонить</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  function setCookie(name, value, days) {
+    let expires = "";
+    if (days) {
+      let date = new Date();
+      date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+      expires = "; expires=" + date.toUTCString();
+    }
+    document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
+  }
+
+  function getCookie(name) {
+    let nameEQ = name + "=";
+    let ca = document.cookie.split(';');
+    for(let i = 0; i < ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+      if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+  }
+
+  function acceptCookies() {
+    setCookie('cookies_accepted', 'true', 365);
+    document.getElementById('cookie-consent').style.display = 'none';
+  }
+
+  function rejectCookies() {
+    setCookie('cookies_accepted', 'false', 365);
+    document.getElementById('cookie-consent').style.display = 'none';
+  }
+
+  // Показываем баннер если нет согласия
+  if (!getCookie('cookies_accepted')) {
+    document.getElementById('cookie-consent').style.display = 'block';
+  }
+  </script>
 </body>
 </html>
