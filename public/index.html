@@ -98,6 +98,17 @@
       margin: 10px 0 !important;
       text-align: center;
     }
+
+    /* ✅ РСЯ ФИКС: НЕВИДИМЫЙ БЛОК */
+    .rsya-info {
+      font-size: 12px;
+      color: #888;
+      padding: 10px;
+      background: #f9f9f9;
+      margin: 20px 0;
+      border-radius: 4px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -138,6 +149,13 @@
       <div id="news-container" class="news-grid"></div>
       <button id="load-more" class="button">Показать ещё</button>
     </section>
+
+    <!-- ✅ РСЯ ФИКС: БЛОК ИСТОЧНИКОВ (ПРАВИЛЬНАЯ ССЫЛКА!) -->
+    <div class="rsya-info">
+      <strong>ℹ️</strong> Независимые новости на основе <em>открытых источников</em> | 
+      <a href="/public/about.html">О проекте</a> | 
+      <a href="mailto:art364@yandex.ru">Контакты</a>
+    </div>
 
     <!-- ✅ ИСПРАВЛЕННАЯ ФОРМА UNISENDER (JavaScript) -->
     <section class="subscribe-wrapper">
@@ -288,7 +306,7 @@
   <!-- 🔥 YANDEX.RTB РЕКЛАМА (ДОБАВЛЕНО) -->
   <script>window.yaContextCb=window.yaContextCb||[]</script>
   <script src="https://yandex.ru/ads/system/context.js" async></script>
-  
+
   <!-- Блок рекламы -->
   <div id="yandex_rtb_R-A-17560420-2" style="margin: 30px 0; text-align: center;"></div>
   <script>
