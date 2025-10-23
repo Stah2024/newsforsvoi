@@ -230,85 +230,17 @@ def main():
     visible_count = sum(1 for block in fresh_news if "hidden" not in block)
     any_new = False
 
-    # ✅ ПЕРЕСОЗДАЁМ archive.html С СТИЛЯМИ (ТОЛЬКО ТЕКСТ)
-    with open("public/archive.html", "w", encoding="utf-8") as archive_file:
-        archive_file.write("""
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Архив новостей - Новости для Своих</title>
-    <meta charset="UTF-8">
-    <style>
-        body { 
-            font-family: sans-serif; 
-            padding: 20px; 
-            background: #f9f9f9; 
-            line-height: 1.6;
-        }
-        h1 { 
-            color: #333; 
-            text-align: center; 
-            margin-bottom: 30px;
-        }
-        .news-preview { 
-            background: #fff; 
-            margin: 20px 0; 
-            padding: 20px; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border-left: 4px solid #0077cc;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .news-preview:hover { 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            transform: translateY(-2px);
-        }
-        .news-preview p { 
-            margin: 8px 0; 
-            color: #333;
-        }
-        .telegram-hint { 
-            color: #0077cc; 
-            font-weight: bold;
-            margin: 15px 0 10px 0;
-            font-size: 1.1em;
-        }
-        .telegram-link { 
-            display: none;
-            color: #0077cc; 
-            text-decoration: none; 
-            font-weight: bold;
-            padding: 10px 15px;
-            background: #f0f8ff;
-            border-radius: 6px;
-            border: 2px solid #0077cc;
-            display: inline-block;
-            margin-top: 5px;
-        }
-        .telegram-link:hover { 
-            background: #e6f3ff; 
-        }
-        .preview-text {
-            font-size: 1.05em;
-            line-height: 1.5;
-            color: #222;
-        }
-    </style>
-</head>
-<body>
-    <h1>🗂 Архив новостей</h1>
-    """)
-
-    # ✅ СОХРАНЯЕМ АКТУАЛЬНЫЕ + ПЕРЕМЕЩАЕМ В АРХИВ ТОЛЬКО ТЕКСТ
+    # ✅ ✅ ИСПРАВЛЕННАЯ ЛОГИКА АРХИВА
     retained_news = []
     archived_count = 0
     
+    # Собираем архивные карточки
+    archive_content = []
     for block in fresh_news:
         ts = extract_timestamp(block)
 
         if ts and is_older_than_two_days(ts.timestamp()):
-            # 1. УДАЛЯЕМ ВСЕ МЕДИА ФАЙЛЫ
+            # 1. УДАЛЯЕМ МЕДИА ФАЙЛЫ
             media_paths = re.findall(r"src=['\"](.*?)['\"]", block)
             for path in media_paths:
                 local_path = os.path.join("public", os.path.basename(path))
@@ -319,7 +251,7 @@ def main():
                     except Exception as e:
                         print(f"⚠️ Ошибка удаления {local_path}: {e}")
 
-            # 2. ИЗВЛЕКАЕМ ТОЛЬКО ТЕКСТ + ССЫЛКУ
+            # 2. ИЗВЛЕКАЕМ ДАННЫЕ
             link_match = re.search(r"<a href='(https://t\.me/[^']+)'", block)
             text_matches = re.findall(r"<div class='text-block'><p>(.*?)</p></div>", block, re.DOTALL)
             category_match = re.search(r"<h2>(.*?)</h2>", block)
@@ -327,7 +259,6 @@ def main():
             link = link_match.group(1) if link_match else f"https://t.me/{CHANNEL_ID[1:]}"
             category = category_match.group(1) if category_match else "Новости"
             
-            # ✅ СОБИРАЕМ ПОЛНЫЙ ТЕКСТ НОВОСТИ (все text-block)
             full_text = ""
             for text_match in text_matches:
                 clean_text = re.sub(r'<[^>]+>', '', text_match).strip()
@@ -335,7 +266,7 @@ def main():
             full_text = full_text.strip()[:200] + "..." if len(full_text) > 200 else full_text
             date_str = ts.strftime("%d.%m.%Y %H:%M")
 
-            # 3. ФОРМИРУЕМ ПРЕВЬЮ БЕЗ МЕДИА
+            # 3. Карточка архива
             archive_card = f"""
 <article class='news-preview' data-post-id='{link.split("/")[-1]}'>
     <p><strong>🗓 {date_str} | <span style='color:#0077cc'>{category}</span></strong></p>
@@ -344,37 +275,104 @@ def main():
     <a href='{link}' target='_blank' class='telegram-link'>🔗 Открыть полный пост</a>
 </article>
 """
-            archive_file.write(archive_card + "\n")
+            archive_content.append(archive_card)
             archived_count += 1
             print(f"📁 АРХИВ: {full_text[:30]}... ({date_str})")
-
         else:
             retained_news.append(block)
 
-    # ✅ JavaScript для клика
-    archive_file.write("""
+    # ✅ ПИШЕМ АРХИВ ОДНИМ write()
+    archive_html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>Архив новостей - Новости для Своих</title>
+    <meta charset="UTF-8">
+    <style>
+        body {{ 
+            font-family: sans-serif; 
+            padding: 20px; 
+            background: #f9f9f9; 
+            line-height: 1.6;
+        }}
+        h1 {{ 
+            color: #333; 
+            text-align: center; 
+            margin-bottom: 30px;
+        }}
+        .news-preview {{ 
+            background: #fff; 
+            margin: 20px 0; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #0077cc;
+            cursor: pointer;
+            transition: all 0.2s;
+        }}
+        .news-preview:hover {{ 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }}
+        .news-preview p {{ 
+            margin: 8px 0; 
+            color: #333;
+        }}
+        .telegram-hint {{ 
+            color: #0077cc; 
+            font-weight: bold;
+            margin: 15px 0 10px 0;
+            font-size: 1.1em;
+        }}
+        .telegram-link {{ 
+            display: none;
+            color: #0077cc; 
+            text-decoration: none; 
+            font-weight: bold;
+            padding: 10px 15px;
+            background: #f0f8ff;
+            border-radius: 6px;
+            border: 2px solid #0077cc;
+            display: inline-block;
+            margin-top: 5px;
+        }}
+        .telegram-link:hover {{ 
+            background: #e6f3ff; 
+        }}
+        .preview-text {{
+            font-size: 1.05em;
+            line-height: 1.5;
+            color: #222;
+        }}
+    </style>
+</head>
+<body>
+    <h1>🗂 Архив новостей</h1>
+    {''.join(archive_content)}
     <script>
-    document.querySelectorAll('.news-preview').forEach(card => {
-        card.addEventListener('click', function(e) {
-            if (!e.target.closest('a')) {
+    document.querySelectorAll('.news-preview').forEach(card => {{
+        card.addEventListener('click', function(e) {{
+            if (!e.target.closest('a')) {{
                 const link = this.querySelector('.telegram-link');
-                if (link) {
+                if (link) {{
                     link.style.display = 'inline-block';
-                    link.scrollIntoView({behavior: 'smooth'});
-                    setTimeout(() => {
+                    link.scrollIntoView({{behavior: 'smooth'}});
+                    setTimeout(() => {{
                         link.click();
-                    }, 500);
-                }
-            }
-        });
-    });
+                    }}, 500);
+                }}
+            }}
+        }});
+    }});
     </script>
-</body></html>
-    """)
+</body>
+</html>"""
+    
+    with open("public/archive.html", "w", encoding="utf-8") as archive_file:
+        archive_file.write(archive_html)
     
     print(f"📁 В архив перемещено: {archived_count} карточек (только текст)")
 
-    fresh_news = retained_news  # ✅ Только актуальные остаются
+    fresh_news = retained_news
 
     # ✅ НОВЫЕ КАРТОЧКИ
     for group_id, group_posts in grouped.items():
@@ -406,7 +404,7 @@ def main():
         print("⚠️ Новых карточек нет — news.html не изменен")
         return
 
-    # ✅ СОЗДАЁМ news.html (БЕЗ ИЗМЕНЕНИЙ СТРУКТУРЫ)
+    # ✅ СОЗДАЁМ news.html (Точно как было)
     with open("public/news.html", "w", encoding="utf-8") as news_file:
         news_file.write("""
 <style>
