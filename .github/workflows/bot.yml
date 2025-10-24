@@ -1,4 +1,4 @@
-name: Run Telegram Bot with Neural Network
+name: Run Telegram Bot
 
 on:
   schedule:
@@ -23,15 +23,6 @@ jobs:
     - name: Install dependencies
       run: |
         pip install -r bot/requirements.txt
-        pip install transformers torch sentencepiece  # Добавляем зависимости для нейросети
-
-    - name: Cache Hugging Face models
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/huggingface
-        key: ${{ runner.os }}-huggingface-${{ hashFiles('bot/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-huggingface-
 
     - name: Run bot
       env:
