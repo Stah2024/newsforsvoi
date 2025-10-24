@@ -5,14 +5,22 @@ import hashlib
 import pytz
 import telebot
 from datetime import datetime, timedelta
+from transformers import T5ForConditionalGeneration, T5Tokenizer
+import torch
 
+# Настройки Telegram
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = "@newsSVOih"
 SEEN_IDS_FILE = "seen_ids.txt"
 
+# Инициализация бота
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone("Europe/Moscow")
 
+# Загрузка модели T5 для перефразирования (один раз при старте)
+model_name = "Vamsi/T5_Paraphrase_Paws"  # Лёгкая модель для перефразирования
+tokenizer = T5Tokenizer.from_pretrained(model_name)
+model = T5ForConditionalGeneration.from_pretrained(model_name)
 
 def clean_text(text):
     unwanted = [
@@ -24,17 +32,28 @@ def clean_text(text):
         text = text.replace(phrase, "")
     return text.strip()
 
+# Функция перефразирования текста с помощью нейросети
+def paraphrase_text(text, max_length=512):
+    if not text or len(text) < 10:  # Не трогаем короткие тексты
+        return text
+    input_text = f"paraphrase: {text[:max_length]}"
+    inputs = tokenizer.encode(input_text, return_tensors="pt", max_length=max_length, truncation=True)
+    outputs = model.generate(inputs, max_length=512, num_beams=4, early_stopping=True)
+    paraphrased = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return paraphrased.replace("paraphrase: ", "").strip()
 
 def format_post(message, caption_override=None, group_size=1):
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
     iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S")
 
-    caption = clean_text(caption_override or message.caption or "")
-    text = clean_text(message.text or "")
+    # Перефразируем caption и text для оригинальности
+    caption = paraphrase_text(clean_text(caption_override or message.caption or ""))
+    text = paraphrase_text(clean_text(message.text or ""))
     file_url = None
     html = ""
 
+    # Категории (оставляем без изменений)
     if "Россия" in caption or "Россия" in text:
         html += "<h2>Россия</h2>\n"
     elif "Космос" in caption or "Космос" in text:
@@ -100,7 +119,6 @@ def format_post(message, caption_override=None, group_size=1):
     html += "</article>\n"
     return html
 
-
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
@@ -110,10 +128,8 @@ def extract_timestamp(html_block):
             return None
     return None
 
-
 def hash_html_block(html):
     return hashlib.md5(html.encode("utf-8")).hexdigest()
-
 
 def update_sitemap():
     now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -126,7 +142,6 @@ def update_sitemap():
 """
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
-
 
 def generate_rss(fresh_news):
     rss_items = ""
@@ -166,19 +181,16 @@ def generate_rss(fresh_news):
         f.write(rss)
     print("📰 rss.xml обновлён")
 
-
 def load_seen_ids():
     if not os.path.exists(SEEN_IDS_FILE):
         return set()
     with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
         return set(line.strip() for line in f)
 
-
 def save_seen_ids(seen_ids):
     with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
         for post_id in seen_ids:
             f.write(f"{post_id}\n")
-
 
 def fetch_latest_posts():
     updates = bot.get_updates()
@@ -189,12 +201,10 @@ def fetch_latest_posts():
     ]
     return list(reversed(posts[-12:])) if posts else []
 
-
 def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
     now = datetime.now(moscow)
     return now - post_time >= timedelta(days=2)
-
 
 def main():
     posts = fetch_latest_posts()
@@ -233,7 +243,7 @@ def main():
     # ✅ ✅ ИСПРАВЛЕННАЯ ЛОГИКА АРХИВА
     retained_news = []
     archived_count = 0
-    
+
     # Собираем архивные карточки
     archive_content = []
     for block in fresh_news:
@@ -258,7 +268,7 @@ def main():
 
             link = link_match.group(1) if link_match else f"https://t.me/{CHANNEL_ID[1:]}"
             category = category_match.group(1) if category_match else "Новости"
-            
+
             full_text = ""
             for text_match in text_matches:
                 clean_text = re.sub(r'<[^>]+>', '', text_match).strip()
@@ -366,10 +376,10 @@ def main():
     </script>
 </body>
 </html>"""
-    
+
     with open("public/archive.html", "w", encoding="utf-8") as archive_file:
         archive_file.write(archive_html)
-    
+
     print(f"📁 В архив перемещено: {archived_count} карточек (только текст)")
 
     fresh_news = retained_news
@@ -467,7 +477,6 @@ document.getElementById("show-more").onclick = () => {
     print("🗂 sitemap.xml обновлён")
     generate_rss(fresh_news)
     print("📰 RSS-файл создан")
-
 
 if __name__ == "__main__":
     main()
