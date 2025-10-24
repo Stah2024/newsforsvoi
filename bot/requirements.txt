@@ -1,6 +1,3 @@
 pyTelegramBotAPI
 python-dotenv
 pytz
-transformers
-torch
-sentencepiece
