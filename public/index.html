@@ -9,10 +9,10 @@
   <link rel="alternate" type="application/rss+xml" title="Новости для Своих" href="/rss.xml" />
 
   <!-- SEO -->
-  <meta name="description" content="Актуальные новости России и мира без фейков и лишнего шума. Главные события, аналитика, обзоры и факты — коротко и по делу.">
-  <meta name="keywords" content="новости, Telegram, SVOih, события, видео, фото, Россия">
-  <meta name="author" content="SVOih News Team">
-  <meta name="robots" content="index, follow">
+  <meta name="description" content="Актуальные новости России и мира без фейков и лишнего шума. Главные события, аналитика, обзоры и факты — коротко и по делу." />
+  <meta name="keywords" content="новости, Telegram, SVOih, события, видео, фото, Россия" />
+  <meta name="author" content="SVOih News Team" />
+  <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://newsforsvoi.ru/" />
 
   <!-- Open Graph -->
@@ -26,7 +26,7 @@
   <meta property="og:image:height" content="630" />
 
   <!-- Yandex -->
-  <meta name="yandex-verification" content="3a33e674e5836564">
+  <meta name="yandex-verification" content="3a33e674e5836564" />
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
@@ -150,10 +150,10 @@
       <button id="load-more" class="button">Показать ещё</button>
     </section>
 
-    <!-- ✅ РСЯ ФИКС: БЛОК ИСТОЧНИКОВ (ПРАВИЛЬНАЯ ССЫЛКА!) -->
+    <!-- ✅ РСЯ ФИКС: БЛОК ИСТОЧНИКОВ (ОБНОВЛЁННЫЙ ПУТЬ!) -->
     <div class="rsya-info">
       <strong>ℹ️</strong> Независимые новости на основе <em>открытых источников</em> | 
-      <a href="/public/about.html">О проекте</a> | 
+      <a href="/about.html">О проекте</a> | 
       <a href="mailto:art364@yandex.ru">Контакты</a>
     </div>
 
@@ -344,41 +344,41 @@
   </div>
 
   <script>
-  function setCookie(name, value, days) {
-    let expires = "";
-    if (days) {
-      let date = new Date();
-      date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-      expires = "; expires=" + date.toUTCString();
+    function setCookie(name, value, days) {
+      let expires = "";
+      if (days) {
+        let date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
+      }
+      document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
     }
-    document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
-  }
 
-  function getCookie(name) {
-    let nameEQ = name + "=";
-    let ca = document.cookie.split(';');
-    for(let i = 0; i < ca.length; i++) {
-      let c = ca[i];
-      while (c.charAt(0) == ' ') c = c.substring(1, c.length);
-      if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+    function getCookie(name) {
+      let nameEQ = name + "=";
+      let ca = document.cookie.split(';');
+      for(let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+      }
+      return null;
     }
-    return null;
-  }
 
-  function acceptCookies() {
-    setCookie('cookies_accepted', 'true', 365);
-    document.getElementById('cookie-consent').style.display = 'none';
-  }
+    function acceptCookies() {
+      setCookie('cookies_accepted', 'true', 365);
+      document.getElementById('cookie-consent').style.display = 'none';
+    }
 
-  function rejectCookies() {
-    setCookie('cookies_accepted', 'false', 365);
-    document.getElementById('cookie-consent').style.display = 'none';
-  }
+    function rejectCookies() {
+      setCookie('cookies_accepted', 'false', 365);
+      document.getElementById('cookie-consent').style.display = 'none';
+    }
 
-  // Показываем баннер если нет согласия
-  if (!getCookie('cookies_accepted')) {
-    document.getElementById('cookie-consent').style.display = 'block';
-  }
+    // Показываем баннер если нет согласия
+    if (!getCookie('cookies_accepted')) {
+      document.getElementById('cookie-consent').style.display = 'block';
+    }
   </script>
 </body>
 </html>
