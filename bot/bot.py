@@ -5,22 +5,14 @@ import hashlib
 import pytz
 import telebot
 from datetime import datetime, timedelta
-from transformers import MBartForConditionalGeneration, MBart50TokenizerFast
-import torch
 
-# Настройки Telegram
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = "@newsSVOih"
 SEEN_IDS_FILE = "seen_ids.txt"
 
-# Инициализация бота
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone("Europe/Moscow")
 
-# Загрузка модели mBART-50 для перефразирования
-model_name = "facebook/mbart-large-50-many-to-many-mmt"  # Многоязычная, ~600 МБ
-tokenizer = MBart50TokenizerFast.from_pretrained(model_name)
-model = MBartForConditionalGeneration.from_pretrained(model_name)
 
 def clean_text(text):
     unwanted = [
@@ -32,38 +24,14 @@ def clean_text(text):
         text = text.replace(phrase, "")
     return text.strip()
 
-# Функция перефразирования с фильтрами
-def paraphrase_text(text, max_length=512):
-    if not text or len(text) < 50:  # Перефразируем только длинные тексты
-        return text
-    try:
-        input_text = f"Перефразируй: {text[:max_length]}"
-        inputs = tokenizer(input_text, return_tensors="pt", padding=True, truncation=True, max_length=max_length)
-        outputs = model.generate(
-            **inputs,
-            max_length=max_length,
-            num_beams=4,
-            early_stopping=True,
-            no_repeat_ngram_size=3  # Уменьшаем повторы
-        )
-        paraphrased = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        paraphrased = paraphrased.replace("Перефразируй: ", "").strip()
-        # Простая проверка: если слишком отличается, возвращаем оригинал
-        if len(set(paraphrased.split()) & set(text.split())) < 2:  # Меньше 2 общих слов
-            return text
-        return paraphrased
-    except Exception as e:
-        print(f"⚠️ Ошибка перефразирования: {e}")
-        return text
 
 def format_post(message, caption_override=None, group_size=1):
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
     iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S")
 
-    # Перефразируем caption и text
-    caption = paraphrase_text(clean_text(caption_override or message.caption or ""))
-    text = paraphrase_text(clean_text(message.text or ""))
+    caption = clean_text(caption_override or message.caption or "")
+    text = clean_text(message.text or "")
     file_url = None
     html = ""
 
@@ -132,8 +100,6 @@ def format_post(message, caption_override=None, group_size=1):
     html += "</article>\n"
     return html
 
-# [Остальной код (extract_timestamp, hash_html_block, update_sitemap, generate_rss, load_seen_ids, save_seen_ids, fetch_latest_posts, is_older_than_two_days, main) остаётся без изменений]
-# Вставь его сюда из предыдущей версии, если нужно, или оставь как есть — он не зависит от нейросети.
 
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
@@ -144,8 +110,10 @@ def extract_timestamp(html_block):
             return None
     return None
 
+
 def hash_html_block(html):
     return hashlib.md5(html.encode("utf-8")).hexdigest()
+
 
 def update_sitemap():
     now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -158,6 +126,7 @@ def update_sitemap():
 """
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
+
 
 def generate_rss(fresh_news):
     rss_items = ""
@@ -197,16 +166,19 @@ def generate_rss(fresh_news):
         f.write(rss)
     print("📰 rss.xml обновлён")
 
+
 def load_seen_ids():
     if not os.path.exists(SEEN_IDS_FILE):
         return set()
     with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
         return set(line.strip() for line in f)
 
+
 def save_seen_ids(seen_ids):
     with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
         for post_id in seen_ids:
             f.write(f"{post_id}\n")
+
 
 def fetch_latest_posts():
     updates = bot.get_updates()
@@ -217,10 +189,12 @@ def fetch_latest_posts():
     ]
     return list(reversed(posts[-12:])) if posts else []
 
+
 def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
     now = datetime.now(moscow)
     return now - post_time >= timedelta(days=2)
+
 
 def main():
     posts = fetch_latest_posts()
@@ -493,6 +467,7 @@ document.getElementById("show-more").onclick = () => {
     print("🗂 sitemap.xml обновлён")
     generate_rss(fresh_news)
     print("📰 RSS-файл создан")
+
 
 if __name__ == "__main__":
     main()
