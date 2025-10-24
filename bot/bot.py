@@ -5,7 +5,7 @@ import hashlib
 import pytz
 import telebot
 from datetime import datetime, timedelta
-from transformers import T5ForConditionalGeneration, T5Tokenizer
+from transformers import MBartForConditionalGeneration, MBart50TokenizerFast
 import torch
 
 # Настройки Telegram
@@ -17,10 +17,10 @@ SEEN_IDS_FILE = "seen_ids.txt"
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone("Europe/Moscow")
 
-# Загрузка модели T5 для перефразирования (один раз при старте)
-model_name = "Vamsi/T5_Paraphrase_Paws"  # Лёгкая модель для перефразирования
-tokenizer = T5Tokenizer.from_pretrained(model_name)
-model = T5ForConditionalGeneration.from_pretrained(model_name)
+# Загрузка модели mBART-50 для перефразирования
+model_name = "facebook/mbart-large-50-many-to-many-mmt"  # Многоязычная, ~600 МБ
+tokenizer = MBart50TokenizerFast.from_pretrained(model_name)
+model = MBartForConditionalGeneration.from_pretrained(model_name)
 
 def clean_text(text):
     unwanted = [
@@ -32,28 +32,41 @@ def clean_text(text):
         text = text.replace(phrase, "")
     return text.strip()
 
-# Функция перефразирования текста с помощью нейросети
+# Функция перефразирования с фильтрами
 def paraphrase_text(text, max_length=512):
-    if not text or len(text) < 10:  # Не трогаем короткие тексты
+    if not text or len(text) < 50:  # Перефразируем только длинные тексты
         return text
-    input_text = f"paraphrase: {text[:max_length]}"
-    inputs = tokenizer.encode(input_text, return_tensors="pt", max_length=max_length, truncation=True)
-    outputs = model.generate(inputs, max_length=512, num_beams=4, early_stopping=True)
-    paraphrased = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    return paraphrased.replace("paraphrase: ", "").strip()
+    try:
+        input_text = f"Перефразируй: {text[:max_length]}"
+        inputs = tokenizer(input_text, return_tensors="pt", padding=True, truncation=True, max_length=max_length)
+        outputs = model.generate(
+            **inputs,
+            max_length=max_length,
+            num_beams=4,
+            early_stopping=True,
+            no_repeat_ngram_size=3  # Уменьшаем повторы
+        )
+        paraphrased = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        paraphrased = paraphrased.replace("Перефразируй: ", "").strip()
+        # Простая проверка: если слишком отличается, возвращаем оригинал
+        if len(set(paraphrased.split()) & set(text.split())) < 2:  # Меньше 2 общих слов
+            return text
+        return paraphrased
+    except Exception as e:
+        print(f"⚠️ Ошибка перефразирования: {e}")
+        return text
 
 def format_post(message, caption_override=None, group_size=1):
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
     iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S")
 
-    # Перефразируем caption и text для оригинальности
+    # Перефразируем caption и text
     caption = paraphrase_text(clean_text(caption_override or message.caption or ""))
     text = paraphrase_text(clean_text(message.text or ""))
     file_url = None
     html = ""
 
-    # Категории (оставляем без изменений)
     if "Россия" in caption or "Россия" in text:
         html += "<h2>Россия</h2>\n"
     elif "Космос" in caption or "Космос" in text:
@@ -118,6 +131,9 @@ def format_post(message, caption_override=None, group_size=1):
     html += f"<script type='application/ld+json'>\n{json.dumps(microdata, ensure_ascii=False)}\n</script>\n"
     html += "</article>\n"
     return html
+
+# [Остальной код (extract_timestamp, hash_html_block, update_sitemap, generate_rss, load_seen_ids, save_seen_ids, fetch_latest_posts, is_older_than_two_days, main) остаётся без изменений]
+# Вставь его сюда из предыдущей версии, если нужно, или оставь как есть — он не зависит от нейросети.
 
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
