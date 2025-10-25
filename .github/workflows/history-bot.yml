@@ -1,8 +1,8 @@
 name: Run History Bot
 on:
   schedule:
-    - cron: '0 8,18 * * *'
-  workflow_dispatch:
+    - cron: '0 8,18 * * *'  # 08:00 и 18:00 CEST (10:00 и 20:00 MSK)
+  workflow_dispatch:        # Ручной запуск
 jobs:
   run-history-bot:
     runs-on: ubuntu-latest
@@ -19,20 +19,20 @@ jobs:
     - run: |
         mkdir -p public/media/
         python bot/history.py
-        ls -la public/media/
+        ls -la public/media/ || echo "Папка public/media/ пуста"
         git status
       env:
         TELEGRAM_HISTORY_TOKEN: ${{ secrets.TELEGRAM_HISTORY_TOKEN }}
     - run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
-        git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/${{ github.repository }}
+        git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/Stah2024/newsforsvoi
         git add public/history.html
         if ls public/media/* >/dev/null 2>&1; then
           git add public/media/*
-          echo "Добавлены медиа"
+          echo "Добавлены медиафайлы"
         else
-          echo "Нет медиа"
+          echo "Нет медиафайлов"
         fi
         git commit -m "Update history.html and media [skip ci]" || echo "Нет изменений"
         git push
