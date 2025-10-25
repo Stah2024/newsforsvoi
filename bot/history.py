@@ -97,9 +97,13 @@ def update_history_html(messages, seen_ids):
             print(f"ℹ️ Сообщение {msg.message_id} уже обработано")
             continue
 
-        content = msg.text or msg.caption or "Без текста"
+        content = (msg.text or msg.caption or "Без текста").encode('utf-8').decode('utf-8')  # Очистка текста
         media_url = get_media_url(msg)
-        iso_time = datetime.fromtimestamp(msg.date, moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
+        try:
+            iso_time = datetime.fromtimestamp(msg.date, moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
+        except Exception as e:
+            print(f"Ошибка с датой сообщения {msg.message_id}: {e}")
+            continue
 
         item_html = f'<article class="news-item" itemscope itemtype="https://schema.org/NewsArticle">'
         if media_url:
@@ -112,7 +116,7 @@ def update_history_html(messages, seen_ids):
         microdata = {
             "@context": "https://schema.org",
             "@type": "NewsArticle",
-            "headline": content[:50] + "..." if len(content) > 50 else content,
+            "headline": (content[:50] + "..." if len(content) > 50 else content).encode('utf-8').decode('utf-8'),
             "datePublished": iso_time,
             "author": {"@type": "Organization", "name": "Новости для Своих"},
             "publisher": {
@@ -122,9 +126,15 @@ def update_history_html(messages, seen_ids):
             },
             "articleBody": content
         }
-        if media_url:
-            microdata["image"] = f"https://newsforsvoi.ru{media_url}" if msg.photo else None
-        item_html += f'<script type="application/ld+json" itemprop="mainEntityOfPage">{json.dumps(microdata, ensure_ascii=False)}</script>'
+        if media_url and msg.photo:
+            microdata["image"] = f"https://newsforsvoi.ru{media_url}"
+        elif media_url and msg.video:
+            microdata["video"] = f"https://newsforsvoi.ru{media_url}"
+        try:
+            item_html += f'<script type="application/ld+json" itemprop="mainEntityOfPage">{json.dumps(microdata, ensure_ascii=False)}</script>'
+        except Exception as e:
+            print(f"Ошибка при создании JSON для сообщения {msg.message_id}: {e}")
+            continue
         item_html += '</article>'
         new_items.append(item_html)
         seen_ids.add(str(msg.message_id))
