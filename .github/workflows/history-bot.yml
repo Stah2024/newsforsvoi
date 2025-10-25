@@ -39,4 +39,4 @@ jobs:
         git remote set-url origin https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}
         git add public/history.html public/media/*
         git commit -m "Update history.html and media files from history bot [skip ci]" || echo "No changes"
-        git push
+        git push 
