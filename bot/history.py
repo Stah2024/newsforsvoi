@@ -1,6 +1,5 @@
 import os
 import re
-import json
 import hashlib
 import pytz
 import telebot
@@ -9,7 +8,7 @@ from datetime import datetime
 # Настройки
 TOKEN = os.getenv("TELEGRAM_HISTORY_TOKEN")
 CHANNEL_ID = "@historySvoih"
-SEEN_IDS_FILE = "seen_ids1.txt"  # Изменено на seen_ids1.txt
+SEEN_IDS_FILE = "seen_ids1.txt"
 HISTORY_FILE = "public/history.html"
 moscow = pytz.timezone("Europe/Moscow")
 
@@ -55,7 +54,7 @@ def get_media_url(message):
         return f"/media/{file_name}"
     return None
 
-# Обновление history.html с разметкой
+# Обновление history.html
 def update_history_html(messages, seen_ids):
     if not os.path.exists(HISTORY_FILE):
         print(f"⚠️ Файл {HISTORY_FILE} не найден")
@@ -90,7 +89,7 @@ def update_history_html(messages, seen_ids):
             if msg.photo:
                 item_html += f'<img src="{media_url}" alt="Фото события" class="history-image" itemprop="image" />'
             elif msg.video:
-                item_html += f'<a href="{media_url}" class="telegram-video-link" itemprop="video">Смотреть видео</a>'
+                item_html += f'<video controls src="{media_url}" itemprop="video"></video>'
         item_html += f'<p itemprop="headline">{content}</p>'
         item_html += f'<div class="timestamp" data-ts="{int(msg.date.timestamp() * 1000)}">{(datetime.now(moscow) - msg.date.replace(tzinfo=moscow)).days} дней назад</div>'
         # JSON-LD разметка
