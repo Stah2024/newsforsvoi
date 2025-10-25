@@ -1,5 +1,4 @@
 import os
-import re
 import json
 import pytz
 import telebot
@@ -12,10 +11,8 @@ SEEN_IDS_FILE = "seen_ids1.txt"
 HISTORY_FILE = "public/history.html"
 moscow = pytz.timezone("Europe/Moscow")
 
-# Инициализация бота
 bot = telebot.TeleBot(TOKEN)
 
-# Форматирование поста
 def format_post(message, caption_override=None, group_size=1):
     timestamp = message.date
     iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -27,12 +24,12 @@ def format_post(message, caption_override=None, group_size=1):
 
     html += f"<article class='news-item' itemscope itemtype='https://schema.org/NewsArticle'>\n"
 
-    if message.photo:
+    if message.content_type == "photo":
         photos = message.photo
         file_info = bot.get_file(photos[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
         html += f"<img src='{file_url}' alt='Фото события' class='history-image' itemprop='image' />\n"
-    elif message.video:
+    elif message.content_type == "video":
         try:
             size = getattr(message.video, "file_size", 0)
             if size == 0 or size <= 20_000_000:
@@ -53,7 +50,7 @@ def format_post(message, caption_override=None, group_size=1):
 
     html += f"<div class='timestamp' data-ts='{int(timestamp * 1000)}'>{(datetime.now(moscow) - datetime.fromtimestamp(timestamp, moscow)).days} дней назад</div>\n"
     html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
-    html += f"<p class='source'>Источник: {message.chat.title}</p>\n"
+    html += f"<p class='source'>Источник: {message.chat.title if hasattr(message.chat, 'title') else 'Канал'}</p>\n"
 
     if group_size > 1:
         html += (
@@ -81,32 +78,26 @@ def format_post(message, caption_override=None, group_size=1):
     html += "</article>\n"
     return html
 
-# Чтение обработанных ID
 def load_seen_ids():
     if not os.path.exists(SEEN_IDS_FILE):
         return set()
     with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
         return set(line.strip() for line in f)
 
-# Сохранение обработанных ID
 def save_seen_ids(seen_ids):
     with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
         for post_id in seen_ids:
             f.write(f"{post_id}\n")
 
-# Получение постов
 def fetch_latest_posts():
-    try:
-        posts = bot.get_chat_history(chat_id=CHANNEL_ID, limit=10)
-        print(f"Получено сообщений: {len(posts)}")
-        for post in posts:
-            print(f"Сообщение {post.message_id}: Фото - {bool(post.photo)}, Текст - {post.text or post.caption or 'Без текста'}")
-        return list(reversed(posts))
-    except Exception as e:
-        print(f"Ошибка при получении сообщений: {e}")
-        return []
+    updates = bot.get_updates()
+    posts = [
+        u.channel_post
+        for u in updates
+        if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
+    ]
+    return list(reversed(posts[-10:])) if posts else []
 
-# Основная логика
 def main():
     posts = fetch_latest_posts()
     seen_ids = load_seen_ids()
@@ -143,7 +134,6 @@ def main():
         print("⚠️ Новых карточек нет — history.html не изменен")
         return
 
-    # Если файл не существует — создаём с базовой структурой
     if not os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE, "w", encoding="utf-8") as f:
             f.write("""
@@ -167,11 +157,9 @@ def main():
 </html>
 """)
 
-    # Чтение текущего содержимого
     with open(HISTORY_FILE, "r", encoding="utf-8") as f:
         existing_html = f.read()
 
-    # Вставка новых карточек перед существующими
     new_html = "\n".join(fresh_news) + "\n" + existing_html
 
     with open(HISTORY_FILE, "w", encoding="utf-8") as f:
