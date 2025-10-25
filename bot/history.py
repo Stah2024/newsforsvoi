@@ -1,8 +1,8 @@
 import os
-import re
 import hashlib
 import pytz
 import telebot
+import json
 from datetime import datetime
 
 # Настройки
@@ -30,29 +30,46 @@ def save_seen_ids(seen_ids):
 
 # Получение медиа
 def get_media_url(message):
+    print(f"Обработка сообщения {message.message_id}")
     if message.photo:
-        file_id = message.photo[-1].file_id
-        file = bot.get_file(file_id)
-        file_path = file.file_path
-        downloaded_file = bot.download_file(file_path)
-        media_dir = "public/media"
-        os.makedirs(media_dir, exist_ok=True)
-        file_name = f"photo_{hashlib.md5(file_id.encode()).hexdigest()}.jpg"
-        with open(os.path.join(media_dir, file_name), "wb") as new_file:
-            new_file.write(downloaded_file)
-        return f"/media/{file_name}"
+        try:
+            file_id = message.photo[-1].file_id
+            print(f"Найдено фото, file_id: {file_id}")
+            file = bot.get_file(file_id)
+            file_path = file.file_path
+            downloaded_file = bot.download_file(file_path)
+            media_dir = "public/media"
+            os.makedirs(media_dir, exist_ok=True)
+            file_name = f"photo_{hashlib.md5(file_id.encode()).hexdigest()}.jpg"
+            file_path = os.path.join(media_dir, file_name)
+            with open(file_path, "wb") as new_file:
+                new_file.write(downloaded_file)
+            print(f"Сохранено фото: {file_path}")
+            return f"/media/{file_name}"
+        except Exception as e:
+            print(f"Ошибка при сохранении фото: {e}")
+            return None
     elif message.video:
-        file_id = message.video.file_id
-        file = bot.get_file(file_id)
-        file_path = file.file_path
-        downloaded_file = bot.download_file(file_path)
-        media_dir = "public/media"
-        os.makedirs(media_dir, exist_ok=True)
-        file_name = f"video_{hashlib.md5(file_id.encode()).hexdigest()}.mp4"
-        with open(os.path.join(media_dir, file_name), "wb") as new_file:
-            new_file.write(downloaded_file)
-        return f"/media/{file_name}"
-    return None
+        try:
+            file_id = message.video.file_id
+            print(f"Найдено видео, file_id: {file_id}")
+            file = bot.get_file(file_id)
+            file_path = file.file_path
+            downloaded_file = bot.download_file(file_path)
+            media_dir = "public/media"
+            os.makedirs(media_dir, exist_ok=True)
+            file_name = f"video_{hashlib.md5(file_id.encode()).hexdigest()}.mp4"
+            file_path = os.path.join(media_dir, file_name)
+            with open(file_path, "wb") as new_file:
+                new_file.write(downloaded_file)
+            print(f"Сохранено видео: {file_path}")
+            return f"/media/{file_name}"
+        except Exception as e:
+            print(f"Ошибка при сохранении видео: {e}")
+            return None
+    else:
+        print("Медиа отсутствует")
+        return None
 
 # Обновление history.html
 def update_history_html(messages, seen_ids):
@@ -92,7 +109,6 @@ def update_history_html(messages, seen_ids):
                 item_html += f'<video controls src="{media_url}" itemprop="video"></video>'
         item_html += f'<p itemprop="headline">{content}</p>'
         item_html += f'<div class="timestamp" data-ts="{int(msg.date.timestamp() * 1000)}">{(datetime.now(moscow) - msg.date.replace(tzinfo=moscow)).days} дней назад</div>'
-        # JSON-LD разметка
         microdata = {
             "@context": "https://schema.org",
             "@type": "NewsArticle",
@@ -127,17 +143,15 @@ def update_history_html(messages, seen_ids):
 # Получение обновлений
 def check_updates():
     seen_ids = load_seen_ids()
-    offset = 0
-    messages = []
-    while True:
-        updates = bot.get_updates(offset=offset, timeout=30)
-        if not updates:
-            break
-        for update in updates:
-            if update.message and update.message.chat.username == CHANNEL_ID.replace("@", ""):
-                messages.append(update.message)
-            offset = update.update_id + 1
-    return messages
+    try:
+        messages = bot.get_chat_history(chat_id=CHANNEL_ID, limit=10)
+        print(f"Получено сообщений: {len(messages)}")
+        for msg in messages:
+            print(f"Сообщение {msg.message_id}: Фото - {bool(msg.photo)}, Текст - {msg.text or msg.caption or 'Без текста'}")
+        return [msg for msg in messages if str(msg.message_id) not in seen_ids]
+    except Exception as e:
+        print(f"Ошибка при получении сообщений: {e}")
+        return []
 
 # Основной цикл
 def main():
