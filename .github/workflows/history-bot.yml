@@ -1,8 +1,10 @@
 name: Run History Bot
+
 on:
   schedule:
     - cron: '0 8,18 * * *'
   workflow_dispatch:
+
 jobs:
   run-history-bot:
     runs-on: ubuntu-latest
@@ -10,31 +12,29 @@ jobs:
     - uses: actions/checkout@v4
       with:
         persist-credentials: false
+
     - uses: actions/setup-python@v5
       with:
         python-version: '3.10'
+
     - run: |
+        python -m pip install --upgrade pip
         pip install pyTelegramBotAPI --upgrade
-        pip install -r bot/requirements.txt
+
     - run: |
-        mkdir -p public/media/
+        mkdir -p public/
         python bot/history.py
-        ls -la public/media/ || echo "Папка public/media/ пуста"
+        ls -la public/
         git status
       env:
         TELEGRAM_HISTORY_TOKEN: ${{ secrets.TELEGRAM_HISTORY_TOKEN }}
+
     - run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git remote set-url origin https://x-access-token:${{ secrets.GH_PAT }}@github.com/Stah2024/newsforsvoi
         git add public/history.html
-        if ls public/media/* >/dev/null 2>&1; then
-          git add public/media/*
-          echo "Добавлены медиафайлы"
-        else
-          echo "Нет медиафайлов"
-        fi
-        git commit -m "Update history.html and media [skip ci]" || echo "Нет изменений"
+        git commit -m "Update history.html [skip ci]" || echo "Нет изменений"
         git push
       env:
         GH_PAT: ${{ secrets.GH_PAT }}
