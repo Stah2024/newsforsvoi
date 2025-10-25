@@ -19,6 +19,25 @@ header {
   border-bottom: 4px solid #ffc107;
   box-shadow: 0 4px 10px rgba(0,0,0,0.3);
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.history-info {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.history-date {
+  font-family: "Segoe UI", Roboto, sans-serif;
+  font-size: 1.2rem;
+  color: #fff;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
 .header-content {
@@ -131,12 +150,12 @@ h2 {
   background: linear-gradient(135deg, #ff0000, #0038a8);
   color: white;
   transition: background 0.3s, transform 0.2s;
-  max-width: 150px; /* Фикс ширины, как у Дзен */
-  white-space: nowrap; /* Без переноса текста */
+  max-width: 150px;
+  white-space: nowrap;
 }
 
 .button.small:hover {
-  background: linear-gradient(135deg, #cc0000, #00288f); /* Темнее при наведении */
+  background: linear-gradient(135deg, #cc0000, #00288f);
   transform: scale(1.03);
 }
 
@@ -358,25 +377,6 @@ footer a {
     width: 36px;
   }
 
-  .buttons {
-    flex-direction: column;
-  }
-
-  .button {
-    margin: 5px 0;
-    width: 100%;
-    max-width: 300px;
-  }
-
-  .category-tabs {
-    gap: 5px;
-  }
-
-  .tab {
-    padding: 8px 12px;
-    font-size: 14px;
-  }
-
   .button-bar {
     flex-direction: column;
     align-items: center;
@@ -384,8 +384,16 @@ footer a {
 
   .button.small {
     margin: 5px 0;
-    max-width: 150px; /* Фикс ширины на мобильных */
+    max-width: 150px;
     width: auto;
+  }
+
+  .history-info {
+    position: static;
+    margin: 1rem auto;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
   }
 }
 
