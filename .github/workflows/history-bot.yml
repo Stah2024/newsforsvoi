@@ -37,6 +37,7 @@ jobs:
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git remote set-url origin https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}
-        git add public/history.html public/media/*
+        git add public/history.html
+        git add public/media/* || echo "No media files to add"  # Игнорируем ошибку, если папка пуста
         git commit -m "Update history.html and media files from history bot [skip ci]" || echo "No changes"
-        git push 
+        git push
