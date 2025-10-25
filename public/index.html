@@ -53,6 +53,7 @@
   </script>
 
   <style>
+    /* Существующие стили остаются без изменений */
     .card-overlay {
       position: fixed;
       top: 0;
@@ -78,7 +79,6 @@
       box-shadow: 0 0 20px rgba(0,0,0,0.3);
     }
 
-    /* 🆕 СТИЛИ ДЛЯ СООБЩЕНИЙ ФОРМЫ */
     .subscribe-success {
       background: #d4edda !important;
       color: #155724 !important;
@@ -99,7 +99,6 @@
       text-align: center;
     }
 
-    /* ✅ РСЯ ФИКС: НЕВИДИМЫЙ БЛОК */
     .rsya-info {
       font-size: 12px;
       color: #888;
@@ -113,6 +112,12 @@
 </head>
 <body>
   <header>
+    <div class="history-info">
+      <span id="current-date" class="history-date"></span>
+      <a href="/history.html" class="button small">
+        <img src="/calendar-icon.svg" alt="Календарь" class="icon" /> Этот день в истории
+      </a>
+    </div>
     <div class="header-content">
       <img src="/rf-flag.svg" alt="Флаг России" class="flag-icon" />
       <div class="text-block">
@@ -150,14 +155,12 @@
       <button id="load-more" class="button">Показать ещё</button>
     </section>
 
-    <!-- ✅ РСЯ ФИКС: БЛОК ИСТОЧНИКОВ (ОБНОВЛЁННЫЙ ПУТЬ!) -->
     <div class="rsya-info">
       <strong>ℹ️</strong> Независимые новости на основе <em>открытых источников</em> | 
       <a href="/about.html">О проекте</a> | 
       <a href="mailto:art364@yandex.ru">Контакты</a>
     </div>
 
-    <!-- ✅ ИСПРАВЛЕННАЯ ФОРМА UNISENDER (JavaScript) -->
     <section class="subscribe-wrapper">
       <h3>Подпишись на новости!</h3>
       <form id="unisender-form" class="subscribe-form">
@@ -175,14 +178,23 @@
   <div id="modal" class="card-overlay" style="display:none;"></div>
 
   <script>
-    // ✅ UNISENDER FORM — РАБОЧИЙ JavaScript
+    // Функция для отображения динамической даты
+    function updateDate() {
+      const dateElement = document.getElementById('current-date');
+      const today = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+      dateElement.textContent = `Сегодня: ${today}`;
+    }
+
+    // Вызов функции при загрузке страницы
+    document.addEventListener('DOMContentLoaded', updateDate);
+
+    // Существующий JavaScript для формы Unisender
     document.getElementById('unisender-form').addEventListener('submit', async function(e) {
       e.preventDefault();
 
       const email = document.getElementById('email-input').value;
       const messageEl = document.getElementById('subscribe-message');
 
-      // Очистка
       messageEl.innerHTML = '<p>Подписываемся...</p>';
       messageEl.className = '';
 
@@ -195,8 +207,8 @@
           body: new URLSearchParams({
             'api_key': '6jhinetoegc4sgwdpc1x44k3wk1gpqjyhn5bqiwe',
             'list_ids': '1',
-            'fields[email]': email,  // ✅ ПРАВИЛЬНО: реальный email
-            'double_optin': '2'      // Без подтверждения
+            'fields[email]': email,
+            'double_optin': '2'
           })
         });
 
@@ -217,7 +229,7 @@
       }
     });
 
-    // ТВОЙ JavaScript (новости, поиск, модалка) — БЕЗ ИЗМЕНЕНИЙ
+    // Существующий JavaScript для новостей, поиска и модалки
     fetch('/news.html')
       .then(response => response.text())
       .then(html => {
@@ -303,11 +315,10 @@
     </div>
   </noscript>
 
-  <!-- 🔥 YANDEX.RTB РЕКЛАМА (ДОБАВЛЕНО) -->
+  <!-- 🔥 YANDEX.RTB РЕКЛАМА -->
   <script>window.yaContextCb=window.yaContextCb||[]</script>
   <script src="https://yandex.ru/ads/system/context.js" async></script>
 
-  <!-- Блок рекламы -->
   <div id="yandex_rtb_R-A-17560420-2" style="margin: 30px 0; text-align: center;"></div>
   <script>
   window.yaContextCb.push(() => {
@@ -375,7 +386,6 @@
       document.getElementById('cookie-consent').style.display = 'none';
     }
 
-    // Показываем баннер если нет согласия
     if (!getCookie('cookies_accepted')) {
       document.getElementById('cookie-consent').style.display = 'block';
     }
