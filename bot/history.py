@@ -36,8 +36,8 @@ def get_media_url(message):
             file_id = message.photo[-1].file_id
             print(f"Найдено фото, file_id: {file_id}")
             file = bot.get_file(file_id)
-            file_path = file.file_path
-            downloaded_file = bot.download_file(file_path)
+            print(f"Путь файла: {file.file_path}")
+            downloaded_file = bot.download_file(file.file_path)
             media_dir = "public/media"
             os.makedirs(media_dir, exist_ok=True)
             file_name = f"photo_{hashlib.md5(file_id.encode()).hexdigest()}.jpg"
@@ -54,8 +54,8 @@ def get_media_url(message):
             file_id = message.video.file_id
             print(f"Найдено видео, file_id: {file_id}")
             file = bot.get_file(file_id)
-            file_path = file.file_path
-            downloaded_file = bot.download_file(file_path)
+            print(f"Путь файла: {file.file_path}")
+            downloaded_file = bot.download_file(file.file_path)
             media_dir = "public/media"
             os.makedirs(media_dir, exist_ok=True)
             file_name = f"video_{hashlib.md5(file_id.encode()).hexdigest()}.mp4"
