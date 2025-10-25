@@ -122,6 +122,7 @@ def update_sitemap():
   <url><loc>https://newsforsvoi.ru/index.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>
   <url><loc>https://newsforsvoi.ru/news.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>0.9</priority></url>
   <url><loc>https://newsforsvoi.ru/archive.html</loc><lastmod>{now}</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://newsforsvoi.ru/history.html</loc><lastmod>{now}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
 </urlset>
 """
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
