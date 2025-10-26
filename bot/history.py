@@ -4,12 +4,14 @@ import pytz
 import telebot
 from datetime import datetime
 from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
 
 # Токен и настройки
 TOKEN = os.getenv("TELEGRAM_HISTORY_TOKEN")
 CHANNEL_ID = "@historySvoih"
 SEEN_IDS_FILE = "seen_ids1.txt"
 HISTORY_FILE = "public/history.html"
+SITEMAP_FILE = "public/sitemap.xml"
 moscow = pytz.timezone("Europe/Moscow")
 
 bot = telebot.TeleBot(TOKEN)
@@ -31,14 +33,14 @@ def save_seen_ids(ids):
 def format_post(message):
     """Форматирует пост в HTML и возвращает данные для JSON-LD."""
     timestamp = message.date
-    iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
+    iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
     caption = message.caption or ""
     text = message.text or ""
     html = "<article class='news-item'>\n"
     json_ld_article = {
         "@type": "Article",
-        "headline": caption[:200] or text[:200] or "Историческое событие",  # Ограничение длины для заголовка
-        "description": text[:500] or caption[:500] or "",  # Ограничение длины для описания
+        "headline": caption[:200] or text[:200] or "Историческое событие",
+        "description": text[:500] or caption[:500] or "",
         "datePublished": iso_time,
         "author": {
             "@type": "Organization",
@@ -48,7 +50,6 @@ def format_post(message):
     }
     file_url = None
 
-    # Обработка фото
     if message.content_type == "photo":
         photos = message.photo
         file_info = bot.get_file(photos[-1].file_id)
@@ -60,8 +61,6 @@ def format_post(message):
             "width": photos[-1].width,
             "height": photos[-1].height
         }
-
-    # Обработка видео
     elif message.content_type == "video":
         try:
             size = getattr(message.video, "file_size", 0)
@@ -81,7 +80,6 @@ def format_post(message):
             print(f"⚠️ Ошибка при видео: {e}")
             return "", None
 
-    # Добавляем текст
     if caption:
         html += f"<p><b>{caption}</b></p>\n"
     if text and text != caption:
@@ -92,24 +90,40 @@ def format_post(message):
     html += "</article>\n"
     return html, json_ld_article
 
+def update_sitemap():
+    """Обновляет <lastmod> для history.html в sitemap.xml."""
+    now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
+    try:
+        tree = ET.parse(SITEMAP_FILE)
+        root = tree.getroot()
+        for url in root.findall("{http://www.sitemaps.org/schemas/sitemap/0.9}url"):
+            loc = url.find("{http://www.sitemaps.org/schemas/sitemap/0.9}loc")
+            if loc.text == "https://newsforsvoi.ru/history.html":
+                lastmod = url.find("{http://www.sitemaps.org/schemas/sitemap/0.9}lastmod")
+                lastmod.text = now
+                break
+        tree.write(SITEMAP_FILE, encoding="utf-8", xml_declaration=True)
+        print(f"✅ Обновлён sitemap.xml для history.html: {now}")
+    except FileNotFoundError:
+        print(f"⚠️ Файл {SITEMAP_FILE} не найден. Убедитесь, что bot.py создал sitemap.xml.")
+    except Exception as e:
+        print(f"⚠️ Ошибка при обновлении sitemap.xml: {e}")
+
 def update_history_html(html, json_ld_article):
     """Добавляет пост и обновляет JSON-LD в history.html."""
     os.makedirs("public", exist_ok=True)
 
-    # Читаем существующий HTML
     if os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             soup = BeautifulSoup(f, "html.parser")
     else:
         soup = BeautifulSoup(open("history.html").read(), "html.parser")
 
-    # Добавляем HTML поста в начало #history-container
     history_container = soup.find("div", id="history-container")
     if history_container:
         new_article = BeautifulSoup(html, "html.parser")
         history_container.insert(0, new_article)
 
-    # Обновляем JSON-LD
     schema_script = soup.find("script", id="schema-org")
     if schema_script and json_ld_article:
         schema_data = json.loads(schema_script.string)
@@ -120,9 +134,12 @@ def update_history_html(html, json_ld_article):
         })
         schema_script.string = json.dumps(schema_data, ensure_ascii=False, indent=2)
 
-    # Сохраняем обновлённый HTML
     with open(HISTORY_FILE, "w", encoding="utf-8") as f:
         f.write(str(soup))
+
+    # Обновляем sitemap.xml только для history.html
+    if os.path.exists(SITEMAP_FILE):
+        update_sitemap()
 
 # === Основная логика ===
 
@@ -134,7 +151,7 @@ def handle_channel_post(message):
 
     seen_ids = load_seen_ids()
     if message.message_id in seen_ids:
-        return  # уже обработано
+        return
 
     html, json_ld_article = format_post(message)
     if html and json_ld_article:
