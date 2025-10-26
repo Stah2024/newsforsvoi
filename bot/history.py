@@ -115,7 +115,7 @@ def format_post(message):
                 }
             else:
                 logging.warning(f"Пропущено видео >20MB: {size}")
-                return "", None
+                return "", Null
         except Exception as e:
             logging.error(f"Ошибка видео {message.message_id}: {e}")
             return "", None
@@ -198,7 +198,7 @@ def generate_rss(posts):
 
 def process_initial_posts():
     try:
-        bot.delete_webhook(drop_pending_updates=True)  # 🔧 сброс polling
+        bot.delete_webhook(drop_pending_updates=True)  # сброс polling
         updates = bot.get_updates()
         posts = [
             u.channel_post
@@ -208,7 +208,7 @@ def process_initial_posts():
         logging.info(f"Загружено {len(posts)} постов из канала @{CHANNEL_ID[1:]}")
     except Exception as e:
         logging.error(f"Ошибка получения обновлений: {e}")
-        generate_rss([])  # 🔥 создаём RSS даже при ошибке
+        generate_rss([])  # создаём RSS даже при ошибке
         posts = []
 
     seen_ids = load_seen_ids()
@@ -226,7 +226,7 @@ def process_initial_posts():
     if new_posts:
         generate_rss(new_posts)
         logging.info(f"Обработано {len(new_posts)} новых постов")
-else:
+    else:
         logging.info("Новых постов не найдено, создаём пустой RSS")
         generate_rss([])
 
@@ -234,4 +234,8 @@ else:
 
 if __name__ == "__main__":
     logging.info("Запуск однократной обработки постов")
-    process_initial_posts()
+    try:
+        process_initial_posts()
+    except Exception as e:
+        logging.error(f"Критическая ошибка: {e}")
+        sys.exit(1)
