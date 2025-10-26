@@ -7,9 +7,17 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import xml.etree.ElementTree as ET
 import re
+import sys
 
 # Настройка логирования
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.FileHandler("history.log"),  # Сохраняем логи в файл
+        logging.StreamHandler()  # Выводим в консоль
+    ]
+)
 
 # Токен и настройки
 TOKEN = os.getenv("TELEGRAM_HISTORY_TOKEN")
@@ -17,27 +25,48 @@ CHANNEL_ID = "@historySvoih"
 SEEN_IDS_FILE = "seen_ids1.txt"
 HISTORY_FILE = "public/history.html"
 SITEMAP_FILE = "public/sitemap.xml"
-RSS_FILE = "public/history_rss.xml"  # Новый файл RSS для history.html
+RSS_FILE = "public/history_rss.xml"
 moscow = pytz.timezone("Europe/Moscow")
 
+# Проверка токена
+if not TOKEN:
+    logging.error("TELEGRAM_HISTORY_TOKEN не найден в переменных окружения")
+    sys.exit(1)
+
 bot = telebot.TeleBot(TOKEN)
+
+# Проверка доступа бота
+try:
+    bot.get_me()
+    logging.info("Бот успешно авторизован")
+except Exception as e:
+    logging.error(f"Ошибка авторизации бота: {e}")
+    sys.exit(1)
 
 # === Вспомогательные функции ===
 
 def load_seen_ids():
     """Загружает ID уже обработанных сообщений."""
     if os.path.exists(SEEN_IDS_FILE):
-        with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
-            return set(json.load(f))
+        try:
+            with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
+                return set(json.load(f))
+        except Exception as e:
+            logging.error(f"Ошибка чтения {SEEN_IDS_FILE}: {e}")
+            return set()
     return set()
 
 def save_seen_ids(ids):
     """Сохраняет список обработанных сообщений."""
-    with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
-        json.dump(list(ids), f)
+    try:
+        with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
+            json.dump(list(ids), f)
+        logging.info(f"Сохранено {len(ids)} ID в {SEEN_IDS_FILE}")
+    except Exception as e:
+        logging.error(f"Ошибка записи в {SEEN_IDS_FILE}: {e}")
 
 def clean_text(text):
-    """Очищает текст от нежелательных фраз (аналогично bot.py)."""
+    """Очищает текст от нежелательных фраз."""
     unwanted = ["Подписаться на историю для своих", "https://t.me/historySvoih"]
     for phrase in unwanted:
         text = text.replace(phrase, "")
@@ -52,7 +81,7 @@ def format_post(message):
     text = clean_text(message.text or "")
     html = "<article class='news-item'>\n"
     json_ld_article = {
-        "@type": "NewsArticle",  # Изменено на NewsArticle для согласованности с bot.py
+        "@type": "NewsArticle",
         "headline": caption[:200] or text[:200] or "Историческое событие",
         "description": text[:500] or caption[:500] or "",
         "datePublished": iso_time,
@@ -82,7 +111,7 @@ def format_post(message):
                 "height": photos[-1].height
             }
         except Exception as e:
-            logging.error(f"Ошибка при обработке фото: {e}")
+            logging.error(f"Ошибка при обработке фото для поста {message.message_id}: {e}")
             return "", None
     elif message.content_type == "video":
         try:
@@ -97,10 +126,10 @@ def format_post(message):
                     "uploadDate": iso_time
                 }
             else:
-                logging.warning(f"Пропущено видео >20MB: {size}")
+                logging.warning(f"Пропущено видео >20MB для поста {message.message_id}: {size}")
                 return "", None
         except Exception as e:
-            logging.error(f"Ошибка при обработке видео: {e}")
+            logging.error(f"Ошибка при обработке видео для поста {message.message_id}: {e}")
             return "", None
 
     if caption:
@@ -115,14 +144,18 @@ def format_post(message):
 
 def fetch_latest_posts():
     """Загружает последние посты из канала при запуске бота."""
-    updates = bot.get_updates()
-    posts = [
-        u.channel_post
-        for u in updates
-        if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
-    ]
-    logging.info(f"Загружено {len(posts)} постов из канала {CHANNEL_ID}")
-    return list(reversed(posts[-12:])) if posts else []
+    try:
+        updates = bot.get_updates()
+        posts = [
+            u.channel_post
+            for u in updates
+            if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
+        ]
+        logging.info(f"Загружено {len(posts)} постов из канала {CHANNEL_ID}")
+        return list(reversed(posts[-12:])) if posts else []
+    except Exception as e:
+        logging.error(f"Ошибка при загрузке постов: {e}")
+        return []
 
 def update_sitemap():
     """Обновляет <lastmod> для history.html в sitemap.xml."""
@@ -178,19 +211,28 @@ def generate_rss(posts):
   </channel>
 </rss>
 """
-    with open(RSS_FILE, "w", encoding="utf-8") as f:
-        f.write(rss)
-    logging.info("history_rss.xml обновлён")
+    try:
+        with open(RSS_FILE, "w", encoding="utf-8") as f:
+            f.write(rss)
+        logging.info("history_rss.xml обновлён")
+    except Exception as e:
+        logging.error(f"Ошибка при записи history_rss.xml: {e}")
 
 def update_history_html(html, json_ld_article):
     """Добавляет пост и обновляет JSON-LD в history.html."""
     os.makedirs("public", exist_ok=True)
 
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-            soup = BeautifulSoup(f, "html.parser")
-    else:
-        soup = BeautifulSoup(open("history.html").read(), "html.parser")
+    try:
+        if os.path.exists(HISTORY_FILE):
+            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+                soup = BeautifulSoup(f, "html.parser")
+        else:
+            logging.warning(f"Файл {HISTORY_FILE} не найден, используется шаблон history.html")
+            with open("history.html", "r", encoding="utf-8") as f:
+                soup = BeautifulSoup(f, "html.parser")
+    except Exception as e:
+        logging.error(f"Ошибка при чтении history.html: {e}")
+        return
 
     history_container = soup.find("div", id="history-container")
     if history_container:
@@ -198,19 +240,27 @@ def update_history_html(html, json_ld_article):
         history_container.insert(0, new_article)
     else:
         logging.error("Контейнер #history-container не найден в history.html")
+        return
 
     schema_script = soup.find("script", id="schema-org")
     if schema_script and json_ld_article:
-        schema_data = json.loads(schema_script.string)
-        schema_data["mainEntity"]["itemListElement"].insert(0, {
-            "@type": "ListItem",
-            "position": len(schema_data["mainEntity"]["itemListElement"]) + 1,
-            "item": json_ld_article
-        })
-        schema_script.string = json.dumps(schema_data, ensure_ascii=False, indent=2)
+        try:
+            schema_data = json.loads(schema_script.string)
+            schema_data["mainEntity"]["itemListElement"].insert(0, {
+                "@type": "ListItem",
+                "position": len(schema_data["mainEntity"]["itemListElement"]) + 1,
+                "item": json_ld_article
+            })
+            schema_script.string = json.dumps(schema_data, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logging.error(f"Ошибка при обновлении JSON-LD: {e}")
 
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-        f.write(str(soup))
+    try:
+        with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+            f.write(str(soup))
+        logging.info(f"Обновлён {HISTORY_FILE}")
+    except Exception as e:
+        logging.error(f"Ошибка при записи {HISTORY_FILE}: {e}")
 
     # Обновляем sitemap.xml
     if os.path.exists(SITEMAP_FILE):
@@ -235,6 +285,8 @@ def process_initial_posts():
             new_posts.append((html, json_ld_article))
             seen_ids.add(post.message_id)
             logging.info(f"Добавлен начальный пост {post.message_id}")
+        else:
+            logging.warning(f"Не удалось обработать пост {post.message_id}")
 
     if new_posts:
         save_seen_ids(seen_ids)
@@ -243,7 +295,6 @@ def process_initial_posts():
     else:
         logging.info("Новых постов для обработки при запуске нет")
 
-@bot.channel_post_handler(func=lambda m: True)
 def handle_channel_post(message):
     """Обрабатывает новые посты из канала в реальном времени."""
     if message.chat.username != CHANNEL_ID[1:]:
@@ -260,13 +311,20 @@ def handle_channel_post(message):
         update_history_html(html, json_ld_article)
         seen_ids.add(message.message_id)
         save_seen_ids(seen_ids)
-        generate_rss([(html, json_ld_article)])  # Обновляем RSS для нового поста
+        generate_rss([(html, json_ld_article)])
         logging.info(f"Добавлен пост {message.message_id}")
     else:
-        logging.error(f"Не удалось обработать пост {message.message_id}")
+        logging.warning(f"Не удалось обработать пост {message.message_id}")
 
 if __name__ == "__main__":
     logging.info("Запуск бота для канала @historySvoih")
-    process_initial_posts()  # Обрабатываем последние посты при старте
-    logging.info("Бот слушает канал...")
-    bot.polling(none_stop=True, timeout=60)
+    process_initial_posts()  # Обрабатываем начальные посты
+    try:
+        logging.info("Бот слушает канал...")
+        bot.polling(none_stop=True, timeout=60)
+    except KeyboardInterrupt:
+        logging.info("Бот остановлен пользователем")
+        sys.exit(0)
+    except Exception as e:
+        logging.error(f"Ошибка в polling: {e}")
+        sys.exit(1)
