@@ -1,3 +1,5 @@
 pyTelegramBotAPI
 python-dotenv
 pytz
+beautifulsoup4
+lxml
