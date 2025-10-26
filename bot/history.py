@@ -197,13 +197,23 @@ def generate_rss(posts):
 def process_initial_posts():
     try:
         bot.delete_webhook(drop_pending_updates=True)
-        messages = bot.get_chat_history(chat_id=CHANNEL_ID, limit=100)
-        posts = [msg for msg in messages if hasattr(msg, 'chat') and msg.chat.username == CHANNEL_ID[1:]]
-        logging.info(f"Получено {len(messages)} сообщений, {len(posts)} постов из канала @{CHANNEL_ID[1:]}")
+        # Получаем chat_id канала
+        chat = bot.get_chat(CHANNEL_ID)
+        chat_id = chat.id
+        logging.info(f"Chat ID канала {CHANNEL_ID}: {chat_id}")
+        # Получаем обновления с увеличенным таймаутом
+        updates = bot.get_updates(timeout=120, limit=100, allowed_updates=["channel_post"])
+        logging.info(f"Получено {len(updates)} обновлений")
+        posts = [
+            u.channel_post
+            for u in updates
+            if u.channel_post and u.channel_post.chat.id == chat_id
+        ]
+        logging.info(f"Загружено {len(posts)} постов из канала {CHANNEL_ID}")
         for post in posts:
             logging.info(f"Пост ID: {post.message_id}, Дата: {datetime.fromtimestamp(post.date, moscow)}")
     except Exception as e:
-        logging.error(f"Ошибка получения постов: {e}")
+        logging.error(f"Ошибка получения обновлений: {e}")
         generate_rss([])
         posts = []
 
