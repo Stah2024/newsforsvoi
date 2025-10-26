@@ -13,7 +13,6 @@ SEEN_IDS_FILE = "seen_ids.txt"
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone("Europe/Moscow")
 
-
 def clean_text(text):
     unwanted = [
         "💪Подписаться на новости для своих🇷🇺",
@@ -24,12 +23,10 @@ def clean_text(text):
         text = text.replace(phrase, "")
     return text.strip()
 
-
 def format_post(message, caption_override=None, group_size=1):
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
-    iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S")
-
+    iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")  # Исправлен формат времени
     caption = clean_text(caption_override or message.caption or "")
     text = clean_text(message.text or "")
     file_url = None
@@ -49,7 +46,6 @@ def format_post(message, caption_override=None, group_size=1):
         file_info = bot.get_file(photos[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
         html += f"<img src='{file_url}' alt='Фото' />\n"
-
     elif message.content_type == "video":
         try:
             size = getattr(message.video, "file_size", 0)
@@ -100,7 +96,6 @@ def format_post(message, caption_override=None, group_size=1):
     html += "</article>\n"
     return html
 
-
 def extract_timestamp(html_block):
     match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
@@ -110,24 +105,40 @@ def extract_timestamp(html_block):
             return None
     return None
 
-
 def hash_html_block(html):
     return hashlib.md5(html.encode("utf-8")).hexdigest()
 
-
 def update_sitemap():
-    now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S%z")
+    now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
+    history_lastmod = now  # Значение по умолчанию
+    sitemap_file = "public/sitemap.xml"
+
+    # Проверяем существующий sitemap.xml и сохраняем <lastmod> для history.html
+    if os.path.exists(sitemap_file):
+        try:
+            tree = ET.parse(sitemap_file)
+            root = tree.getroot()
+            for url in root.findall("{http://www.sitemaps.org/schemas/sitemap/0.9}url"):
+                loc = url.find("{http://www.sitemaps.org/schemas/sitemap/0.9}loc")
+                if loc.text == "https://newsforsvoi.ru/history.html":
+                    lastmod = url.find("{http://www.sitemaps.org/schemas/sitemap/0.9}lastmod")
+                    if lastmod is not None:
+                        history_lastmod = lastmod.text
+                    break
+        except Exception as e:
+            print(f"⚠️ Ошибка при чтении sitemap.xml: {e}")
+
     sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://newsforsvoi.ru/index.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>
   <url><loc>https://newsforsvoi.ru/news.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>0.9</priority></url>
   <url><loc>https://newsforsvoi.ru/archive.html</loc><lastmod>{now}</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>
-  <url><loc>https://newsforsvoi.ru/history.html</loc><lastmod>{now}</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://newsforsvoi.ru/history.html</loc><lastmod>{history_lastmod}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
 </urlset>
 """
-    with open("public/sitemap.xml", "w", encoding="utf-8") as f:
+    with open(sitemap_file, "w", encoding="utf-8") as f:
         f.write(sitemap)
-
+    print("🗂 sitemap.xml обновлён")
 
 def generate_rss(fresh_news):
     rss_items = ""
@@ -139,7 +150,7 @@ def generate_rss(fresh_news):
         title = title_match.group(1) if title_match else "Без заголовка"
         link = link_match.group(1) if link_match else "https://t.me/newsSVOih"
         pub_date = (
-            datetime.strptime(date_match.group(1), "%Y-%m-%dT%H:%M:%S").strftime("%a, %d %b %Y %H:%M:%S +0300")
+            datetime.strptime(date_match.group(1), "%Y-%m-%dT%H:%M:%S+03:00").strftime("%a, %d %b %Y %H:%M:%S +0300")
             if date_match
             else ""
         )
@@ -167,19 +178,16 @@ def generate_rss(fresh_news):
         f.write(rss)
     print("📰 rss.xml обновлён")
 
-
 def load_seen_ids():
     if not os.path.exists(SEEN_IDS_FILE):
         return set()
     with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
         return set(line.strip() for line in f)
 
-
 def save_seen_ids(seen_ids):
     with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
         for post_id in seen_ids:
             f.write(f"{post_id}\n")
-
 
 def fetch_latest_posts():
     updates = bot.get_updates()
@@ -190,12 +198,10 @@ def fetch_latest_posts():
     ]
     return list(reversed(posts[-12:])) if posts else []
 
-
 def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
     now = datetime.now(moscow)
     return now - post_time >= timedelta(days=2)
-
 
 def main():
     posts = fetch_latest_posts()
@@ -231,17 +237,13 @@ def main():
     visible_count = sum(1 for block in fresh_news if "hidden" not in block)
     any_new = False
 
-    # ✅ ✅ ИСПРАВЛЕННАЯ ЛОГИКА АРХИВА
     retained_news = []
     archived_count = 0
-
-    # Собираем архивные карточки
     archive_content = []
     for block in fresh_news:
         ts = extract_timestamp(block)
 
         if ts and is_older_than_two_days(ts.timestamp()):
-            # 1. УДАЛЯЕМ МЕДИА ФАЙЛЫ
             media_paths = re.findall(r"src=['\"](.*?)['\"]", block)
             for path in media_paths:
                 local_path = os.path.join("public", os.path.basename(path))
@@ -252,14 +254,12 @@ def main():
                     except Exception as e:
                         print(f"⚠️ Ошибка удаления {local_path}: {e}")
 
-            # 2. ИЗВЛЕКАЕМ ДАННЫЕ
             link_match = re.search(r"<a href='(https://t\.me/[^']+)'", block)
             text_matches = re.findall(r"<div class='text-block'><p>(.*?)</p></div>", block, re.DOTALL)
             category_match = re.search(r"<h2>(.*?)</h2>", block)
 
             link = link_match.group(1) if link_match else f"https://t.me/{CHANNEL_ID[1:]}"
             category = category_match.group(1) if category_match else "Новости"
-
             full_text = ""
             for text_match in text_matches:
                 clean_text = re.sub(r'<[^>]+>', '', text_match).strip()
@@ -267,7 +267,6 @@ def main():
             full_text = full_text.strip()[:200] + "..." if len(full_text) > 200 else full_text
             date_str = ts.strftime("%d.%m.%Y %H:%M")
 
-            # 3. Карточка архива
             archive_card = f"""
 <article class='news-preview' data-post-id='{link.split("/")[-1]}'>
     <p><strong>🗓 {date_str} | <span style='color:#0077cc'>{category}</span></strong></p>
@@ -282,7 +281,6 @@ def main():
         else:
             retained_news.append(block)
 
-    # ✅ ПИШЕМ АРХИВ ОДНИМ write()
     archive_html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -375,7 +373,6 @@ def main():
 
     fresh_news = retained_news
 
-    # ✅ НОВЫЕ КАРТОЧКИ
     for group_id, group_posts in grouped.items():
         post_id = str(group_id)
         first = group_posts[0]
@@ -405,7 +402,6 @@ def main():
         print("⚠️ Новых карточек нет — news.html не изменен")
         return
 
-    # ✅ СОЗДАЁМ news.html (Точно как было)
     with open("public/news.html", "w", encoding="utf-8") as news_file:
         news_file.write("""
 <style>
@@ -468,7 +464,6 @@ document.getElementById("show-more").onclick = () => {
     print("🗂 sitemap.xml обновлён")
     generate_rss(fresh_news)
     print("📰 RSS-файл создан")
-
 
 if __name__ == "__main__":
     main()
