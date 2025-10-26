@@ -2,9 +2,14 @@ import os
 import json
 import pytz
 import telebot
+import logging
 from datetime import datetime
 from bs4 import BeautifulSoup
 import xml.etree.ElementTree as ET
+import re
+
+# Настройка логирования
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Токен и настройки
 TOKEN = os.getenv("TELEGRAM_HISTORY_TOKEN")
@@ -12,6 +17,7 @@ CHANNEL_ID = "@historySvoih"
 SEEN_IDS_FILE = "seen_ids1.txt"
 HISTORY_FILE = "public/history.html"
 SITEMAP_FILE = "public/sitemap.xml"
+RSS_FILE = "public/history_rss.xml"  # Новый файл RSS для history.html
 moscow = pytz.timezone("Europe/Moscow")
 
 bot = telebot.TeleBot(TOKEN)
@@ -30,15 +36,23 @@ def save_seen_ids(ids):
     with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
         json.dump(list(ids), f)
 
+def clean_text(text):
+    """Очищает текст от нежелательных фраз (аналогично bot.py)."""
+    unwanted = ["Подписаться на историю для своих", "https://t.me/historySvoih"]
+    for phrase in unwanted:
+        text = text.replace(phrase, "")
+    return text.strip()
+
 def format_post(message):
-    """Форматирует пост в HTML и возвращает данные для JSON-LD."""
+    """Форматирует пост в HTML и возвращает данные для JSON-LD и RSS."""
     timestamp = message.date
     iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
-    caption = message.caption or ""
-    text = message.text or ""
+    formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
+    caption = clean_text(message.caption or "")
+    text = clean_text(message.text or "")
     html = "<article class='news-item'>\n"
     json_ld_article = {
-        "@type": "Article",
+        "@type": "NewsArticle",  # Изменено на NewsArticle для согласованности с bot.py
         "headline": caption[:200] or text[:200] or "Историческое событие",
         "description": text[:500] or caption[:500] or "",
         "datePublished": iso_time,
@@ -46,21 +60,30 @@ def format_post(message):
             "@type": "Organization",
             "name": "SVOih History Team"
         },
+        "publisher": {
+            "@type": "Organization",
+            "name": "Новости для Своих",
+            "logo": {"@type": "ImageObject", "url": "https://newsforsvoi.ru/logo.png"}
+        },
         "url": f"https://t.me/{CHANNEL_ID[1:]}/{message.message_id}"
     }
     file_url = None
 
     if message.content_type == "photo":
         photos = message.photo
-        file_info = bot.get_file(photos[-1].file_id)
-        file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
-        html += f"<img src='{file_url}' alt='Фото события' class='history-image' />\n"
-        json_ld_article["image"] = {
-            "@type": "ImageObject",
-            "url": file_url,
-            "width": photos[-1].width,
-            "height": photos[-1].height
-        }
+        try:
+            file_info = bot.get_file(photos[-1].file_id)
+            file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
+            html += f"<img src='{file_url}' alt='Фото события' class='history-image' />\n"
+            json_ld_article["image"] = {
+                "@type": "ImageObject",
+                "url": file_url,
+                "width": photos[-1].width,
+                "height": photos[-1].height
+            }
+        except Exception as e:
+            logging.error(f"Ошибка при обработке фото: {e}")
+            return "", None
     elif message.content_type == "video":
         try:
             size = getattr(message.video, "file_size", 0)
@@ -74,10 +97,10 @@ def format_post(message):
                     "uploadDate": iso_time
                 }
             else:
-                print(f"⛔️ Пропущено видео >20MB: {size}")
+                logging.warning(f"Пропущено видео >20MB: {size}")
                 return "", None
         except Exception as e:
-            print(f"⚠️ Ошибка при видео: {e}")
+            logging.error(f"Ошибка при обработке видео: {e}")
             return "", None
 
     if caption:
@@ -86,9 +109,20 @@ def format_post(message):
         html += f"<p>{text}</p>\n"
 
     html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
-    html += f"<div class='timestamp'>{iso_time}</div>\n"
+    html += f"<div class='timestamp' data-ts='{iso_time}'>🕒 {formatted_time}</div>\n"
     html += "</article>\n"
     return html, json_ld_article
+
+def fetch_latest_posts():
+    """Загружает последние посты из канала при запуске бота."""
+    updates = bot.get_updates()
+    posts = [
+        u.channel_post
+        for u in updates
+        if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
+    ]
+    logging.info(f"Загружено {len(posts)} постов из канала {CHANNEL_ID}")
+    return list(reversed(posts[-12:])) if posts else []
 
 def update_sitemap():
     """Обновляет <lastmod> для history.html в sitemap.xml."""
@@ -103,11 +137,50 @@ def update_sitemap():
                 lastmod.text = now
                 break
         tree.write(SITEMAP_FILE, encoding="utf-8", xml_declaration=True)
-        print(f"✅ Обновлён sitemap.xml для history.html: {now}")
+        logging.info(f"Обновлён sitemap.xml для history.html: {now}")
     except FileNotFoundError:
-        print(f"⚠️ Файл {SITEMAP_FILE} не найден. Убедитесь, что bot.py создал sitemap.xml.")
+        logging.error(f"Файл {SITEMAP_FILE} не найден. Убедитесь, что bot.py создал sitemap.xml.")
     except Exception as e:
-        print(f"⚠️ Ошибка при обновлении sitemap.xml: {e}")
+        logging.error(f"Ошибка при обновлении sitemap.xml: {e}")
+
+def generate_rss(posts):
+    """Генерирует RSS для history.html."""
+    rss_items = ""
+    for html_block, json_ld in posts:
+        title_match = re.search(r"<p><b>(.*?)</b></p>", html_block) or re.search(r"<p>(.*?)</p>", html_block)
+        link_match = re.search(r"<a href='(https://t\.me/[^']+)'", html_block)
+        date_match = re.search(r"data-ts='([^']+)'", html_block)
+
+        title = title_match.group(1) if title_match else json_ld["headline"]
+        link = link_match.group(1) if link_match else f"https://t.me/{CHANNEL_ID[1:]}"
+        pub_date = (
+            datetime.strptime(date_match.group(1), "%Y-%m-%dT%H:%M:%S+03:00").strftime("%a, %d %b %Y %H:%M:%S +0300")
+            if date_match
+            else datetime.now(moscow).strftime("%a, %d %b %Y %H:%M:%S +0300")
+        )
+
+        rss_items += f"""
+<item>
+  <title>{title}</title>
+  <link>{link}</link>
+  <description>{json_ld["description"]}</description>
+  <pubDate>{pub_date}</pubDate>
+</item>
+"""
+
+    rss = f"""<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>История для Своих</title>
+    <link>https://newsforsvoi.ru/history.html</link>
+    <description>Исторические события из Telegram-канала История для Своих</description>
+    {rss_items}
+  </channel>
+</rss>
+"""
+    with open(RSS_FILE, "w", encoding="utf-8") as f:
+        f.write(rss)
+    logging.info("history_rss.xml обновлён")
 
 def update_history_html(html, json_ld_article):
     """Добавляет пост и обновляет JSON-LD в history.html."""
@@ -123,6 +196,8 @@ def update_history_html(html, json_ld_article):
     if history_container:
         new_article = BeautifulSoup(html, "html.parser")
         history_container.insert(0, new_article)
+    else:
+        logging.error("Контейнер #history-container не найден в history.html")
 
     schema_script = soup.find("script", id="schema-org")
     if schema_script and json_ld_article:
@@ -137,20 +212,47 @@ def update_history_html(html, json_ld_article):
     with open(HISTORY_FILE, "w", encoding="utf-8") as f:
         f.write(str(soup))
 
-    # Обновляем sitemap.xml только для history.html
+    # Обновляем sitemap.xml
     if os.path.exists(SITEMAP_FILE):
         update_sitemap()
 
 # === Основная логика ===
 
+def process_initial_posts():
+    """Обрабатывает последние посты при запуске бота."""
+    posts = fetch_latest_posts()
+    seen_ids = load_seen_ids()
+    new_posts = []
+
+    for post in posts:
+        if post.message_id in seen_ids:
+            logging.info(f"Пропущен пост {post.message_id}: уже обработан")
+            continue
+
+        html, json_ld_article = format_post(post)
+        if html and json_ld_article:
+            update_history_html(html, json_ld_article)
+            new_posts.append((html, json_ld_article))
+            seen_ids.add(post.message_id)
+            logging.info(f"Добавлен начальный пост {post.message_id}")
+
+    if new_posts:
+        save_seen_ids(seen_ids)
+        generate_rss(new_posts)
+        logging.info(f"Обработано {len(new_posts)} начальных постов")
+    else:
+        logging.info("Новых постов для обработки при запуске нет")
+
 @bot.channel_post_handler(func=lambda m: True)
 def handle_channel_post(message):
-    """Обрабатывает новые посты из канала."""
+    """Обрабатывает новые посты из канала в реальном времени."""
     if message.chat.username != CHANNEL_ID[1:]:
+        logging.warning(f"Получен пост из другого канала: {message.chat.username}")
         return
 
     seen_ids = load_seen_ids()
     if message.message_id in seen_ids:
+        logging.info(f"Пропущен пост {message.message_id}: уже обработан")
         return
 
     html, json_ld_article = format_post(message)
@@ -158,7 +260,13 @@ def handle_channel_post(message):
         update_history_html(html, json_ld_article)
         seen_ids.add(message.message_id)
         save_seen_ids(seen_ids)
-        print(f"✅ Добавлен пост {message.message_id}")
+        generate_rss([(html, json_ld_article)])  # Обновляем RSS для нового поста
+        logging.info(f"Добавлен пост {message.message_id}")
+    else:
+        logging.error(f"Не удалось обработать пост {message.message_id}")
 
-print("🤖 Бот слушает канал...")
-bot.polling(none_stop=True, timeout=60)
+if __name__ == "__main__":
+    logging.info("Запуск бота для канала @historySvoih")
+    process_initial_posts()  # Обрабатываем последние посты при старте
+    logging.info("Бот слушает канал...")
+    bot.polling(none_stop=True, timeout=60)
