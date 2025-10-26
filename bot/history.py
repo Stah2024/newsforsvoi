@@ -115,7 +115,7 @@ def format_post(message):
                 }
             else:
                 logging.warning(f"Пропущено видео >20MB: {size}")
-                return "", None  # Исправлено: Null → None
+                return "", None
         except Exception as e:
             logging.error(f"Ошибка видео {message.message_id}: {e}")
             return "", None
@@ -198,17 +198,19 @@ def generate_rss(posts):
 
 def process_initial_posts():
     try:
-        bot.delete_webhook(drop_pending_updates=True)  # сброс polling
-        updates = bot.get_updates()
+        bot.delete_webhook(drop_pending_updates=True)
+        updates = bot.get_updates(timeout=30, limit=100)  # Добавлен тайма26        logging.info(f"Получено {len(updates)} обновлений")
         posts = [
             u.channel_post
             for u in updates
             if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
         ]
         logging.info(f"Загружено {len(posts)} постов из канала @{CHANNEL_ID[1:]}")
+        for post in posts:
+            logging.info(f"Пост ID: {post.message_id}, Дата: {post.date}")
     except Exception as e:
         logging.error(f"Ошибка получения обновлений: {e}")
-        generate_rss([])  # создаём RSS даже при ошибке
+        generate_rss([])
         posts = []
 
     seen_ids = load_seen_ids()
