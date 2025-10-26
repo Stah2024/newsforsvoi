@@ -5,7 +5,6 @@ import telebot
 import logging
 from datetime import datetime
 from bs4 import BeautifulSoup
-import re
 import sys
 
 # Настройка логирования
@@ -87,12 +86,12 @@ def format_post(message):
         },
         "url": f"https://t.me/{CHANNEL_ID[1:]}/{message.message_id}"
     }
-    
+
     if message.content_type == "photo":
         try:
             file_info = bot.get_file(message.photo[-1].file_id)
             file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
-            html += f"    <img src='{file_url}' alt='Фото события' class='history-image' />\n"
+            html += f"<img src='{file_url}' alt='Фото события' class='history-image' />\n"
             json_ld_article["image"] = {
                 "@type": "ImageObject",
                 "url": file_url,
@@ -108,7 +107,7 @@ def format_post(message):
             if size <= 20_000_000:
                 file_info = bot.get_file(message.video.file_id)
                 file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
-                html += f"    <video controls src='{file_url}'></video>\n"
+                html += f"<video controls src='{file_url}'></video>\n"
                 json_ld_article["video"] = {
                     "@type": "VideoObject",
                     "contentUrl": file_url,
@@ -122,12 +121,12 @@ def format_post(message):
             return "", None
 
     if caption:
-        html += f"    <p><b>{caption}</b></p>\n"
+        html += f"<p><b>{caption}</b></p>\n"
     if text and text != caption:
-        html += f"    <p>{text}</p>\n"
+        html += f"<p>{text}</p>\n"
 
-    html += f"    <a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
-    html += f"    <div class='timestamp' data-ts='{iso_time}'>🕒 {formatted_time}</div>\n"
+    html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
+    html += f"<div class='timestamp' data-ts='{iso_time}'>🕒 {formatted_time}</div>\n"
     html += "</article>\n"
     return html, json_ld_article
 
@@ -167,44 +166,49 @@ def update_history_html(html, json_ld_article):
         logging.error(f"Ошибка записи history.html: {e}")
 
 def generate_rss(posts):
+    if not posts:
+        logging.info("Создаём пустой RSS — новых постов нет")
     rss_items = ""
     for _, json_ld in posts:
         title = json_ld["headline"]
         link = json_ld["url"]
         pub_date = json_ld["datePublished"].replace("T", " ").replace("+03:00", " +0300")
         rss_items += f"""
-    <item>
-        <title>{title}</title>
-        <link>{link}</link>
-        <description>{json_ld["description"]}</description>
-        <pubDate>{pub_date}</pubDate>
-    </item>
+<item>
+  <title>{title}</title>
+  <link>{link}</link>
+  <description>{json_ld["description"]}</description>
+  <pubDate>{pub_date}</pubDate>
+</item>
 """
     rss = f"""<?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">
-    <channel>
-        <title>История для Своих</title>
-        <link>https://newsforsvoi.ru/history.html</link>
-        <description>Исторические события из Telegram-канала История для Своих</description>
-        {rss_items}
-    </channel>
+  <channel>
+    <title>История для Своих</title>
+    <link>https://newsforsvoi.ru/history.html</link>
+    <description>Исторические события из Telegram-канала История для Своих</description>
+    {rss_items}
+  </channel>
 </rss>
 """
     os.makedirs(os.path.dirname(RSS_FILE), exist_ok=True)
     with open(RSS_FILE, "w", encoding="utf-8") as f:
         f.write(rss)
-    logging.info("Создан history_rss.xml")
+    logging.info(f"RSS записан в: {RSS_FILE}")
 
 def process_initial_posts():
     try:
+        bot.delete_webhook(drop_pending_updates=True)  # 🔧 сброс polling
         updates = bot.get_updates()
         posts = [
             u.channel_post
             for u in updates
             if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
         ]
+        logging.info(f"Загружено {len(posts)} постов из канала @{CHANNEL_ID[1:]}")
     except Exception as e:
         logging.error(f"Ошибка получения обновлений: {e}")
+        generate_rss([])  # 🔥 создаём RSS даже при ошибке
         posts = []
 
     seen_ids = load_seen_ids()
@@ -218,11 +222,11 @@ def process_initial_posts():
             update_history_html(html, json_ld)
             seen_ids.add(post.message_id)
             new_posts.append((html, json_ld))
-    
+
     if new_posts:
         generate_rss(new_posts)
         logging.info(f"Обработано {len(new_posts)} новых постов")
-    else:
+else:
         logging.info("Новых постов не найдено, создаём пустой RSS")
         generate_rss([])
 
