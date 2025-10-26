@@ -14,15 +14,15 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("history.log"),  # Сохраняем логи в файл
-        logging.StreamHandler()  # Выводим в консоль
+        logging.FileHandler("history.log"),
+        logging.StreamHandler()
     ]
 )
 
 # Токен и настройки
 TOKEN = os.getenv("TELEGRAM_HISTORY_TOKEN")
 CHANNEL_ID = "@historySvoih"
-SEEN_IDS_FILE = "seen_ids1.txt"
+SEEN_IDS_FILE = "bot/seen_ids1.txt"  # Явно указываем путь
 HISTORY_FILE = "public/history.html"
 SITEMAP_FILE = "public/sitemap.xml"
 RSS_FILE = "public/history_rss.xml"
@@ -47,18 +47,33 @@ except Exception as e:
 
 def load_seen_ids():
     """Загружает ID уже обработанных сообщений."""
-    if os.path.exists(SEEN_IDS_FILE):
-        try:
-            with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
-                return set(json.load(f))
-        except Exception as e:
-            logging.error(f"Ошибка чтения {SEEN_IDS_FILE}: {e}")
-            return set()
-    return set()
+    if not os.path.exists(SEEN_IDS_FILE):
+        logging.info(f"Файл {SEEN_IDS_FILE} не существует, создаём пустой список")
+        os.makedirs(os.path.dirname(SEEN_IDS_FILE), exist_ok=True)
+        with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
+            json.dump([], f)
+        return set()
+    
+    try:
+        with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
+            content = f.read().strip()
+            if not content:
+                logging.info(f"Файл {SEEN_IDS_FILE} пуст, возвращаем пустой список")
+                return set()
+            return set(json.loads(content))
+    except json.JSONDecodeError as e:
+        logging.error(f"Ошибка JSON в {SEEN_IDS_FILE}: {e}. Сбрасываем файл")
+        with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
+            json.dump([], f)
+        return set()
+    except Exception as e:
+        logging.error(f"Ошибка чтения {SEEN_IDS_FILE}: {e}")
+        return set()
 
 def save_seen_ids(ids):
     """Сохраняет список обработанных сообщений."""
     try:
+        os.makedirs(os.path.dirname(SEEN_IDS_FILE), exist_ok=True)
         with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
             json.dump(list(ids), f)
         logging.info(f"Сохранено {len(ids)} ID в {SEEN_IDS_FILE}")
@@ -67,6 +82,8 @@ def save_seen_ids(ids):
 
 def clean_text(text):
     """Очищает текст от нежелательных фраз."""
+    if not text:
+        return ""
     unwanted = ["Подписаться на историю для своих", "https://t.me/historySvoih"]
     for phrase in unwanted:
         text = text.replace(phrase, "")
@@ -212,6 +229,7 @@ def generate_rss(posts):
 </rss>
 """
     try:
+        os.makedirs(os.path.dirname(RSS_FILE), exist_ok=True)
         with open(RSS_FILE, "w", encoding="utf-8") as f:
             f.write(rss)
         logging.info("history_rss.xml обновлён")
@@ -220,7 +238,7 @@ def generate_rss(posts):
 
 def update_history_html(html, json_ld_article):
     """Добавляет пост и обновляет JSON-LD в history.html."""
-    os.makedirs("public", exist_ok=True)
+    os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
 
     try:
         if os.path.exists(HISTORY_FILE):
@@ -230,6 +248,9 @@ def update_history_html(html, json_ld_article):
             logging.warning(f"Файл {HISTORY_FILE} не найден, используется шаблон history.html")
             with open("history.html", "r", encoding="utf-8") as f:
                 soup = BeautifulSoup(f, "html.parser")
+    except FileNotFoundError:
+        logging.error(f"Файл history.html не найден, создайте шаблон в корне проекта")
+        return
     except Exception as e:
         logging.error(f"Ошибка при чтении history.html: {e}")
         return
@@ -309,7 +330,7 @@ def handle_channel_post(message):
     html, json_ld_article = format_post(message)
     if html and json_ld_article:
         update_history_html(html, json_ld_article)
-        seen_ids.add(message.message_id)
+        seen_ids.add(message.message_id)  # Исправлено: post → message
         save_seen_ids(seen_ids)
         generate_rss([(html, json_ld_article)])
         logging.info(f"Добавлен пост {message.message_id}")
@@ -319,12 +340,4 @@ def handle_channel_post(message):
 if __name__ == "__main__":
     logging.info("Запуск бота для канала @historySvoih")
     process_initial_posts()  # Обрабатываем начальные посты
-    try:
-        logging.info("Бот слушает канал...")
-        bot.polling(none_stop=True, timeout=60)
-    except KeyboardInterrupt:
-        logging.info("Бот остановлен пользователем")
-        sys.exit(0)
-    except Exception as e:
-        logging.error(f"Ошибка в polling: {e}")
-        sys.exit(1)
+    logging.info("Завершение работы после обработки начальных постов")
