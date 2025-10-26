@@ -115,7 +115,7 @@ def format_post(message):
                 }
             else:
                 logging.warning(f"Пропущено видео >20MB: {size}")
-                return "", Null
+                return "", None  # Исправлено: Null → None
         except Exception as e:
             logging.error(f"Ошибка видео {message.message_id}: {e}")
             return "", None
