@@ -15,10 +15,10 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3  # ✅ стабильная версия
+      uses: actions/checkout@v3
       with:
         persist-credentials: false
-        fetch-depth: 0            # ✅ гарантирует свежие файлы
+        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -38,13 +38,13 @@ jobs:
         ls -la public/
         git status
 
-    - name: Commit updated files
+    - name: Commit and push updated files
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git remote set-url origin https://x-access-token:${GH_PAT}@github.com/Stah2024/newsforsvoi
+
         find public/ -type f -name "*.html" -o -name "*.xml" | xargs git add
         git add seen_ids1.txt || echo "Нет изменений"
         git commit -m "Update history files [skip ci]" || echo "Нет изменений"
-        git pull --rebase || echo "Нет изменений при pull"
-        git push || echo "Push не удался"
+        git push origin main || echo "Push не удался"
