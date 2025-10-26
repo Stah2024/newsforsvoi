@@ -18,6 +18,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         persist-credentials: false
+        fetch-depth: 0  # 🔧 гарантирует свежую версию репозитория
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -32,7 +33,7 @@ jobs:
     - name: Run bot script
       run: |
         mkdir -p public/
-        touch seen_ids1.txt  # создаём пустой файл, если нет
+        touch seen_ids1.txt
         python bot/history.py
         ls -la public/
         git status
@@ -42,7 +43,8 @@ jobs:
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git remote set-url origin https://x-access-token:${GH_PAT}@github.com/Stah2024/newsforsvoi
-        git add public/history.html public/history_rss.xml public/sitemap.xml
+        find public/ -type f -name "*.html" -o -name "*.xml" | xargs git add
+        git add seen_ids1.txt || echo "Нет изменений"
         git commit -m "Update history files [skip ci]" || echo "Нет изменений"
         git pull --rebase || echo "Нет изменений при pull"
         git push || echo "Push не удался"
