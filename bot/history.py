@@ -5,7 +5,6 @@ import telebot
 import logging
 from datetime import datetime
 from bs4 import BeautifulSoup
-import xml.etree.ElementTree as ET
 import re
 import sys
 
@@ -24,26 +23,21 @@ TOKEN = os.getenv("TELEGRAM_HISTORY_TOKEN")
 CHANNEL_ID = "@historySvoih"
 SEEN_IDS_FILE = "seen_ids1.txt"
 HISTORY_FILE = "public/history.html"
-SITEMAP_FILE = "public/sitemap.xml"
 RSS_FILE = "public/history_rss.xml"
 moscow = pytz.timezone("Europe/Moscow")
 
-# Проверка токена
 if not TOKEN:
     logging.error("TELEGRAM_HISTORY_TOKEN не найден в переменных окружения")
     sys.exit(1)
 
 bot = telebot.TeleBot(TOKEN)
 
-# Проверка доступа бота
 try:
     bot.get_me()
     logging.info("Бот успешно авторизован")
 except Exception as e:
     logging.error(f"Ошибка авторизации бота: {e}")
     sys.exit(1)
-
-# === Вспомогательные функции ===
 
 def load_seen_ids():
     if not os.path.exists(SEEN_IDS_FILE):
@@ -93,9 +87,7 @@ def format_post(message):
         },
         "url": f"https://t.me/{CHANNEL_ID[1:]}/{message.message_id}"
     }
-    file_url = None
-
-    if message.content_type == "photo":
+if message.content_type == "photo":
         try:
             file_info = bot.get_file(message.photo[-1].file_id)
             file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
@@ -138,15 +130,12 @@ def format_post(message):
     html += f"<div class='timestamp' data-ts='{iso_time}'>🕒 {formatted_time}</div>\n"
     html += "</article>\n"
     return html, json_ld_article
+
 def update_history_html(html, json_ld_article):
     os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
     try:
-        if os.path.exists(HISTORY_FILE):
-            with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-                soup = BeautifulSoup(f, "html.parser")
-        else:
-            with open("history.html", "r", encoding="utf-8") as f:
-                soup = BeautifulSoup(f, "html.parser")
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            soup = BeautifulSoup(f, "html.parser")
     except Exception as e:
         logging.error(f"Ошибка чтения history.html: {e}")
         return
@@ -176,24 +165,67 @@ def update_history_html(html, json_ld_article):
             f.write(str(soup))
     except Exception as e:
         logging.error(f"Ошибка записи history.html: {e}")
+def generate_rss(posts):
+    rss_items = ""
+    for _, json_ld in posts:
+        title = json_ld["headline"]
+        link = json_ld["url"]
+        pub_date = json_ld["datePublished"].replace("T", " ").replace("+03:00", " +0300")
+        rss_items += f"""
+<item>
+  <title>{title}</title>
+  <link>{link}</link>
+  <description>{json_ld["description"]}</description>
+  <pubDate>{pub_date}</pubDate>
+</item>
+"""
+    rss = f"""<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>История для Своих</title>
+    <link>https://newsforsvoi.ru/history.html</link>
+    <description>Исторические события из Telegram-канала История для Своих</description>
+    {rss_items}
+  </channel>
+</rss>
+"""
+    os.makedirs(os.path.dirname(RSS_FILE), exist_ok=True)
+    with open(RSS_FILE, "w", encoding="utf-8") as f:
+        f.write(rss)
+    logging.info("Создан history_rss.xml")
 
-def handle_channel_post(message):
-    if message.chat.username != CHANNEL_ID[1:]:
-        return
+def process_initial_posts():
+    try:
+        updates = bot.get_updates()
+        posts = [
+            u.channel_post
+            for u in updates
+            if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
+        ]
+    except Exception as e:
+        logging.error(f"Ошибка получения обновлений: {e}")
+        posts = []
+
     seen_ids = load_seen_ids()
-    if message.message_id in seen_ids:
-        return
-    html, json_ld = format_post(message)
-    if html and json_ld:
-        update_history_html(html, json_ld)
-        seen_ids.add(message.message_id)
-        save_seen_ids(seen_ids)
-        logging.info(f"Добавлен пост {message.message_id}")
+    new_posts = []
 
-@bot.channel_post_handler(func=lambda m: True)
-def channel_listener(message):
-    handle_channel_post(message)
+    for post in posts:
+        if post.message_id in seen_ids:
+            continue
+        html, json_ld = format_post(post)
+        if html and json_ld:
+            update_history_html(html, json_ld)
+            seen_ids.add(post.message_id)
+            new_posts.append((html, json_ld))
+if new_posts:
+        generate_rss(new_posts)
+        logging.info(f"Обработано {len(new_posts)} новых постов")
+    else:
+        logging.info("Новых постов не найдено, создаём пустой RSS")
+        generate_rss([])
+
+    save_seen_ids(seen_ids)
 
 if __name__ == "__main__":
-    logging.info("Запуск бота @historySvoih")
-    bot.polling(none_stop=True)
+    logging.info("Запуск однократной обработки постов")
+    process_initial_posts()
