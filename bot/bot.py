@@ -5,7 +5,7 @@ import hashlib
 import pytz
 import telebot
 from datetime import datetime, timedelta
-import xml.etree.ElementTree as ET  # Добавлен импорт для update_sitemap
+import xml.etree.ElementTree as ET
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = "@newsSVOih"
@@ -111,10 +111,9 @@ def hash_html_block(html):
 
 def update_sitemap():
     now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
-    history_lastmod = now  # Значение по умолчанию
+    history_lastmod = now
     sitemap_file = "public/sitemap.xml"
 
-    # Проверяем существующий sitemap.xml и сохраняем <lastmod> для history.html
     if os.path.exists(sitemap_file):
         try:
             tree = ET.parse(sitemap_file)
@@ -151,15 +150,14 @@ def generate_rss(fresh_news):
 
         title = title_match.group(1) if title_match else "Без заголовка"
         link = link_match.group(1) if link_match else "https://t.me/newsSVOih"
-        pub_date = datetime.now(moscow).strftime("%a, %d %b %Y %H:%M:%S +0300")  # Значение по умолчанию
+        pub_date = datetime.now(moscow).strftime("%a, %d %b %Y %H:%M:%S +0300")
 
         if date_match:
             date_str = date_match.group(1)
             try:
-                # Поддержка форматов с и без смещения
-                if len(date_str) == 19:  # Без +03:00 (YYYY-MM-DDTHH:MM:SS)
+                if len(date_str) == 19:
                     dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
-                else:  # С +03:00 (YYYY-MM-DDTHH:MM:SS+03:00)
+                else:
                     dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S+03:00")
                 pub_date = dt.replace(tzinfo=moscow).strftime("%a, %d %b %Y %H:%M:%S +0300")
             except ValueError as e:
@@ -236,7 +234,7 @@ def main():
 
     if os.path.exists("public/archive.html"):
         with open("public/archive.html", "r", encoding="utf-8") as f:
-            for block in re.findall(r"<article class='news-item.*?>.*?</article>", f.read(), re.DOTALL):
+            for block in re.findall(r"<article class='news-preview.*?>.*?</article>", f.read(), re.DOTALL):
                 seen_html_hashes.add(hash_html_block(block))
 
     grouped = {}
@@ -255,22 +253,14 @@ def main():
         ts = extract_timestamp(block)
 
         if ts and is_older_than_two_days(ts.timestamp()):
-            media_paths = re.findall(r"src=['\"](.*?)['\"]", block)
-            for path in media_paths:
-                local_path = os.path.join("public", os.path.basename(path))
-                if os.path.exists(local_path):
-                    try:
-                        os.remove(local_path)
-                        print(f"🧹 Удалён медиафайл: {local_path}")
-                    except Exception as e:
-                        print(f"⚠️ Ошибка удаления {local_path}: {e}")
-
             link_match = re.search(r"<a href='(https://t\.me/[^']+)'", block)
             text_matches = re.findall(r"<div class='text-block'><p>(.*?)</p></div>", block, re.DOTALL)
             category_match = re.search(r"<h2>(.*?)</h2>", block)
+            img_match = re.search(r"<img src='(.*?)'", block)  # Добавлено для превью
 
             link = link_match.group(1) if link_match else f"https://t.me/{CHANNEL_ID[1:]}"
             category = category_match.group(1) if category_match else "Новости"
+            preview_img = img_match.group(1) if img_match else "https://newsforsvoi.ru/preview.jpg"  # Превью по умолчанию
             full_text = ""
             for text_match in text_matches:
                 clean_text = re.sub(r'<[^>]+>', '', text_match).strip()
@@ -280,6 +270,7 @@ def main():
 
             archive_card = f"""
 <article class='news-preview' data-post-id='{link.split("/")[-1]}'>
+    <img src='{preview_img}' alt='Превью' style='max-width:200px;border-radius:8px;margin-bottom:10px;' />
     <p><strong>🗓 {date_str} | <span style='color:#0077cc'>{category}</span></strong></p>
     <p class='preview-text'>{full_text}</p>
     <p class='telegram-hint'>👀 Смотри в Telegram</p>
@@ -292,6 +283,18 @@ def main():
         else:
             retained_news.append(block)
 
+            # Удаление медиа только после добавления в архив
+            media_paths = re.findall(r"src=['\"](.*?)['\"]", block)
+            for path in media_paths:
+                local_path = os.path.join("public", os.path.basename(path))
+                if os.path.exists(local_path):
+                    try:
+                        os.remove(local_path)
+                        print(f"🧹 Удалён медиафайл: {local_path}")
+                    except Exception as e:
+                        print(f"⚠️ Ошибка удаления {local_path}: {e}")
+
+    # Сохраняем archive.html даже если нет новых постов
     archive_html = f"""<!DOCTYPE html>
 <html>
 <head>
@@ -379,8 +382,7 @@ def main():
 
     with open("public/archive.html", "w", encoding="utf-8") as archive_file:
         archive_file.write(archive_html)
-
-    print(f"📁 В архив перемещено: {archived_count} карточек (только текст)")
+        print(f"📁 archive.html обновлён, добавлено {archived_count} карточек")
 
     fresh_news = retained_news
 
@@ -409,8 +411,8 @@ def main():
         seen_html_hashes.add(html_hash)
         any_new = True
 
-    if not any_new:
-        print("⚠️ Новых карточек нет — news.html не изменен")
+    if not any_new and not archived_count:
+        print("⚠️ Новых или архивированных карточек нет — news.html не изменён")
         return
 
     with open("public/news.html", "w", encoding="utf-8") as news_file:
@@ -470,7 +472,7 @@ document.getElementById("show-more").onclick = () => {
 """)
 
     save_seen_ids(seen_ids.union(new_ids))
-    print(f"✅ news.html обновлен, добавлено новых карточек: {len(new_ids)}")
+    print(f"✅ news.html обновлён, добавлено новых карточек: {len(new_ids)}")
     update_sitemap()
     print("🗂 sitemap.xml обновлён")
     generate_rss(fresh_news)
