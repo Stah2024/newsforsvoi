@@ -7,7 +7,6 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import sys
 
-# Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -17,7 +16,6 @@ logging.basicConfig(
     ]
 )
 
-# Токен и настройки
 TOKEN = os.getenv("TELEGRAM_HISTORY_TOKEN")
 CHANNEL_ID = "@historySvoih"
 SEEN_IDS_FILE = "seen_ids1.txt"
@@ -26,16 +24,16 @@ RSS_FILE = "public/history_rss.xml"
 moscow = pytz.timezone("Europe/Moscow")
 
 if not TOKEN:
-    logging.error("TELEGRAM_HISTORY_TOKEN не найден в переменных окружения")
+    logging.error("TELEGRAM_HISTORY_TOKEN не найден")
     sys.exit(1)
 
 bot = telebot.TeleBot(TOKEN)
 
 try:
     bot.get_me()
-    logging.info("Бот успешно авторизован")
+    logging.info("Бот авторизован")
 except Exception as e:
-    logging.error(f"Ошибка авторизации бота: {e}")
+    logging.error(f"Ошибка авторизации: {e}")
     sys.exit(1)
 
 def load_seen_ids():
@@ -56,7 +54,7 @@ def save_seen_ids(ids):
         with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
             json.dump(list(ids), f)
     except Exception as e:
-        logging.error(f"Ошибка записи в {SEEN_IDS_FILE}: {e}")
+        logging.error(f"Ошибка записи {SEEN_IDS_FILE}: {e}")
 
 def clean_text(text):
     if not text:
@@ -199,17 +197,13 @@ def generate_rss(posts):
 def process_initial_posts():
     try:
         bot.delete_webhook(drop_pending_updates=True)
-        updates = bot.get_updates(timeout=30, limit=100)  # Добавлен тайма26        logging.info(f"Получено {len(updates)} обновлений")
-        posts = [
-            u.channel_post
-            for u in updates
-            if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
-        ]
-        logging.info(f"Загружено {len(posts)} постов из канала @{CHANNEL_ID[1:]}")
+        messages = bot.get_chat_history(chat_id=CHANNEL_ID, limit=100)
+        posts = [msg for msg in messages if hasattr(msg, 'chat') and msg.chat.username == CHANNEL_ID[1:]]
+        logging.info(f"Получено {len(messages)} сообщений, {len(posts)} постов из канала @{CHANNEL_ID[1:]}")
         for post in posts:
-            logging.info(f"Пост ID: {post.message_id}, Дата: {post.date}")
+            logging.info(f"Пост ID: {post.message_id}, Дата: {datetime.fromtimestamp(post.date, moscow)}")
     except Exception as e:
-        logging.error(f"Ошибка получения обновлений: {e}")
+        logging.error(f"Ошибка получения постов: {e}")
         generate_rss([])
         posts = []
 
@@ -217,12 +211,12 @@ def process_initial_posts():
     new_posts = []
 
     for post in posts:
-        if post.message_id in seen_ids:
+        if str(post.message_id) in seen_ids:
             continue
         html, json_ld = format_post(post)
         if html and json_ld:
             update_history_html(html, json_ld)
-            seen_ids.add(post.message_id)
+            seen_ids.add(str(post.message_id))
             new_posts.append((html, json_ld))
 
     if new_posts:
