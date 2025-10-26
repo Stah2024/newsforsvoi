@@ -22,7 +22,7 @@ logging.basicConfig(
 # Токен и настройки
 TOKEN = os.getenv("TELEGRAM_HISTORY_TOKEN")
 CHANNEL_ID = "@historySvoih"
-SEEN_IDS_FILE = "bot/seen_ids1.txt"  # Явно указываем путь
+SEEN_IDS_FILE = "seen_ids1.txt"  # В корне проекта
 HISTORY_FILE = "public/history.html"
 SITEMAP_FILE = "public/sitemap.xml"
 RSS_FILE = "public/history_rss.xml"
@@ -47,9 +47,9 @@ except Exception as e:
 
 def load_seen_ids():
     """Загружает ID уже обработанных сообщений."""
+    logging.info(f"Попытка загрузки {SEEN_IDS_FILE}")
     if not os.path.exists(SEEN_IDS_FILE):
         logging.info(f"Файл {SEEN_IDS_FILE} не существует, создаём пустой список")
-        os.makedirs(os.path.dirname(SEEN_IDS_FILE), exist_ok=True)
         with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
             json.dump([], f)
         return set()
@@ -73,7 +73,6 @@ def load_seen_ids():
 def save_seen_ids(ids):
     """Сохраняет список обработанных сообщений."""
     try:
-        os.makedirs(os.path.dirname(SEEN_IDS_FILE), exist_ok=True)
         with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
             json.dump(list(ids), f)
         logging.info(f"Сохранено {len(ids)} ID в {SEEN_IDS_FILE}")
@@ -283,7 +282,6 @@ def update_history_html(html, json_ld_article):
     except Exception as e:
         logging.error(f"Ошибка при записи {HISTORY_FILE}: {e}")
 
-    # Обновляем sitemap.xml
     if os.path.exists(SITEMAP_FILE):
         update_sitemap()
 
@@ -330,7 +328,7 @@ def handle_channel_post(message):
     html, json_ld_article = format_post(message)
     if html and json_ld_article:
         update_history_html(html, json_ld_article)
-        seen_ids.add(message.message_id)  # Исправлено: post → message
+        seen_ids.add(message.message_id)
         save_seen_ids(seen_ids)
         generate_rss([(html, json_ld_article)])
         logging.info(f"Добавлен пост {message.message_id}")
@@ -339,5 +337,5 @@ def handle_channel_post(message):
 
 if __name__ == "__main__":
     logging.info("Запуск бота для канала @historySvoih")
-    process_initial_posts()  # Обрабатываем начальные посты
+    process_initial_posts()
     logging.info("Завершение работы после обработки начальных постов")
