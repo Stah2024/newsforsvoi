@@ -5,6 +5,7 @@ import hashlib
 import pytz
 import telebot
 from datetime import datetime, timedelta
+import xml.etree.ElementTree as ET  # Добавлен импорт для update_sitemap
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = "@newsSVOih"
@@ -26,7 +27,7 @@ def clean_text(text):
 def format_post(message, caption_override=None, group_size=1):
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
-    iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")  # Исправлен формат времени
+    iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
     caption = clean_text(caption_override or message.caption or "")
     text = clean_text(message.text or "")
     file_url = None
@@ -141,6 +142,7 @@ def update_sitemap():
     print("🗂 sitemap.xml обновлён")
 
 def generate_rss(fresh_news):
+    """Генерирует RSS для news.html с поддержкой разных форматов даты."""
     rss_items = ""
     for block in fresh_news:
         title_match = re.search(r"<p>(.*?)</p>", block)
@@ -149,11 +151,20 @@ def generate_rss(fresh_news):
 
         title = title_match.group(1) if title_match else "Без заголовка"
         link = link_match.group(1) if link_match else "https://t.me/newsSVOih"
-        pub_date = (
-            datetime.strptime(date_match.group(1), "%Y-%m-%dT%H:%M:%S+03:00").strftime("%a, %d %b %Y %H:%M:%S +0300")
-            if date_match
-            else ""
-        )
+        pub_date = datetime.now(moscow).strftime("%a, %d %b %Y %H:%M:%S +0300")  # Значение по умолчанию
+
+        if date_match:
+            date_str = date_match.group(1)
+            try:
+                # Поддержка форматов с и без смещения
+                if len(date_str) == 19:  # Без +03:00 (YYYY-MM-DDTHH:MM:SS)
+                    dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
+                else:  # С +03:00 (YYYY-MM-DDTHH:MM:SS+03:00)
+                    dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S+03:00")
+                pub_date = dt.replace(tzinfo=moscow).strftime("%a, %d %b %Y %H:%M:%S +0300")
+            except ValueError as e:
+                print(f"⚠️ Ошибка при парсинге даты {date_str}: {e}")
+                continue
 
         rss_items += f"""
 <item>
