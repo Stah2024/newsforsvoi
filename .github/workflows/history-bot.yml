@@ -27,19 +27,21 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install beautifulsoup4
 
     - name: Run bot script
       run: |
-        mkdir -p public/
+        mkdir -p public/ bot/
+        touch bot/posts.txt
         python bot/history.py
-        ls -la public/
+        ls -la public/ bot/
         git status
 
-    - name: Commit and push updated sitemap
+    - name: Commit and push updated files
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git remote set-url origin https://x-access-token:${GH_PAT}@github.com/Stah2024/newsforsvoi
-        git add public/sitemap.xml || echo "Нет изменений"
-        git commit -m "Update sitemap.xml for history.html [skip ci]" || echo "Нет изменений"
+        git add public/history.html public/sitemap.xml bot/posts.txt || echo "Нет изменений"
+        git commit -m "Update history.html and sitemap.xml [skip ci]" || echo "Нет изменений"
         git push origin main || echo "Push не удался"
