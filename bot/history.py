@@ -17,7 +17,7 @@ logging.basicConfig(
 )
 
 TOKEN = os.getenv("TELEGRAM_HISTORY_TOKEN")
-CHANNEL_ID = "@historySvoih"
+CHANNEL_ID = "-1003292128534"  # Явный chat_id
 SEEN_IDS_FILE = "seen_ids1.txt"
 HISTORY_FILE = "public/history.html"
 RSS_FILE = "public/history_rss.xml"
@@ -82,7 +82,7 @@ def format_post(message):
             "name": "Новости для Своих",
             "logo": {"@type": "ImageObject", "url": "https://newsforsvoi.ru/logo.png"}
         },
-        "url": f"https://t.me/{CHANNEL_ID[1:]}/{message.message_id}"
+        "url": f"https://t.me/historySvoih/{message.message_id}"
     }
 
     if message.content_type == "photo":
@@ -123,7 +123,7 @@ def format_post(message):
     if text and text != caption:
         html += f"<p>{text}</p>\n"
 
-    html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
+    html += f"<a href='https://t.me/historySvoih/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
     html += f"<div class='timestamp' data-ts='{iso_time}'>🕒 {formatted_time}</div>\n"
     html += "</article>\n"
     return html, json_ld_article
@@ -197,17 +197,12 @@ def generate_rss(posts):
 def process_initial_posts():
     try:
         bot.delete_webhook(drop_pending_updates=True)
-        # Получаем chat_id канала
-        chat = bot.get_chat(CHANNEL_ID)
-        chat_id = chat.id
-        logging.info(f"Chat ID канала {CHANNEL_ID}: {chat_id}")
-        # Получаем обновления с увеличенным таймаутом
         updates = bot.get_updates(timeout=120, limit=100, allowed_updates=["channel_post"])
         logging.info(f"Получено {len(updates)} обновлений")
         posts = [
             u.channel_post
             for u in updates
-            if u.channel_post and u.channel_post.chat.id == chat_id
+            if u.channel_post and u.channel_post.chat.id == int(CHANNEL_ID)
         ]
         logging.info(f"Загружено {len(posts)} постов из канала {CHANNEL_ID}")
         for post in posts:
