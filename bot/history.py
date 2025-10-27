@@ -197,7 +197,7 @@ def generate_rss(posts):
 def process_initial_posts():
     try:
         bot.delete_webhook(drop_pending_updates=True)
-        updates = bot.get_updates(timeout=120, limit=100, allowed_updates=["channel_post"])
+        updates = bot.get_updates(timeout=120, limit=100)
         logging.info(f"Получено {len(updates)} обновлений")
         posts = [
             u.channel_post
