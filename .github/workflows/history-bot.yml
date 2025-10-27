@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      TELEGRAM_HISTORY_TOKEN: ${{ secrets.TELEGRAM_HISTORY_TOKEN }}
       GH_PAT: ${{ secrets.GH_PAT }}
 
     steps:
@@ -28,22 +27,19 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r bot/requirements.txt
 
     - name: Run bot script
       run: |
         mkdir -p public/
-        touch seen_ids1.txt
         python bot/history.py
         ls -la public/
         git status
 
-    - name: Commit and push updated files
+    - name: Commit and push updated sitemap
       run: |
         git config user.name "github-actions"
         git config user.email "github-actions@github.com"
         git remote set-url origin https://x-access-token:${GH_PAT}@github.com/Stah2024/newsforsvoi
-
-        git add public/ seen_ids1.txt || echo "Нет изменений"
-        git commit -m "Update history files [skip ci]" || echo "Нет изменений"
+        git add public/sitemap.xml || echo "Нет изменений"
+        git commit -m "Update sitemap.xml for history.html [skip ci]" || echo "Нет изменений"
         git push origin main || echo "Push не удался"
