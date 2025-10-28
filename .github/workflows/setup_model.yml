@@ -1,7 +1,7 @@
 name: Setup Rut5 Model
 
 on:
-  workflow_dispatch:  # ручной запуск из интерфейса GitHub
+  workflow_dispatch:
 
 jobs:
   setup-model:
@@ -11,7 +11,7 @@ jobs:
       - name: Checkout репозитория
         uses: actions/checkout@v3
         with:
-          lfs: true  # включаем Git LFS
+          lfs: true
 
       - name: Установка Python
         uses: actions/setup-python@v4
@@ -21,7 +21,7 @@ jobs:
       - name: Установка зависимостей
         run: |
           python -m pip install --upgrade pip
-          pip install transformers gitpython
+          pip install transformers gitpython sentencepiece torch
 
       - name: Запуск setup_model.py
         run: python setup_model.py
