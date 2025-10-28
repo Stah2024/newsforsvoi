@@ -16,7 +16,6 @@ moscow = pytz.timezone("Europe/Moscow")
 
 def clean_text(text):
     unwanted = [
-        "💪Подписаться на новости для своих🇷🇺",
         "Подписаться на новости для своих",
         "https://t.me/newsSVOih",
     ]
@@ -55,10 +54,10 @@ def format_post(message, caption_override=None, group_size=1):
                 file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
                 html += f"<video controls src='{file_url}'></video>\n"
             else:
-                print(f"⛔️ Пропущено видео >20MB: {size} байт")
+                print(f"Пропущено видео >20MB: {size} байт")
                 return ""
         except Exception as e:
-            print(f"⚠️ Ошибка при обработке видео: {e}")
+            print(f"Ошибка при обработке видео: {e}")
             return ""
 
     if caption:
@@ -66,14 +65,14 @@ def format_post(message, caption_override=None, group_size=1):
     if text and text != caption:
         html += f"<div class='text-block'><p>{text}</p></div>\n"
 
-    html += f"<p class='timestamp' data-ts='{iso_time}'>🕒 {formatted_time}</p>\n"
+    html += f"<p class='timestamp' data-ts='{iso_time}'> {formatted_time}</p>\n"
     html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
     html += f"<p class='source'>Источник: {message.chat.title}</p>\n"
 
     if group_size > 1:
         html += (
             f"<p><a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' "
-            f"target='_blank'>📷 Смотреть остальные фото/видео в Telegram</a></p>\n"
+            f"target='_blank'>Смотреть остальные фото/видео в Telegram</a></p>\n"
         )
 
     microdata = {
@@ -98,7 +97,7 @@ def format_post(message, caption_override=None, group_size=1):
     return html
 
 def extract_timestamp(html_block):
-    match = re.search(r"🕒 (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
+    match = re.search(r" (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", html_block)
     if match:
         try:
             return datetime.strptime(match.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow)
@@ -126,7 +125,7 @@ def update_sitemap():
                         history_lastmod = lastmod.text
                     break
         except Exception as e:
-            print(f"⚠️ Ошибка при чтении sitemap.xml: {e}")
+            print(f"Ошибка при чтении sitemap.xml: {e}")
 
     sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -138,10 +137,9 @@ def update_sitemap():
 """
     with open(sitemap_file, "w", encoding="utf-8") as f:
         f.write(sitemap)
-    print("🗂 sitemap.xml обновлён")
+    print("sitemap.xml обновлён")
 
 def generate_rss(fresh_news):
-    """Генерирует RSS для news.html с поддержкой разных форматов даты."""
     rss_items = ""
     for block in fresh_news:
         title_match = re.search(r"<p>(.*?)</p>", block)
@@ -161,7 +159,7 @@ def generate_rss(fresh_news):
                     dt = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S+03:00")
                 pub_date = dt.replace(tzinfo=moscow).strftime("%a, %d %b %Y %H:%M:%S +0300")
             except ValueError as e:
-                print(f"⚠️ Ошибка при парсинге даты {date_str}: {e}")
+                print(f"Ошибка при парсинге даты {date_str}: {e}")
                 continue
 
         rss_items += f"""
@@ -185,7 +183,7 @@ def generate_rss(fresh_news):
 """
     with open("public/rss.xml", "w", encoding="utf-8") as f:
         f.write(rss)
-    print("📰 rss.xml обновлён")
+    print("rss.xml обновлён")
 
 def load_seen_ids():
     if not os.path.exists(SEEN_IDS_FILE):
@@ -219,7 +217,7 @@ def main():
     seen_html_hashes = set()
 
     if not posts:
-        print("⚠️ Новых постов нет — выходим")
+        print("Новых постов нет — выходим")
         return
 
     os.makedirs("public", exist_ok=True)
@@ -237,6 +235,130 @@ def main():
             for block in re.findall(r"<article class='news-preview.*?>.*?</article>", f.read(), re.DOTALL):
                 seen_html_hashes.add(hash_html_block(block))
 
+    # === АРХИВАЦИЯ СТАРЫХ КАРТОЧЕК ===
+    retained_news = []
+    archived_count = 0
+    new_archive_cards = []
+
+    # Читаем существующий archive.html
+    existing_archive_cards = []
+    if os.path.exists("public/archive.html"):
+        with open("public/archive.html", "r", encoding="utf-8") as f:
+            content = f.read()
+            existing_archive_cards = re.findall(r"<article class='news-preview.*?>.*?</article>", content, re.DOTALL)
+
+    for block in fresh_news:
+        ts = extract_timestamp(block)
+
+        if ts and is_older_than_two_days(ts.timestamp()):
+            link_match = re.search(r"<a href='(https://t\.me/[^']+)'", block)
+            text_matches = re.findall(r"<div class='text-block'><p>(.*?)</p></div>", block, re.DOTALL)
+            category_match = re.search(r"<h2>(.*?)</h2>", block)
+            img_match = re.search(r"<img src='(.*?)'", block)
+            video_match = re.search(r"<video .*?src='(.*?)'", block)
+
+            link = link_match.group(1) if link_match else f"https://t.me/{CHANNEL_ID[1:]}"
+            category = category_match.group(1) if category_match else "Новости"
+            preview_img = img_match.group(1) if img_match else (video_match.group(1) if video_match else "https://newsforsvoi.ru/preview.jpg")
+            full_text = " ".join(re.sub(r'<[^>]+>', '', t).strip() for t in text_matches)
+            full_text = full_text[:200] + "..." if len(full_text) > 200 else full_text
+            date_str = ts.strftime("%d.%m.%Y %H:%M")
+            timestamp_iso = ts.strftime("%Y-%m-%d")
+
+            # Защита от дублей
+            card_hash = hashlib.md5(f"{link}{date_str}".encode()).hexdigest()
+            if any(card_hash in card for card in existing_archive_cards):
+                print(f"Дубль архивной карточки пропущен: {full_text[:30]}...")
+            else:
+                archive_card = f"""
+<article class='news-preview' data-timestamp='{timestamp_iso}' data-post-id='{link.split("/")[-1]}'>
+    <img src='{preview_img}' alt='Превью' style='max-width:200px;border-radius:8px;margin-bottom:10px;' />
+    <p><strong> {date_str} | <span style='color:#0077cc'>{category}</span></strong></p>
+    <p class='preview-text'>{full_text}</p>
+    <p class='telegram-hint'>Смотри в Telegram</p>
+    <a href='{link}' target='_blank' class='telegram-link'>Открыть полный пост</a>
+</article>
+"""
+                new_archive_cards.append(archive_card)
+                archived_count += 1
+                print(f"АРХИВ: {full_text[:30]}... ({date_str})")
+
+            # Удаляем медиа только после добавления в архив
+            media_paths = re.findall(r"src=['\"](.*?)['\"]", block)
+            for path in media_paths:
+                local_path = os.path.join("public", os.path.basename(path))
+                if os.path.exists(local_path):
+                    try:
+                        os.remove(local_path)
+                        print(f"Удалён медиафайл: {local_path}")
+                    except Exception as e:
+                        print(f"Ошибка удаления {local_path}: {e}")
+        else:
+            retained_news.append(block)
+
+    fresh_news = retained_news
+
+    # === ОБНОВЛЕНИЕ archive.html ===
+    all_archive_cards = existing_archive_cards + new_archive_cards
+
+    # Сортировка по дате (новые сверху)
+    def get_date(card):
+        match = re.search(r"data-timestamp=['\"]([^'\"]+)['\"]", card)
+        if match:
+            try:
+                return datetime.strptime(match.group(1), "%Y-%m-%d")
+            except:
+                pass
+        return datetime.min
+
+    all_archive_cards.sort(key=get_date, reverse=True)
+
+    archive_html = f"""<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Архив новостей</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {{ margin: 0; font-family: system-ui, sans-serif; background: #1c1c1c; color: #e0e0e0; }}
+    .news-item {{ background: #2a2a2a; margin: 1rem auto; padding: 1rem; border-radius: 8px; max-width: 800px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }}
+    .news-item img, .news-item video {{ max-width: 100%; border-radius: 6px; }}
+    .timestamp, .source {{ font-size: 0.9rem; color: #aaa; }}
+    .button {{ display: inline-block; margin-top: 1rem; padding: 0.5rem 1rem; background: #2F4F4F; color: #fff; text-decoration: none; border-radius: 4px; }}
+    .flag-icon {{ width: 48px; margin-bottom: 1rem; }}
+    header h1, header h2 {{ margin: 0.2rem 0; }}
+    input[type="search"] {{ margin-top: 1rem; padding: 0.5rem; width: 80%; max-width: 400px; border-radius: 4px; border: none; }}
+    .news-preview {{ background: #2a2a2a; margin: 1.5rem auto; padding: 1.2rem; border-radius: 8px; max-width: 800px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border-left: 4px solid #2F4F4F; }}
+    .news-preview img {{ max-width: 200px; border-radius: 6px; float: left; margin-right: 1rem; }}
+    .preview-text {{ margin: 0.5rem 0; color: #ddd; }}
+    .telegram-hint {{ color: #4CAF50; font-weight: bold; }}
+    .telegram-link {{ color: #4CAF50; text-decoration: none; font-weight: bold; }}
+  </style>
+</head>
+<body>
+<header style="background: linear-gradient(135deg, #444, #2f2f2f); color: #e0e0e0; text-align: center; padding: 3rem 1rem 2rem; border-bottom: 4px solid #2F4F4F; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+  <div class="header-content">
+    <img src="rf-flag.svg" alt="Флаг" class="flag-icon">
+    <div>
+      <h1>Архив новостей</h1>
+      <h2>Посты старше двух дней</h2>
+      <a href="index.html" class="button">← Вернуться на главную</a>
+      <br>
+      <input type="search" placeholder="Поиск по архиву...">
+    </div>
+  </div>
+</header>
+<main>
+{''.join(all_archive_cards)}
+</main>
+</body>
+</html>"""
+
+    with open("public/archive.html", "w", encoding="utf-8") as f:
+        f.write(archive_html)
+    print(f"archive.html обновлён: +{archived_count} новых, всего {len(all_archive_cards)}")
+
+    # === ДОБАВЛЕНИЕ НОВЫХ ПОСТОВ ===
     grouped = {}
     for post in posts:
         key = getattr(post, "media_group_id", None) or post.message_id
@@ -245,146 +367,6 @@ def main():
     visible_limit = 12
     visible_count = sum(1 for block in fresh_news if "hidden" not in block)
     any_new = False
-
-    retained_news = []
-    archived_count = 0
-    archive_content = []
-    for block in fresh_news:
-        ts = extract_timestamp(block)
-
-        if ts and is_older_than_two_days(ts.timestamp()):
-            link_match = re.search(r"<a href='(https://t\.me/[^']+)'", block)
-            text_matches = re.findall(r"<div class='text-block'><p>(.*?)</p></div>", block, re.DOTALL)
-            category_match = re.search(r"<h2>(.*?)</h2>", block)
-            img_match = re.search(r"<img src='(.*?)'", block)  # Добавлено для превью
-
-            link = link_match.group(1) if link_match else f"https://t.me/{CHANNEL_ID[1:]}"
-            category = category_match.group(1) if category_match else "Новости"
-            preview_img = img_match.group(1) if img_match else "https://newsforsvoi.ru/preview.jpg"  # Превью по умолчанию
-            full_text = ""
-            for text_match in text_matches:
-                clean_text = re.sub(r'<[^>]+>', '', text_match).strip()
-                full_text += clean_text + " "
-            full_text = full_text.strip()[:200] + "..." if len(full_text) > 200 else full_text
-            date_str = ts.strftime("%d.%m.%Y %H:%M")
-
-            archive_card = f"""
-<article class='news-preview' data-post-id='{link.split("/")[-1]}'>
-    <img src='{preview_img}' alt='Превью' style='max-width:200px;border-radius:8px;margin-bottom:10px;' />
-    <p><strong>🗓 {date_str} | <span style='color:#0077cc'>{category}</span></strong></p>
-    <p class='preview-text'>{full_text}</p>
-    <p class='telegram-hint'>👀 Смотри в Telegram</p>
-    <a href='{link}' target='_blank' class='telegram-link'>🔗 Открыть полный пост</a>
-</article>
-"""
-            archive_content.append(archive_card)
-            archived_count += 1
-            print(f"📁 АРХИВ: {full_text[:30]}... ({date_str})")
-        else:
-            retained_news.append(block)
-
-            # Удаление медиа только после добавления в архив
-            media_paths = re.findall(r"src=['\"](.*?)['\"]", block)
-            for path in media_paths:
-                local_path = os.path.join("public", os.path.basename(path))
-                if os.path.exists(local_path):
-                    try:
-                        os.remove(local_path)
-                        print(f"🧹 Удалён медиафайл: {local_path}")
-                    except Exception as e:
-                        print(f"⚠️ Ошибка удаления {local_path}: {e}")
-
-    # Сохраняем archive.html даже если нет новых постов
-    archive_html = f"""<!DOCTYPE html>
-<html>
-<head>
-    <title>Архив новостей - Новости для Своих</title>
-    <meta charset="UTF-8">
-    <style>
-        body {{ 
-            font-family: sans-serif; 
-            padding: 20px; 
-            background: #f9f9f9; 
-            line-height: 1.6;
-        }}
-        h1 {{ 
-            color: #333; 
-            text-align: center; 
-            margin-bottom: 30px;
-        }}
-        .news-preview {{ 
-            background: #fff; 
-            margin: 20px 0; 
-            padding: 20px; 
-            border-radius: 8px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border-left: 4px solid #0077cc;
-            cursor: pointer;
-            transition: all 0.2s;
-        }}
-        .news-preview:hover {{ 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            transform: translateY(-2px);
-        }}
-        .news-preview p {{ 
-            margin: 8px 0; 
-            color: #333;
-        }}
-        .telegram-hint {{ 
-            color: #0077cc; 
-            font-weight: bold;
-            margin: 15px 0 10px 0;
-            font-size: 1.1em;
-        }}
-        .telegram-link {{ 
-            display: none;
-            color: #0077cc; 
-            text-decoration: none; 
-            font-weight: bold;
-            padding: 10px 15px;
-            background: #f0f8ff;
-            border-radius: 6px;
-            border: 2px solid #0077cc;
-            display: inline-block;
-            margin-top: 5px;
-        }}
-        .telegram-link:hover {{ 
-            background: #e6f3ff; 
-        }}
-        .preview-text {{
-            font-size: 1.05em;
-            line-height: 1.5;
-            color: #222;
-        }}
-    </style>
-</head>
-<body>
-    <h1>🗂 Архив новостей</h1>
-    {''.join(archive_content)}
-    <script>
-    document.querySelectorAll('.news-preview').forEach(card => {{
-        card.addEventListener('click', function(e) {{
-            if (!e.target.closest('a')) {{
-                const link = this.querySelector('.telegram-link');
-                if (link) {{
-                    link.style.display = 'inline-block';
-                    link.scrollIntoView({{behavior: 'smooth'}});
-                    setTimeout(() => {{
-                        link.click();
-                    }}, 500);
-                }}
-            }}
-        }});
-    }});
-    </script>
-</body>
-</html>"""
-
-    with open("public/archive.html", "w", encoding="utf-8") as archive_file:
-        archive_file.write(archive_html)
-        print(f"📁 archive.html обновлён, добавлено {archived_count} карточек")
-
-    fresh_news = retained_news
 
     for group_id, group_posts in grouped.items():
         post_id = str(group_id)
@@ -412,7 +394,7 @@ def main():
         any_new = True
 
     if not any_new and not archived_count:
-        print("⚠️ Новых или архивированных карточек нет — news.html не изменён")
+        print("Новых или архивированных карточек нет — news.html не изменён")
         return
 
     with open("public/news.html", "w", encoding="utf-8") as news_file:
@@ -472,11 +454,11 @@ document.getElementById("show-more").onclick = () => {
 """)
 
     save_seen_ids(seen_ids.union(new_ids))
-    print(f"✅ news.html обновлён, добавлено новых карточек: {len(new_ids)}")
+    print(f"news.html обновлён, добавлено новых карточек: {len(new_ids)}")
     update_sitemap()
-    print("🗂 sitemap.xml обновлён")
+    print("sitemap.xml обновлён")
     generate_rss(fresh_news)
-    print("📰 RSS-файл создан")
+    print("RSS-файл создан")
 
 if __name__ == "__main__":
     main()
