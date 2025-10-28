@@ -1,0 +1,5 @@
+models/rut5-base/*.bin filter=lfs diff=lfs merge=lfs -text
+models/rut5-base/*.json filter=lfs diff=lfs merge=lfs -text
+models/rut5-base/*.txt filter=lfs diff=lfs merge=lfs -text
+models/rut5-base/*.model filter=lfs diff=lfs merge=lfs -text
+models/rut5-base/*.safetensors filter=lfs diff=lfs merge=lfs -text
