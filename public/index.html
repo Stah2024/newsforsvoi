@@ -171,8 +171,12 @@
     </section>
   </main>
 
+  <!-- ОБНОВЛЁННЫЙ ФУТЕР -->
   <footer>
-    © 2025 Новости для Своих | Сделано: <a href="https://t.me/Artstah" target="_blank">@Artstah</a>, email: <a href="mailto:art364@yandex.ru">art364@yandex.ru</a>
+    © 2025 Новости для Своих | 
+    Сделано: <a href="https://t.me/Artstah" target="_blank">@Artstah</a> | 
+    Email: <a href="mailto:art364@yandex.ru">art364@yandex.ru</a> | 
+    <a href="/privacy.html">Политика конфиденциальности</a>
   </footer>
 
   <div id="modal" class="card-overlay" style="display:none;"></div>
@@ -293,21 +297,24 @@
     }
   </script>
 
-  <!-- Yandex.Metrika counter -->
+  <!-- Yandex.Metrika counter — УСЛОВНАЯ ЗАГРУЗКА -->
   <script type="text/javascript">
     (function(m,e,t,r,i,k,a){
+      if (getCookie('cookies_accepted') === 'false') return;
       m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
       m[i].l=1*new Date();
       k=e.createElement(t),a=e.getElementsByTagName(t)[0],
       k.async=1;k.src=r;a.parentNode.insertBefore(k,a)
     })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
 
-    ym(104596413, "init", {
-        clickmap:true,
-        trackLinks:true,
-        accurateTrackBounce:true,
-        webvisor:true
-    });
+    if (getCookie('cookies_accepted') !== 'false') {
+      ym(104596413, "init", {
+          clickmap:true,
+          trackLinks:true,
+          accurateTrackBounce:true,
+          webvisor:true
+      });
+    }
   </script>
   <noscript>
     <div>
@@ -315,21 +322,23 @@
     </div>
   </noscript>
 
-  <!-- 🔥 YANDEX.RTB РЕКЛАМА -->
+  <!-- YANDEX.RTB РЕКЛАМА — УСЛОВНАЯ ЗАГРУЗКА -->
   <script>window.yaContextCb=window.yaContextCb||[]</script>
   <script src="https://yandex.ru/ads/system/context.js" async></script>
 
   <div id="yandex_rtb_R-A-17560420-2" style="margin: 30px 0; text-align: center;"></div>
   <script>
-  window.yaContextCb.push(() => {
-      Ya.Context.AdvManager.render({
-          "blockId": "R-A-17560420-2",
-          "renderTo": "yandex_rtb_R-A-17560420-2"
+    if (getCookie('cookies_accepted') !== 'false') {
+      window.yaContextCb.push(() => {
+          Ya.Context.AdvManager.render({
+              "blockId": "R-A-17560420-2",
+              "renderTo": "yandex_rtb_R-A-17560420-2"
+          })
       })
-  })
+    }
   </script>
 
-  <!-- 🍪 БАННЕР СОГЛАСИЯ НА COOKIES -->
+  <!-- БАННЕР СОГЛАСИЯ НА COOKIES -->
   <div id="cookie-consent" style="
     position: fixed; bottom: 0; left: 0; right: 0; 
     background: #333; color: white; padding: 20px; z-index: 10001; 
@@ -379,15 +388,22 @@
     function acceptCookies() {
       setCookie('cookies_accepted', 'true', 365);
       document.getElementById('cookie-consent').style.display = 'none';
+      location.reload();
     }
 
     function rejectCookies() {
       setCookie('cookies_accepted', 'false', 365);
       document.getElementById('cookie-consent').style.display = 'none';
+      document.querySelector('#yandex_rtb_R-A-17560420-2').innerHTML = '';
+      location.reload();
     }
 
+    // Показ баннера
     if (!getCookie('cookies_accepted')) {
       document.getElementById('cookie-consent').style.display = 'block';
+    } else if (getCookie('cookies_accepted') === 'false') {
+      // Отключаем рекламу, если уже отказались
+      document.querySelector('#yandex_rtb_R-A-17560420-2').innerHTML = '';
     }
   </script>
 </body>
