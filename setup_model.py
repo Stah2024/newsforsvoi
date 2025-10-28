@@ -22,11 +22,13 @@ print(f"Сохраняю в {MODEL_DIR}...", flush=True)
 model.save_pretrained(MODEL_DIR)
 tokenizer.save_pretrained(MODEL_DIR)
 
-# LFS
+# LFS трекинг
 lfs_lines = [
     f"{MODEL_DIR}/*.bin filter=lfs diff=lfs merge=lfs -text",
     f"{MODEL_DIR}/*.json filter=lfs diff=lfs merge=lfs -text",
-    f"{MODEL_DIR}/*.txt filter=lfs diff=lfs merge=lfs -text"
+    f"{MODEL_DIR}/*.txt filter=lfs diff=lfs merge=lfs -text",
+    f"{MODEL_DIR}/*.model filter=lfs diff=lfs merge=lfs -text",
+    f"{MODEL_DIR}/*.safetensors filter=lfs diff=lfs merge=lfs -text"
 ]
 
 try:
