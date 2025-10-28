@@ -17,6 +17,7 @@ logging.basicConfig(
 
 HISTORY_FILE = "public/history.html"
 SITEMAP_FILE = "public/sitemap.xml"
+RSS_FILE = "public/rss.xml"
 POSTS_FILE = "bot/posts.txt"
 
 def load_posts():
@@ -169,11 +170,70 @@ def generate_sitemap():
         f.write(sitemap)
     logging.info(f"Sitemap обновлён: {SITEMAP_FILE}")
 
+def generate_rss():
+    try:
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            soup = BeautifulSoup(f, "html.parser")
+        items = soup.find_all("article", class_="news-item")[:20]  # последние 20 постов
+
+        last_build = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0300")
+
+        rss = f'''<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>История для Своих — события прошлых дней</title>
+    <link>https://newsforsvoi.ru/history.html</link>
+    <description>Исторические события за последние дни — отражение прошлого для настоящего.</description>
+    <language>ru</language>
+    <lastBuildDate>{last_build}</lastBuildDate>
+    <atom:link href="https://newsforsvoi.ru/rss.xml" rel="self" type="application/rss+xml" />
+'''
+
+        for item in items:
+            title_tag = item.find(class_="news-title")
+            title = title_tag.get_text(strip=True) if title_tag else "Историческое событие"
+            desc_tag = item.find(class_="news-text")
+            description = desc_tag.get_text(separator=" ", strip=True)[:500] if desc_tag else ""
+            timestamp = item.find(class_="timestamp")
+            pub_date = timestamp["data-ts"] if timestamp and "data-ts" in timestamp.attrs else datetime.now().isoformat()
+            pub_date_rss = datetime.fromisoformat(pub_date.replace("Z", "+00:00")).astimezone().strftime("%a, %d %b %Y %H:%M:%S %z")
+
+            media_tag = item.find("img") or item.find("video")
+            enclosure = ""
+            if media_tag:
+                src = media_tag["src"]
+                if src.endswith(('.jpg', '.jpeg', '.png', '.gif')):
+                    enclosure = f'<enclosure url="{src}" length="0" type="image/jpeg" />'
+                elif src.endswith(('.mp4', '.webm')):
+                    enclosure = f'<enclosure url="{src}" length="0" type="video/mp4" />'
+
+            rss += f'''
+    <item>
+      <title>{title}</title>
+      <link>https://newsforsvoi.ru/history.html</link>
+      <description><![CDATA[{description}]]></description>
+      <pubDate>{pub_date_rss}</pubDate>
+      <guid isPermaLink="false">history-{pub_date}</guid>
+      {enclosure}
+    </item>'''
+
+        rss += '''
+  </channel>
+</rss>'''
+
+        os.makedirs(os.path.dirname(RSS_FILE), exist_ok=True)
+        with open(RSS_FILE, "w", encoding="utf-8") as f:
+            f.write(rss)
+        logging.info(f"RSS обновлён: {RSS_FILE}")
+    except Exception as e:
+        logging.error(f"Ошибка генерации RSS: {e}")
+
 def main():
     posts = load_posts()
     if not posts:
         logging.info("Новых постов нет")
         generate_sitemap()
+        generate_rss()
         return
 
     for post in posts:
@@ -184,6 +244,7 @@ def main():
 
     save_posts()
     generate_sitemap()
+    generate_rss()  # Генерируем RSS после обновления
 
 if __name__ == "__main__":
     logging.info("Запуск обработки постов")
