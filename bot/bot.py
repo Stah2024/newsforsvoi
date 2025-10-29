@@ -37,7 +37,16 @@ def paraphrase(text):
                 temperature=0.8,
                 early_stopping=True
             )
-        return tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+        result = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
+
+        # === УДАЛЕНИЕ ЭМОДЗИ, ФЛАГОВ, ЛИШНИХ ЗНАКОВ ===
+        result = re.sub(r'[\U0001F1E6-\U0001F1FF\U0001F3F4\U0001F3F3\U0001F4AA\U0001F525\U0001F31F\U0001F91D\U0001F4AA\U0001F4A5]', '', result)  # эмодзи
+        result = re.sub(r'[🇷🇺🇺🇸🇮🇱🇵🇸💪🔥⭐✊]', '', result)  # конкретные флаги и эмодзи
+        result = re.sub(r'\s+', ' ', result)  # лишние пробелы
+        result = re.sub(r'^[.,!?;:-]+|[.,!?;:-]+$', '', result)  # знаки в начале/конце
+        result = result.strip()
+
+        return result if result else text
     except Exception as e:
         print(f"[ПЕРЕФРАЗИРОВКА] Ошибка: {e}")
         return text
