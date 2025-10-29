@@ -263,7 +263,7 @@ def fetch_latest_posts():
         for u in updates
         if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]
     ]
-    return list(reversed(posts[-20:])) if posts else []  # Берём больше, чтобы был запас
+    return list(reversed(posts[-20:])) if posts else []
 
 def is_older_than_two_days(timestamp):
     post_time = datetime.fromtimestamp(timestamp, moscow)
@@ -286,7 +286,7 @@ def main():
     if os.path.exists("public/news.html"):
         with open("public/news.html", "r", encoding="utf-8") as f:
             raw = f.read()
-            container = re.search(r'<div class="news-container">(.*?)</div>', raw, re.DOTALL)
+            container = re.search(r'<div class="news-grid">(.*?)</div>', raw, re.DOTALL)
             if container:
                 fresh_news = re.findall(r"<article class='news-item.*?>.*?</article>", container.group(1), re.DOTALL)
             for block in fresh_news:
@@ -311,7 +311,6 @@ def main():
     for block in fresh_news:
         ts = extract_timestamp(block)
         if ts and is_older_than_two_days(ts.timestamp()):
-            # (архивируем — как было)
             link_match = re.search(r"<a href='(https://t\.me/[^']+)'", block)
             text_matches = re.findall(r"<div class='text-block'><p>(.*?)</p></div>", block, re.DOTALL)
             category_match = re.search(r"<h2>(.*?)</h2>", block)
@@ -353,17 +352,11 @@ def main():
         return datetime.strptime(match.group(1), "%Y-%m-%d") if match else datetime.min
     all_archive_cards.sort(key=get_date, reverse=True)
 
-    # (archive.html — как было, без изменений)
-
     # === НОВЫЕ ПОСТЫ ===
     grouped = {}
     for post in posts:
         key = getattr(post, "media_group_id", None) or post.message_id
         grouped.setdefault(str(key), []).append(post)
-
-    base_limit = 12
-    visible_count = sum(1 for block in fresh_news if "hidden" not in block)
-    any_new = False
 
     for group_id, group_posts in grouped.items():
         post_id = str(group_id)
@@ -384,86 +377,13 @@ def main():
         fresh_news.insert(0, html)
         new_ids.add(post_id)
         seen_html_hashes.add(html_hash)
-        any_new = True
 
-    # === ДИНАМИЧЕСКИЙ ЛИМИТ: показываем 12+, если влезает ===
-    visible_count = 0
-    final_news = []
-    for block in fresh_news:
-        if "hidden" not in block and visible_count < 20:  # запас
-            final_news.append(block)
-            visible_count += 1
-        else:
-            final_news.append(block.replace("<article", "<article class='hidden'"))
+    # === ФИНАЛЬНАЯ СБОРКА ===
+    final_news = fresh_news
 
-    # === ЗАПИСЬ news.html С MASONRY ===
+    # === ГЕНЕРАЦИЯ ФРАГМЕНТА ДЛЯ index.html ===
     with open("public/news.html", "w", encoding="utf-8") as f:
-        f.write(f"""<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <title>Новости для Своих</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    * {{ box-sizing: border-box; }}
-    body {{ margin: 0; font-family: system-ui, sans-serif; background: #1a1a1a; color: #e0e0e0; }}
-    .news-container {{
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      grid-auto-rows: 10px;
-      gap: 16px;
-      padding: 16px;
-      max-width: 1400px;
-      margin: 0 auto;
-      grid-auto-flow: dense;
-    }}
-    .news-item {{
-      background: #2a2a2a;
-      padding: 16px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      border-left: 4px solid #0077cc;
-      display: flex;
-      flex-direction: column;
-    }}
-    .news-item img, .news-item video {{ width: 100%; height: auto; border-radius: 6px; margin: 8px 0; }}
-    .size-small {{ grid-row: span 20; }}
-    .size-medium {{ grid-row: span 30; }}
-    .size-large {{ grid-row: span 42; grid-column: span 2; }}
-    .timestamp {{ font-size: 0.9em; color: #aaa; margin-top: auto; }}
-    .source {{ font-size: 0.85em; color: #999; }}
-    h2 {{ grid-column: 1 / -1; margin: 32px 0 8px; font-size: 22px; border-bottom: 2px solid #444; padding-bottom: 8px; }}
-    .text-block p {{ margin: 8px 0; }}
-    a {{ color: #4CAF50; text-decoration: none; }}
-    .hidden {{ display: none; }}
-    #show-more {{ display: block; margin: 32px auto; padding: 12px 24px; background: #0077cc; color: white; border: none; border-radius: 6px; cursor: pointer; }}
-    @media (max-width: 900px) {{
-      .news-container {{ grid-template-columns: repeat(2, 1fr); }}
-      .size-large {{ grid-column: span 2; grid-row: span 35; }}
-    }}
-    @media (max-width: 600px) {{
-      .news-container {{ grid-template-columns: 1fr; }}
-      .news-item {{ grid-row: auto !important; grid-column: auto !important; }}
-    }}
-  </style>
-</head>
-<body>
-  <div class="news-container">
-    {''.join(final_news)}
-  </div>
-  <button id="show-more" style="display:none;">Показать ещё</button>
-  <script>
-    const hidden = document.querySelectorAll('.news-item.hidden');
-    if (hidden.length > 0) {{
-      document.getElementById('show-more').style.display = 'block';
-    }}
-    document.getElementById('show-more').onclick = () => {{
-      hidden.forEach(el => el.classList.remove('hidden'));
-      document.getElementById('show-more').style.display = 'none';
-    }};
-  </script>
-</body>
-</html>""")
+        f.write(f'<div class="news-grid">\n{"".join(final_news)}\n</div>')
 
     save_seen_ids(seen_ids.union(new_ids))
     print(f"news.html обновлён: {len(new_ids)} новых")
