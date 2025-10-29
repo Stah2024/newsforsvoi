@@ -92,19 +92,12 @@ def format_post(message, caption_override=None, group_size=1):
     is_medium = text_len > 100 or has_photo
 
     size_class = "small"
-    grid_row_span = 1
-    grid_col_span = 1
-
     if has_video or (has_photo and is_long):
         size_class = "large"
-        grid_row_span = 2
-        grid_col_span = 2
     elif is_medium:
         size_class = "medium"
-        grid_row_span = 2
-        grid_col_span = 1
 
-    html += f"<article class='news-item size-{size_class}' style='grid-row: span {grid_row_span}; grid-column: span {grid_col_span};'>\n"
+    html += f"<article class='news-item size-{size_class}'>\n"
 
     if message.content_type == "photo":
         photos = message.photo
@@ -286,9 +279,7 @@ def main():
     if os.path.exists("public/news.html"):
         with open("public/news.html", "r", encoding="utf-8") as f:
             raw = f.read()
-            container = re.search(r'<div class="news-grid">(.*?)</div>', raw, re.DOTALL)
-            if container:
-                fresh_news = re.findall(r"<article class='news-item.*?>.*?</article>", container.group(1), re.DOTALL)
+            fresh_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
             for block in fresh_news:
                 seen_html_hashes.add(hash_html_block(block))
 
@@ -299,9 +290,7 @@ def main():
 
     # === АРХИВАЦИЯ ===
     retained_news = []
-    archived_count = 0
     new_archive_cards = []
-
     existing_archive_cards = []
     if os.path.exists("public/archive.html"):
         with open("public/archive.html", "r", encoding="utf-8") as f:
@@ -339,7 +328,6 @@ def main():
 </article>
 """
                 new_archive_cards.append(archive_card)
-                archived_count += 1
         else:
             retained_news.append(block)
 
@@ -378,17 +366,14 @@ def main():
         new_ids.add(post_id)
         seen_html_hashes.add(html_hash)
 
-    # === ФИНАЛЬНАЯ СБОРКА ===
-    final_news = fresh_news
-
-    # === ГЕНЕРАЦИЯ ФРАГМЕНТА ДЛЯ index.html ===
+    # === ГЕНЕРАЦИЯ ТОЛЬКО КАРТОЧЕК ===
     with open("public/news.html", "w", encoding="utf-8") as f:
-        f.write(f'<div class="news-grid">\n{"".join(final_news)}\n</div>')
+        f.write("".join(fresh_news))
 
     save_seen_ids(seen_ids.union(new_ids))
     print(f"news.html обновлён: {len(new_ids)} новых")
     update_sitemap()
-    generate_rss(final_news)
+    generate_rss(fresh_news)
     print("Готово!")
 
 if __name__ == "__main__":
