@@ -1,5 +1,4 @@
 import os
-import re
 import logging
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -28,28 +27,79 @@ def load_posts():
         return []
     try:
         with open(POSTS_FILE, "r", encoding="utf-8") as f:
-            content = f.read().strip()
-        if not content:
+            content = f.read()
+        if not content.strip():
             return []
+
         posts = []
-        for post_text in content.split("---\n"):
-            post_text = post_text.strip()
-            if not post_text:
+        # Разделяем по --- (учитываем \n или просто ---)
+        raw_posts = [p.strip() for p in re.split(r"\n?---\n?", content) if p.strip()]
+
+        for post_text in raw_posts:
+            post = {
+                "title": "Историческое событие",
+                "text": "",
+                "iso_time": datetime.now().strftime("%Y-%m-%dT%H:%M:%S+03:00"),
+                "date": datetime.now().strftime("%d.%m.%Y %H:%M"),
+                "media_url": "",
+                "media_type": ""
+            }
+
+            lines = post_text.split("\n")
+            current_field = None
+            field_lines = []
+
+            for line in lines:
+                line = line.rstrip()
+
+                # Определяем начало нового поля
+                if line.startswith("TITLE:"):
+                    if current_field and current_field != "title":
+                        post[current_field] = "\n".join(field_lines).strip()
+                    current_field = "title"
+                    field_lines = [line[7:].strip()]
+                elif line.startswith("TEXT:"):
+                    if current_field and current_field != "text":
+                        post[current_field] = "\n".join(field_lines).strip()
+                    current_field = "text"
+                    field_lines = [line[6:].strip()]
+                elif line.startswith("TIME:"):
+                    if current_field:
+                        post[current_field] = "\n".join(field_lines).strip()
+                    post["iso_time"] = line[6:].strip()
+                    current_field = None
+                    field_lines = []
+                elif line.startswith("DATE:"):
+                    if current_field:
+                        post[current_field] = "\n".join(field_lines).strip()
+                    post["date"] = line[6:].strip()
+                    current_field = None
+                    field_lines = []
+                elif line.startswith("MEDIA_URL:"):
+                    if current_field:
+                        post[current_field] = "\n".join(field_lines).strip()
+                    post["media_url"] = line[11:].strip()
+                    current_field = None
+                    field_lines = []
+                elif line.startswith("MEDIA_TYPE:"):
+                    if current_field:
+                        post[current_field] = "\n".join(field_lines).strip()
+                    post["media_type"] = line[12:].strip()
+                    current_field = None
+                    field_lines = []
+                elif current_field:
+                    field_lines.append(line)
+
+            # Сохраняем последний блок
+            if current_field:
+                post[current_field] = "\n".join(field_lines).strip()
+
+            # Убираем пустые посты
+            if not post["title"] and not post["text"]:
                 continue
-            post = {}
-            title_match = re.search(r"TITLE: (.*?)(?=\nTEXT:|\n---|$)", post_text, re.DOTALL)
-            text_match = re.search(r"TEXT: (.*?)(?=\nTIME:|\n---|$)", post_text, re.DOTALL)
-            time_match = re.search(r"TIME: (.*?)(?=\nDATE:|\n---|$)", post_text, re.DOTALL)
-            date_match = re.search(r"DATE: (.*?)(?=\nMEDIA_URL:|\n---|$)", post_text, re.DOTALL)
-            media_url_match = re.search(r"MEDIA_URL: (.*?)(?=\nMEDIA_TYPE:|\n---|$)", post_text, re.DOTALL)
-            media_type_match = re.search(r"MEDIA_TYPE: (.*?)(?=\n---|$)", post_text, re.DOTALL)
-            post["title"] = title_match.group(1).strip() if title_match else "Историческое событие"
-            post["text"] = text_match.group(1).strip() if text_match else ""
-            post["iso_time"] = time_match.group(1).strip() if time_match else datetime.now().strftime("%Y-%m-%dT%H:%M:%S+03:00")
-            post["date"] = date_match.group(1).strip() if date_match else datetime.now().strftime("%d.%m.%Y %H:%M")
-            post["media_url"] = media_url_match.group(1).strip() if media_url_match and media_url_match.group(1).strip() else ""
-            post["media_type"] = media_type_match.group(1).strip() if media_type_match and media_type_match.group(1).strip() else ""
+
             posts.append(post)
+
         return posts
     except Exception as e:
         logging.error(f"Ошибка чтения {POSTS_FILE}: {e}")
@@ -79,13 +129,13 @@ def format_post(post):
         html += f"<video controls src='{media_url}' class='news-image'></video>\n"
     html += f"<p><b class='news-title'>{title}</b></p>\n"
     html += f"<p class='news-text'>{text}</p>\n"
-    html += f"<div class='timestamp' data-ts='{iso_time}'>🕒 {formatted_time}</div>\n"
+    html += f"<div class='timestamp' data-ts='{iso_time}'>  {formatted_time}</div>\n"
     html += "</article>\n"
 
     json_ld_article = {
         "@type": "NewsArticle",
         "headline": title[:200],
-        "description": text[:500],
+        "description": post.get("text", "")[:500],
         "datePublished": iso_time,
         "author": {"@type": "Organization", "name": "SVOih History Team"},
         "publisher": {
@@ -116,33 +166,35 @@ def update_history_html(html, json_ld_article):
     try:
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             soup = BeautifulSoup(f, "html.parser")
+    except FileNotFoundError:
+        logging.error(f"{HISTORY_FILE} не найден!")
+        return
     except Exception as e:
         logging.error(f"Ошибка чтения {HISTORY_FILE}: {e}")
         return
 
     container = soup.find("div", id="history-container")
-    if container:
-        container.insert(0, BeautifulSoup(html, "html.parser"))
-    else:
+    if not container:
         logging.error("Контейнер #history-container не найден")
         return
+    container.insert(0, BeautifulSoup(html, "html.parser"))
 
     schema_script = soup.find("script", id="schema-org")
     if schema_script and json_ld_article:
         try:
-            schema_data = json.loads(schema_script.string)
-            current_positions = {item["position"]: item for item in schema_data["mainEntity"]["itemListElement"]}
-            new_positions = []
-            new_positions.append({
+            schema_data = json.loads(schema_script.string or "{}")
+            if "mainEntity" not in schema_data:
+                schema_data["mainEntity"] = {"@type": "ItemList", "itemListElement": []}
+            items = schema_data["mainEntity"]["itemListElement"]
+            # Сдвигаем старые
+            for item in items:
+                item["position"] += 1
+            # Добавляем новый
+            items.insert(0, {
                 "@type": "ListItem",
                 "position": 1,
                 "item": json_ld_article
             })
-            for pos in sorted(current_positions.keys()):
-                item = current_positions[pos]
-                item["position"] = pos + 1
-                new_positions.append(item)
-            schema_data["mainEntity"]["itemListElement"] = new_positions
             schema_script.string = json.dumps(schema_data, ensure_ascii=False, indent=2)
         except Exception as e:
             logging.error(f"Ошибка JSON-LD: {e}")
@@ -174,7 +226,7 @@ def generate_rss():
     try:
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             soup = BeautifulSoup(f, "html.parser")
-        items = soup.find_all("article", class_="news-item")[:20]  # последние 20 постов
+        items = soup.find_all("article", class_="news-item")[:20]
 
         last_build = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0300")
 
@@ -244,7 +296,7 @@ def main():
 
     save_posts()
     generate_sitemap()
-    generate_rss()  # Генерируем RSS после обновления
+    generate_rss()
 
 if __name__ == "__main__":
     logging.info("Запуск обработки постов")
