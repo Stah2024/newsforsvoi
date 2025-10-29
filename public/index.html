@@ -179,15 +179,13 @@
       }
     });
 
-    // === ЗАГРУЗКА НОВОСТЕЙ ===
     fetch('/news.html')
       .then(r => r.text())
       .then(html => {
         const container = document.getElementById('news-container');
-        const temp = document.createElement('div');
-        temp.innerHTML = html;
-        const items = Array.from(temp.querySelectorAll('.news-item'));
+        container.innerHTML = html;
 
+        const items = Array.from(container.querySelectorAll('.news-item'));
         items.sort((a, b) => {
           const timeA = new Date(a.querySelector('.timestamp')?.dataset.ts || 0);
           const timeB = new Date(b.querySelector('.timestamp')?.dataset.ts || 0);
@@ -208,6 +206,9 @@
         };
 
         render();
+      })
+      .catch(() => {
+        document.getElementById('news-container').innerHTML = '<p>Ошибка загрузки новостей...</p>';
       });
 
     document.getElementById('search-box').addEventListener('input', function(e) {
@@ -219,7 +220,7 @@
 
     function enableCardEnlargement() {
       const modal = document.getElementById('modal');
-      modal.onclick = e => { if (e.target === modal) modal.style.display = 'none'; modal.innerHTML = ''; };
+      modal.onclick = e => { if (e.target === modal) { modal.style.display = 'none'; modal.innerHTML = ''; } };
       document.querySelectorAll('.news-item').forEach(item => {
         item.onclick = () => {
           modal.innerHTML = item.outerHTML;
@@ -227,10 +228,8 @@
         };
       });
     }
-  </script>
 
-  <!-- Метрика, реклама, куки — без изменений -->
-  <script type="text/javascript">
+    // Метрика
     (function(m,e,t,r,i,k,a){ if(getCookie('cookies_accepted')==='false')return; m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)}; m[i].l=1*new Date(); k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1;k.src=r;a.parentNode.insertBefore(k,a) })(window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
     if (getCookie('cookies_accepted') !== 'false') { ym(104596413, "init", { clickmap:true, trackLinks:true, accurateTrackBounce:true, webvisor:true }); }
   </script>
