@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -19,12 +20,14 @@ SITEMAP_FILE = "public/sitemap.xml"
 RSS_FILE = "public/rss.xml"
 POSTS_FILE = "bot/posts.txt"
 
+
 def load_posts():
     if not os.path.exists(POSTS_FILE):
         logging.warning(f"{POSTS_FILE} не найден, создаём пустой")
         with open(POSTS_FILE, "w", encoding="utf-8") as f:
             f.write("")
         return []
+
     try:
         with open(POSTS_FILE, "r", encoding="utf-8") as f:
             content = f.read()
@@ -52,58 +55,63 @@ def load_posts():
             for line in lines:
                 line = line.rstrip()
 
-                # Определяем начало нового поля
                 if line.startswith("TITLE:"):
                     if current_field and current_field != "title":
                         post[current_field] = "\n".join(field_lines).strip()
                     current_field = "title"
                     field_lines = [line[7:].strip()]
+
                 elif line.startswith("TEXT:"):
                     if current_field and current_field != "text":
                         post[current_field] = "\n".join(field_lines).strip()
                     current_field = "text"
                     field_lines = [line[6:].strip()]
+
                 elif line.startswith("TIME:"):
                     if current_field:
                         post[current_field] = "\n".join(field_lines).strip()
                     post["iso_time"] = line[6:].strip()
                     current_field = None
                     field_lines = []
+
                 elif line.startswith("DATE:"):
                     if current_field:
                         post[current_field] = "\n".join(field_lines).strip()
                     post["date"] = line[6:].strip()
                     current_field = None
                     field_lines = []
+
                 elif line.startswith("MEDIA_URL:"):
                     if current_field:
                         post[current_field] = "\n".join(field_lines).strip()
                     post["media_url"] = line[11:].strip()
                     current_field = None
                     field_lines = []
+
                 elif line.startswith("MEDIA_TYPE:"):
                     if current_field:
                         post[current_field] = "\n".join(field_lines).strip()
                     post["media_type"] = line[12:].strip()
                     current_field = None
                     field_lines = []
+
                 elif current_field:
                     field_lines.append(line)
 
-            # Сохраняем последний блок
             if current_field:
                 post[current_field] = "\n".join(field_lines).strip()
 
-            # Убираем пустые посты
             if not post["title"] and not post["text"]:
                 continue
 
             posts.append(post)
 
         return posts
+
     except Exception as e:
         logging.error(f"Ошибка чтения {POSTS_FILE}: {e}")
         return []
+
 
 def save_posts():
     try:
@@ -112,6 +120,7 @@ def save_posts():
         logging.info(f"{POSTS_FILE} очищен")
     except Exception as e:
         logging.error(f"Ошибка записи {POSTS_FILE}: {e}")
+
 
 def format_post(post):
     title = post.get("title", "Историческое событие")
@@ -123,10 +132,12 @@ def format_post(post):
 
     html = "<article class='news-item'>\n"
     html += "<span class='category-badge'>История</span>\n"
+
     if media_url and media_type == "photo":
         html += f"<img src='{media_url}' alt='Фото события' class='news-image' />\n"
     elif media_url and media_type == "video":
         html += f"<video controls src='{media_url}' class='news-image'></video>\n"
+
     html += f"<p><b class='news-title'>{title}</b></p>\n"
     html += f"<p class='news-text'>{text}</p>\n"
     html += f"<div class='timestamp' data-ts='{iso_time}'>  {formatted_time}</div>\n"
@@ -145,6 +156,7 @@ def format_post(post):
         },
         "url": "https://newsforsvoi.ru/history.html"
     }
+
     if media_url and media_type == "photo":
         json_ld_article["image"] = {
             "@type": "ImageObject",
@@ -160,6 +172,7 @@ def format_post(post):
         }
 
     return html, json_ld_article
+
 
 def update_history_html(html, json_ld_article):
     os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
@@ -177,6 +190,7 @@ def update_history_html(html, json_ld_article):
     if not container:
         logging.error("Контейнер #history-container не найден")
         return
+
     container.insert(0, BeautifulSoup(html, "html.parser"))
 
     schema_script = soup.find("script", id="schema-org")
@@ -185,11 +199,11 @@ def update_history_html(html, json_ld_article):
             schema_data = json.loads(schema_script.string or "{}")
             if "mainEntity" not in schema_data:
                 schema_data["mainEntity"] = {"@type": "ItemList", "itemListElement": []}
+
             items = schema_data["mainEntity"]["itemListElement"]
-            # Сдвигаем старые
             for item in items:
                 item["position"] += 1
-            # Добавляем новый
+
             items.insert(0, {
                 "@type": "ListItem",
                 "position": 1,
@@ -204,6 +218,7 @@ def update_history_html(html, json_ld_article):
             f.write(str(soup))
     except Exception as e:
         logging.error(f"Ошибка записи {HISTORY_FILE}: {e}")
+
 
 def generate_sitemap():
     lastmod = datetime.now().strftime("%Y-%m-%d")
@@ -222,12 +237,13 @@ def generate_sitemap():
         f.write(sitemap)
     logging.info(f"Sitemap обновлён: {SITEMAP_FILE}")
 
+
 def generate_rss():
     try:
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             soup = BeautifulSoup(f, "html.parser")
-        items = soup.find_all("article", class_="news-item")[:20]
 
+        items = soup.find_all("article", class_="news-item")[:20]
         last_build = datetime.now().strftime("%a, %d %b %Y %H:%M:%S +0300")
 
         rss = f'''<?xml version="1.0" encoding="UTF-8"?>
@@ -277,8 +293,10 @@ def generate_rss():
         with open(RSS_FILE, "w", encoding="utf-8") as f:
             f.write(rss)
         logging.info(f"RSS обновлён: {RSS_FILE}")
+
     except Exception as e:
         logging.error(f"Ошибка генерации RSS: {e}")
+
 
 def main():
     posts = load_posts()
@@ -297,6 +315,7 @@ def main():
     save_posts()
     generate_sitemap()
     generate_rss()
+
 
 if __name__ == "__main__":
     logging.info("Запуск обработки постов")
