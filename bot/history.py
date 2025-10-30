@@ -35,7 +35,6 @@ def load_posts():
             return []
 
         posts = []
-        # Разделяем по --- (учитываем \n или просто ---)
         raw_posts = [p.strip() for p in re.split(r"\n?---\n?", content) if p.strip()]
 
         for post_text in raw_posts:
@@ -108,7 +107,7 @@ def load_posts():
 
         return posts
 
-    except Exception as e:
+    EXCEPT Exception as e:
         logging.error(f"Ошибка чтения {POSTS_FILE}: {e}")
         return []
 
@@ -143,6 +142,7 @@ def format_post(post):
     html += f"<div class='timestamp' data-ts='{iso_time}'>  {formatted_time}</div>\n"
     html += "</article>\n"
 
+    # === NewsArticle + VideoObject (thumbnailUrl = видео) ===
     json_ld_article = {
         "@type": "NewsArticle",
         "headline": title[:200],
@@ -157,19 +157,29 @@ def format_post(post):
         "url": "https://newsforsvoi.ru/history.html"
     }
 
-    if media_url and media_type == "photo":
-        json_ld_article["image"] = {
-            "@type": "ImageObject",
-            "url": media_url,
-            "width": 800,
-            "height": 600
-        }
-    elif media_url and media_type == "video":
-        json_ld_article["video"] = {
-            "@type": "VideoObject",
-            "contentUrl": media_url,
-            "uploadDate": iso_time
-        }
+    if media_url:
+        if media_type == "photo":
+            json_ld_article["image"] = {
+                "@type": "ImageObject",
+                "url": media_url,
+                "width": 800,
+                "height": 600
+            }
+        elif media_type == "video":
+            json_ld_article["video"] = {
+                "@type": "VideoObject",
+                "name": title,
+                "description": post.get("text", "")[:500],
+                "thumbnailUrl": media_url,  # ← ВИДЕО КАК ПРЕВЬЮ
+                "contentUrl": media_url,
+                "embedUrl": media_url,
+                "uploadDate": iso_time,
+                "duration": "PT1M",
+                "publisher": {
+                    "@type": "NewsMediaOrganization",
+                    "name": "Новости для Своих"
+                }
+            }
 
     return html, json_ld_article
 
