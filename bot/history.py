@@ -107,7 +107,7 @@ def load_posts():
 
         return posts
 
-    EXCEPT Exception as e:
+    except Exception as e:  # ← ИСПРАВЛЕНО: было EXCEPT
         logging.error(f"Ошибка чтения {POSTS_FILE}: {e}")
         return []
 
@@ -170,7 +170,7 @@ def format_post(post):
                 "@type": "VideoObject",
                 "name": title,
                 "description": post.get("text", "")[:500],
-                "thumbnailUrl": media_url,  # ← ВИДЕО КАК ПРЕВЬЮ
+                "thumbnailUrl": media_url,  # ← ДОБАВЛЕНО: thumbnailUrl = видео
                 "contentUrl": media_url,
                 "embedUrl": media_url,
                 "uploadDate": iso_time,
