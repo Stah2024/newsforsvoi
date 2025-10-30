@@ -40,10 +40,10 @@ def paraphrase(text):
         result = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
 
         # === УДАЛЕНИЕ ЭМОДЗИ, ФЛАГОВ, ЛИШНИХ ЗНАКОВ ===
-        result = re.sub(r'[\U0001F1E6-\U0001F1FF\U0001F3F4\U0001F3F3\U0001F4AA\U0001F525\U0001F31F\U0001F91D\U0001F4AA\U0001F4A5]', '', result)  # эмодзи
-        result = re.sub(r'[🇷🇺🇺🇸🇮🇱🇵🇸💪🔥⭐✊]', '', result)  # конкретные флаги и эмодзи
-        result = re.sub(r'\s+', ' ', result)  # лишние пробелы
-        result = re.sub(r'^[.,!?;:-]+|[.,!?;:-]+$', '', result)  # знаки в начале/конце
+        result = re.sub(r'[\U0001F1E6-\U0001F1FF\U0001F3F4\U0001F3F3\U0001F4AA\U0001F525\U0001F31F\U0001F91D\U0001F4AA\U0001F4A5]', '', result)
+        result = re.sub(r'[🇷🇺🇺🇸🇮🇱🇵🇸💪🔥⭐✊]', '', result)
+        result = re.sub(r'\s+', ' ', result)
+        result = re.sub(r'^[.,!?;:-]+|[.,!?;:-]+$', '', result)
         result = result.strip()
 
         return result if result else text
@@ -80,6 +80,7 @@ def format_post(message, caption_override=None, group_size=1):
     text = paraphrase(text)
 
     file_url = None
+    thumb_url = "https://newsforsvoi.ru/preview.jpg"  # fallback
     html = ""
 
     if "Россия" in caption or "Россия" in text:
@@ -96,16 +97,53 @@ def format_post(message, caption_override=None, group_size=1):
         file_info = bot.get_file(photos[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
         html += f"<img src='{file_url}' alt='Фото' />\n"
+        thumb_url = file_url  # для microdata
+
     elif message.content_type == "video":
         try:
             size = getattr(message.video, "file_size", 0)
-            if size == 0 or size <= 20_000_000:
-                file_info = bot.get_file(message.video.file_id)
-                file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
-                html += f"<video controls src='{file_url}'></video>\n"
-            else:
+            if size == 0 or size > 20_000_000:
                 print(f"Пропущено видео >20MB: {size} байт")
                 return ""
+
+            file_info = bot.get_file(message.video.file_id)
+            file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
+            html += f"<video controls src='{file_url}'></video>\n"
+
+            # === Превью видео ===
+            if hasattr(message.video, "thumbnail") and message.video.thumbnail:
+                thumb_info = bot.get_file(message.video.thumbnail.file_id)
+                thumb_url = f"https://api.telegram.org/file/bot{TOKEN}/{thumb_info.file_path}"
+
+            # === Длительность ===
+            duration_str = "PT1M"
+            if hasattr(message.video, "duration") and message.video.duration:
+                mins = message.video.duration // 60
+                secs = message.video.duration % 60
+                duration_str = f"PT{mins}M{secs}S"
+
+            # === VideoObject ===
+            video_schema = {
+                "@context": "https://schema.org",
+                "@type": "VideoObject",
+                "name": caption or text or "Видео-новость",
+                "description": (caption or text or "Видео из Telegram-канала @newsSVOih")[:500],
+                "thumbnailUrl": thumb_url,
+                "uploadDate": iso_time,
+                "duration": duration_str,
+                "contentUrl": file_url,
+                "embedUrl": file_url,
+                "publisher": {
+                    "@type": "NewsMediaOrganization",
+                    "name": "Новости для Своих",
+                    "logo": {
+                        "@type": "ImageObject",
+                        "url": "https://newsforsvoi.ru/logo.png"
+                    }
+                }
+            }
+            html += f"<script type='application/ld+json'>{json.dumps(video_schema, ensure_ascii=False)}</script>\n"
+
         except Exception as e:
             print(f"Ошибка при обработке видео: {e}")
             return ""
@@ -125,6 +163,7 @@ def format_post(message, caption_override=None, group_size=1):
             f"target='_blank'>Смотреть остальные фото/видео в Telegram</a></p>\n"
         )
 
+    # === NewsArticle microdata ===
     microdata = {
         "@context": "https://schema.org",
         "@type": "NewsArticle",
@@ -141,6 +180,15 @@ def format_post(message, caption_override=None, group_size=1):
 
     if file_url:
         microdata["image"] = file_url
+        if message.content_type == "video":
+            microdata["video"] = {
+                "@type": "VideoObject",
+                "name": caption or text or "Видео",
+                "thumbnailUrl": thumb_url,
+                "contentUrl": file_url,
+                "uploadDate": iso_time,
+                "duration": duration_str
+            }
 
     html += f"<script type='application/ld+json'>\n{json.dumps(microdata, ensure_ascii=False)}\n</script>\n"
     html += "</article>\n"
