@@ -115,7 +115,7 @@ def load_posts():
             if not post["title"] and not post["text"]:
                 continue
 
-            # Поддержка image и photo
+            # Поддержка image, photo → thumbnail = media_url
             if post["media_type"] in ["photo", "image"] and post["media_url"]:
                 post["thumbnail"] = post["media_url"]
 
@@ -149,17 +149,22 @@ def format_post(post):
     html = "<article class='news-item'>\n"
     html += f"<span class='category-badge'>{THEME_TITLE}</span>\n"
 
-    # ИСПРАВЛЕНО: image и photo
+    # === МЕДИА: image / video ===
     if media_url and media_type in ["photo", "image"]:
-        html += f"<img src='{media_url}' alt='Фото события' class='news-image' />\n"
+        html += f"<img src='{media_url}' alt='Фото события' class='news-image' style='display:block; max-width:100%; height:auto; margin:10px 0; border-radius:8px;' />\n"
     elif media_url and media_type == "video":
-        html += f"<video controls src='{media_url}' class='news-image' poster='{thumbnail}'></video>\n"
+        # Для видео — НЕ используем default-history.jpg
+        poster = thumbnail if thumbnail != DEFAULT_THUMBNAIL else ""
+        poster_attr = f" poster='{poster}'" if poster else ""
+        html += f"<video controls src='{media_url}' class='news-image'{poster_attr}></video>\n"
+    # Если нет медиа — ничего не вставляем
 
     html += f"<p><b class='news-title'>{title}</b></p>\n"
     html += f"<p class='news-text'>{text}</p>\n"
     html += f"<div class='timestamp' data-ts='{iso_time}'>  {formatted_time}</div>\n"
     html += "</article>\n"
 
+    # === JSON-LD ===
     json_ld_article = {
         "@type": "NewsArticle",
         "headline": title[:200],
@@ -176,22 +181,26 @@ def format_post(post):
             "@type": "WebPage",
             "@id": PAGE_URL
         },
-        "url": PAGE_URL,
-        "image": {
-            "@type": "ImageObject",
-            "url": thumbnail,
-            "width": 1200,
-            "height": 675
-        },
-        "thumbnailUrl": thumbnail
+        "url": PAGE_URL
     }
 
+    # Добавляем image только если это фото
+    if media_url and media_type in ["photo", "image"]:
+        json_ld_article["image"] = {
+            "@type": "ImageObject",
+            "url": media_url,
+            "width": 1200,
+            "height": 675
+        }
+        json_ld_article["thumbnailUrl"] = media_url
+
+    # Добавляем video только если это видео
     if media_url and media_type == "video":
         json_ld_article["video"] = {
             "@type": "VideoObject",
             "name": title,
             "description": f"{THEME_DESC}: {post.get('text', '')[:500]}",
-            "thumbnailUrl": thumbnail,
+            "thumbnailUrl": thumbnail if thumbnail != DEFAULT_THUMBNAIL else "",
             "contentUrl": media_url,
             "embedUrl": media_url,
             "uploadDate": iso_time,
@@ -210,7 +219,6 @@ def format_post(post):
 def update_history_html(html, json_ld_article):
     os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
 
-    # БЕЗОПАСНО: если файла нет — выходим
     if not os.path.exists(HISTORY_FILE):
         logging.error(f"{HISTORY_FILE} НЕ НАЙДЕН! Создай его вручную с <div id=\"history-container\">")
         return
@@ -238,10 +246,15 @@ def update_history_html(html, json_ld_article):
     try:
         schema_data = json.loads(schema_script.string or "{}") if schema_script.string else {
             "@context": "https://schema.org",
-            "@type": "CollectionPage",
-            "name": THEME_TITLE,
-            "description": THEME_DESC,
+            "@type": "WebPage",
+            "name": "История для Своих — события прошлых дней",
+            "description": "Исторические события за последние дни — отражение прошлого для настоящего.",
             "url": PAGE_URL,
+            "publisher": {
+                "@type": "Organization",
+                "name": "Новости для Своих",
+                "logo": {"@type": "ImageObject", "url": "https://newsforsvoi.ru/pushkin-portrait.jpg", "width": 1200, "height": 630}
+            },
             "mainEntity": {"@type": "ItemList", "itemListElement": []}
         }
 
