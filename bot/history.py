@@ -20,6 +20,15 @@ SITEMAP_FILE = "public/sitemap.xml"
 RSS_FILE = "public/rss.xml"
 POSTS_FILE = "bot/posts.txt"
 
+# === КОНФИГУРАЦИЯ ===
+DEFAULT_THUMBNAIL = "https://newsforsvoi.ru/media/default-history.jpg"
+LOGO_URL = "https://newsforsvoi.ru/logo.png"
+SITE_URL = "https://newsforsvoi.ru"
+PAGE_URL = f"{SITE_URL}/history.html"
+
+THEME_TITLE = "История России и мира"
+THEME_DESC = "Что случилось в этот день"
+
 
 def load_posts():
     if not os.path.exists(POSTS_FILE):
@@ -39,12 +48,13 @@ def load_posts():
 
         for post_text in raw_posts:
             post = {
-                "title": "Историческое событие",
+                "title": f"{THEME_DESC}: Историческое событие",
                 "text": "",
                 "iso_time": datetime.now().strftime("%Y-%m-%dT%H:%M:%S+03:00"),
                 "date": datetime.now().strftime("%d.%m.%Y %H:%M"),
                 "media_url": "",
-                "media_type": ""
+                "media_type": "",
+                "thumbnail": DEFAULT_THUMBNAIL
             }
 
             lines = post_text.split("\n")
@@ -71,28 +81,30 @@ def load_posts():
                         post[current_field] = "\n".join(field_lines).strip()
                     post["iso_time"] = line[6:].strip()
                     current_field = None
-                    field_lines = []
 
                 elif line.startswith("DATE:"):
                     if current_field:
                         post[current_field] = "\n".join(field_lines).strip()
                     post["date"] = line[6:].strip()
                     current_field = None
-                    field_lines = []
 
                 elif line.startswith("MEDIA_URL:"):
                     if current_field:
                         post[current_field] = "\n".join(field_lines).strip()
                     post["media_url"] = line[11:].strip()
                     current_field = None
-                    field_lines = []
 
                 elif line.startswith("MEDIA_TYPE:"):
                     if current_field:
                         post[current_field] = "\n".join(field_lines).strip()
-                    post["media_type"] = line[12:].strip()
+                    post["media_type"] = line[12:].strip().lower()
                     current_field = None
-                    field_lines = []
+
+                elif line.startswith("THUMBNAIL:"):
+                    if current_field:
+                        post[current_field] = "\n".join(field_lines).strip()
+                    post["thumbnail"] = line[10:].strip()
+                    current_field = None
 
                 elif current_field:
                     field_lines.append(line)
@@ -103,11 +115,14 @@ def load_posts():
             if not post["title"] and not post["text"]:
                 continue
 
+            if post["media_type"] == "photo" and post["media_url"]:
+                post["thumbnail"] = post["media_url"]
+
             posts.append(post)
 
         return posts
 
-    except Exception as e:  # ← ИСПРАВЛЕНО: было EXCEPT
+    except Exception as e:
         logging.error(f"Ошибка чтения {POSTS_FILE}: {e}")
         return []
 
@@ -122,110 +137,131 @@ def save_posts():
 
 
 def format_post(post):
-    title = post.get("title", "Историческое событие")
+    title = post.get("title", f"{THEME_DESC}: Историческое событие")
     text = post.get("text", "").replace("\n", "<br>")
     iso_time = post.get("iso_time", datetime.now().strftime("%Y-%m-%dT%H:%M:%S+03:00"))
     formatted_time = post.get("date", datetime.now().strftime("%d.%m.%Y %H:%M"))
     media_url = post.get("media_url", "")
     media_type = post.get("media_type", "")
+    thumbnail = post.get("thumbnail", DEFAULT_THUMBNAIL)
 
     html = "<article class='news-item'>\n"
-    html += "<span class='category-badge'>История</span>\n"
+    html += f"<span class='category-badge'>{THEME_TITLE}</span>\n"
 
     if media_url and media_type == "photo":
         html += f"<img src='{media_url}' alt='Фото события' class='news-image' />\n"
     elif media_url and media_type == "video":
-        html += f"<video controls src='{media_url}' class='news-image'></video>\n"
+        html += f"<video controls src='{media_url}' class='news-image' poster='{thumbnail}'></video>\n"
 
     html += f"<p><b class='news-title'>{title}</b></p>\n"
     html += f"<p class='news-text'>{text}</p>\n"
     html += f"<div class='timestamp' data-ts='{iso_time}'>  {formatted_time}</div>\n"
     html += "</article>\n"
 
-    # === NewsArticle + VideoObject (thumbnailUrl = видео) ===
     json_ld_article = {
         "@type": "NewsArticle",
         "headline": title[:200],
-        "description": post.get("text", "")[:500],
+        "description": f"{THEME_DESC}: {post.get('text', '')[:500]}",
         "datePublished": iso_time,
-        "author": {"@type": "Organization", "name": "SVOih History Team"},
+        "dateModified": iso_time,
+        "author": {"@type": "Organization", "name": "История России и мира"},
         "publisher": {
             "@type": "Organization",
             "name": "Новости для Своих",
-            "logo": {"@type": "ImageObject", "url": "https://newsforsvoi.ru/logo.png"}
+            "logo": {"@type": "ImageObject", "url": LOGO_URL}
         },
-        "url": "https://newsforsvoi.ru/history.html"
+        "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": PAGE_URL
+        },
+        "url": PAGE_URL,
+        "image": {
+            "@type": "ImageObject",
+            "url": thumbnail,
+            "width": 1200,
+            "height": 675
+        },
+        "thumbnailUrl": thumbnail
     }
 
-    if media_url:
-        if media_type == "photo":
-            json_ld_article["image"] = {
-                "@type": "ImageObject",
-                "url": media_url,
-                "width": 800,
-                "height": 600
+    if media_url and media_type == "video":
+        json_ld_article["video"] = {
+            "@type": "VideoObject",
+            "name": title,
+            "description": f"{THEME_DESC}: {post.get('text', '')[:500]}",
+            "thumbnailUrl": thumbnail,
+            "contentUrl": media_url,
+            "embedUrl": media_url,
+            "uploadDate": iso_time,
+            "duration": "PT1M",
+            "width": 1280,
+            "height": 720,
+            "publisher": {
+                "@type": "NewsMediaOrganization",
+                "name": "Новости для Своих"
             }
-        elif media_type == "video":
-            json_ld_article["video"] = {
-                "@type": "VideoObject",
-                "name": title,
-                "description": post.get("text", "")[:500],
-                "thumbnailUrl": media_url,  # ← ДОБАВЛЕНО: thumbnailUrl = видео
-                "contentUrl": media_url,
-                "embedUrl": media_url,
-                "uploadDate": iso_time,
-                "duration": "PT1M",
-                "publisher": {
-                    "@type": "NewsMediaOrganization",
-                    "name": "Новости для Своих"
-                }
-            }
+        }
 
     return html, json_ld_article
 
 
 def update_history_html(html, json_ld_article):
     os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
+
+    # БЕЗОПАСНО: если файла нет — выходим, НИЧЕГО НЕ СОЗДАЁМ
+    if not os.path.exists(HISTORY_FILE):
+        logging.error(f"{HISTORY_FILE} НЕ НАЙДЕН! Создай его вручную с <div id=\"history-container\">")
+        return
+
     try:
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
             soup = BeautifulSoup(f, "html.parser")
-    except FileNotFoundError:
-        logging.error(f"{HISTORY_FILE} не найден!")
-        return
     except Exception as e:
         logging.error(f"Ошибка чтения {HISTORY_FILE}: {e}")
         return
 
     container = soup.find("div", id="history-container")
     if not container:
-        logging.error("Контейнер #history-container не найден")
+        logging.error("Контейнер #history-container не найден в history.html")
         return
 
     container.insert(0, BeautifulSoup(html, "html.parser"))
 
+    # Обновляем JSON-LD (если есть)
     schema_script = soup.find("script", id="schema-org")
-    if schema_script and json_ld_article:
-        try:
-            schema_data = json.loads(schema_script.string or "{}")
-            if "mainEntity" not in schema_data:
-                schema_data["mainEntity"] = {"@type": "ItemList", "itemListElement": []}
+    if not schema_script:
+        schema_script = soup.new_tag("script", type="application/ld+json", id="schema-org")
+        soup.head.append(schema_script)
 
-            items = schema_data["mainEntity"]["itemListElement"]
-            for item in items:
+    try:
+        schema_data = json.loads(schema_script.string or "{}") if schema_script.string else {
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "name": THEME_TITLE,
+            "description": THEME_DESC,
+            "url": PAGE_URL,
+            "mainEntity": {"@type": "ItemList", "itemListElement": []}
+        }
+
+        items = schema_data["mainEntity"]["itemListElement"]
+        for item in items:
+            if "position" in item:
                 item["position"] += 1
 
-            items.insert(0, {
-                "@type": "ListItem",
-                "position": 1,
-                "item": json_ld_article
-            })
-            schema_script.string = json.dumps(schema_data, ensure_ascii=False, indent=2)
-        except Exception as e:
-            logging.error(f"Ошибка JSON-LD: {e}")
+        items.insert(0, {
+            "@type": "ListItem",
+            "position": 1,
+            "item": json_ld_article
+        })
+
+        schema_script.string = json.dumps(schema_data, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logging.error(f"Ошибка JSON-LD: {e}")
 
     try:
         with open(HISTORY_FILE, "w", encoding="utf-8") as f:
             f.write(str(soup))
+        logging.info("history.html обновлён")
     except Exception as e:
         logging.error(f"Ошибка записи {HISTORY_FILE}: {e}")
 
@@ -235,7 +271,7 @@ def generate_sitemap():
     sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://newsforsvoi.ru/history.html</loc>
+    <loc>{PAGE_URL}</loc>
     <lastmod>{lastmod}</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
@@ -244,7 +280,7 @@ def generate_sitemap():
 """
     os.makedirs(os.path.dirname(SITEMAP_FILE), exist_ok=True)
     with open(SITEMAP_FILE, "w", encoding="utf-8") as f:
-        f.write(sitemap)
+        f.write(sitemap.strip())
     logging.info(f"Sitemap обновлён: {SITEMAP_FILE}")
 
 
@@ -259,17 +295,17 @@ def generate_rss():
         rss = f'''<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>История для Своих — события прошлых дней</title>
-    <link>https://newsforsvoi.ru/history.html</link>
-    <description>Исторические события за последние дни — отражение прошлого для настоящего.</description>
+    <title>{THEME_TITLE} — {THEME_DESC}</title>
+    <link>{PAGE_URL}</link>
+    <description>Исторические события России и мира: что случилось в этот день.</description>
     <language>ru</language>
     <lastBuildDate>{last_build}</lastBuildDate>
-    <atom:link href="https://newsforsvoi.ru/rss.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="{SITE_URL}/rss.xml" rel="self" type="application/rss+xml" />
 '''
 
         for item in items:
             title_tag = item.find(class_="news-title")
-            title = title_tag.get_text(strip=True) if title_tag else "Историческое событие"
+            title = title_tag.get_text(strip=True) if title_tag else f"{THEME_DESC}: Историческое событие"
             desc_tag = item.find(class_="news-text")
             description = desc_tag.get_text(separator=" ", strip=True)[:500] if desc_tag else ""
             timestamp = item.find(class_="timestamp")
@@ -288,7 +324,7 @@ def generate_rss():
             rss += f'''
     <item>
       <title>{title}</title>
-      <link>https://newsforsvoi.ru/history.html</link>
+      <link>{PAGE_URL}</link>
       <description><![CDATA[{description}]]></description>
       <pubDate>{pub_date_rss}</pubDate>
       <guid isPermaLink="false">history-{pub_date}</guid>
