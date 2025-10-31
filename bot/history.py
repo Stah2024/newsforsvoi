@@ -115,7 +115,8 @@ def load_posts():
             if not post["title"] and not post["text"]:
                 continue
 
-            if post["media_type"] == "photo" and post["media_url"]:
+            # Поддержка image и photo
+            if post["media_type"] in ["photo", "image"] and post["media_url"]:
                 post["thumbnail"] = post["media_url"]
 
             posts.append(post)
@@ -148,7 +149,8 @@ def format_post(post):
     html = "<article class='news-item'>\n"
     html += f"<span class='category-badge'>{THEME_TITLE}</span>\n"
 
-    if media_url and media_type == "photo":
+    # ИСПРАВЛЕНО: image и photo
+    if media_url and media_type in ["photo", "image"]:
         html += f"<img src='{media_url}' alt='Фото события' class='news-image' />\n"
     elif media_url and media_type == "video":
         html += f"<video controls src='{media_url}' class='news-image' poster='{thumbnail}'></video>\n"
@@ -208,7 +210,7 @@ def format_post(post):
 def update_history_html(html, json_ld_article):
     os.makedirs(os.path.dirname(HISTORY_FILE), exist_ok=True)
 
-    # БЕЗОПАСНО: если файла нет — выходим, НИЧЕГО НЕ СОЗДАЁМ
+    # БЕЗОПАСНО: если файла нет — выходим
     if not os.path.exists(HISTORY_FILE):
         logging.error(f"{HISTORY_FILE} НЕ НАЙДЕН! Создай его вручную с <div id=\"history-container\">")
         return
@@ -227,7 +229,7 @@ def update_history_html(html, json_ld_article):
 
     container.insert(0, BeautifulSoup(html, "html.parser"))
 
-    # Обновляем JSON-LD (если есть)
+    # Обновляем JSON-LD
     schema_script = soup.find("script", id="schema-org")
     if not schema_script:
         schema_script = soup.new_tag("script", type="application/ld+json", id="schema-org")
