@@ -4,53 +4,8 @@ import json
 import hashlib
 import pytz
 import telebot
-import torch
 from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
-
-# === ПЕРЕФРАЗИРОВКА: модель из ../models/rut5-base (от папки bot/) ===
-from transformers import T5Tokenizer, T5ForConditionalGeneration
-
-MODEL_PATH = "../models/rut5-base"  # от bot/ вверх в корень
-try:
-    tokenizer = T5Tokenizer.from_pretrained(MODEL_PATH)
-    model = T5ForConditionalGeneration.from_pretrained(MODEL_PATH)
-    model.eval()
-    print("[OK] Модель rut5-base загружена из ../models/rut5-base")
-except Exception as e:
-    print(f"[ОШИБКА] Не найдена модель: {e}")
-    print("Запустите: python ../setup_model.py")
-    tokenizer = None
-    model = None
-
-def paraphrase(text):
-    if not text or len(text.strip()) < 10 or tokenizer is None:
-        return text
-    try:
-        input_text = f"перефразировать: {text.strip()}"
-        inputs = tokenizer(input_text, return_tensors="pt", max_length=256, truncation=True)
-        with torch.no_grad():
-            outputs = model.generate(
-                **inputs,
-                max_length=256,
-                num_beams=5,
-                temperature=0.8,
-                early_stopping=True
-            )
-        result = tokenizer.decode(outputs[0], skip_special_tokens=True).strip()
-
-        # === УДАЛЕНИЕ ЭМОДЗИ, ФЛАГОВ, ЛИШНИХ ЗНАКОВ ===
-        result = re.sub(r'[\U0001F1E6-\U0001F1FF\U0001F3F4\U0001F3F3\U0001F4AA\U0001F525\U0001F31F\U0001F91D\U0001F4AA\U0001F4A5]', '', result)
-        result = re.sub(r'[🇷🇺🇺🇸🇮🇱🇵🇸💪🔥⭐✊]', '', result)
-        result = re.sub(r'\s+', ' ', result)
-        result = re.sub(r'^[.,!?;:-]+|[.,!?;:-]+$', '', result)
-        result = result.strip()
-
-        return result if result else text
-    except Exception as e:
-        print(f"[ПЕРЕФРАЗИРОВКА] Ошибка: {e}")
-        return text
-# =========================================
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 CHANNEL_ID = "@newsSVOih"
@@ -74,10 +29,6 @@ def format_post(message, caption_override=None, group_size=1):
     iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
     caption = clean_text(caption_override or message.caption or "")
     text = clean_text(message.text or "")
-
-    # === ПЕРЕФРАЗИРОВКА ===
-    caption = paraphrase(caption)
-    text = paraphrase(text)
 
     file_url = None
     thumb_url = "https://newsforsvoi.ru/preview.jpg"  # fallback
