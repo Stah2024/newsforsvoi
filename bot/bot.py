@@ -17,43 +17,53 @@ moscow = pytz.timezone("Europe/Moscow")
 def clean_text(text):
     if not text:
         return ""
-    
+
     # === УДАЛЯЕМ ВСЕ ВАРИАНТЫ ПОДПИСКИ И ССЫЛКИ ===
     unwanted_patterns = [
-        r"💪\s*Подписаться на новости для своих\s*🇷🇺",  # с эмодзи
-        r"Подписаться на новости для своих",             # без эмодзи
-        r"https://t\.me/newsSVOih",                      # ссылка
+        r"💪\s*Подписаться на новости для своих\s*🇷🇺",
+        r"Подписаться на новости для своих",
+        r"https://t\.me/newsSVOih",
     ]
-    
+
     for pattern in unwanted_patterns:
         text = re.sub(pattern, "", text, flags=re.IGNORECASE)
-    
-    # === УДАЛЕНИЕ ВСЕХ ЭМОДЗИ (ПОЛНЫЙ ДИАПАЗОН) ===
+
+    # === УДАЛЕНИЕ ВСЕХ ЭМОДЗИ ===
     emoji_pattern = (
-        r'[\U0001F600-\U0001F64F'   # эмоции
-        r'\U0001F300-\U0001F5FF'   # символы
-        r'\U0001F680-\U0001F6FF'   # транспорт
-        r'\U0001F1E0-\U0001F1FF'   # флаги стран
-        r'\U00002600-\U000026FF'   # погода
-        r'\U00002700-\U000027BF'   # разные символы
-        r'\U0001F900-\U0001F9FF]+' # доп.
+        r'[\U0001F600-\U0001F64F'
+        r'\U0001F300-\U0001F5FF'
+        r'\U0001F680-\U0001F6FF'
+        r'\U0001F1E0-\U0001F1FF'
+        r'\U00002600-\U000026FF'
+        r'\U00002700-\U000027BF'
+        r'\U0001F900-\U0001F9FF]+'
     )
     text = re.sub(emoji_pattern, '', text)
-    
+
     # === ОЧИСТКА ПРОБЕЛОВ ===
     text = re.sub(r'\s+', ' ', text).strip()
-    
+
     return text
 
-def format_post(message, caption_override=None, group_size=1):
+def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     timestamp = message.date
     formatted_time = datetime.fromtimestamp(timestamp, moscow).strftime("%d.%m.%Y %H:%M")
     iso_time = datetime.fromtimestamp(timestamp, moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
     caption = clean_text(caption_override or message.caption or "")
     text = clean_text(message.text or "")
 
+    # === УДАЛЯЕМ #СРОЧНО ИЗ ТЕКСТА (чтобы не дублировалось) ===
+    full_text = caption + " " + text
+    full_text = re.sub(r'#срочно', '', full_text, flags=re.IGNORECASE).strip()
+    if caption and text:
+        caption = full_text.split(text)[0].strip()
+        text = text
+    else:
+        caption = full_text
+        text = ""
+
     file_url = None
-    thumb_url = "https://newsforsvoi.ru/preview.jpg"  # fallback
+    thumb_url = "https://newsforsvoi.ru/preview.jpg"
     html = ""
 
     if "Россия" in caption or "Россия" in text:
@@ -63,7 +73,12 @@ def format_post(message, caption_override=None, group_size=1):
     elif any(word in caption + text for word in ["Израиль", "Газа", "Мексика", "США", "Китай", "Тайвань", "Мир"]):
         html += "<h2>Мир</h2>\n"
 
-    html += "<article class='news-item'>\n"
+    # === СТИЛЬ ДЛЯ СРОЧНОЙ КАРТОЧКИ ===
+    if is_urgent:
+        html += "<article class='news-item' style='border-left: 6px solid #d32f2f; background: #ffebee;'>\n"
+        html += "<p style='color: #d32f2f; font-weight: bold; margin-top: 0;'>СРОЧНО:</p>\n"
+    else:
+        html += "<article class='news-item'>\n"
 
     if message.content_type == "photo":
         photos = message.photo
@@ -125,7 +140,7 @@ def format_post(message, caption_override=None, group_size=1):
 
     html += f"<p class='timestamp' data-ts='{iso_time}'> {formatted_time}</p>\n"
     html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
-    html += f"<p class='source'>Источник: Новости для Своих</p>\n"  # ← ОСТАВЛЕНО ПО ТВОЕМУ ЖЕЛАНИЮ
+    html += f"<p class='source'>Источник: Новости для Своих</p>\n"
 
     if group_size > 1:
         html += (
@@ -423,6 +438,8 @@ def main():
 
     # === ДОБАВЛЕНИЕ НОВЫХ ПОСТОВ ===
     grouped = {}
+    urgent_post = None  # Для хранения последней срочной новости
+
     for post in posts:
         key = getattr(post, "media_group_id", None) or post.message_id
         grouped.setdefault(str(key), []).append(post)
@@ -439,7 +456,15 @@ def main():
         if post_id in seen_ids or post_id in new_ids:
             continue
 
-        html = format_post(last, caption_override=first.caption, group_size=len(group_posts))
+        # === ПРОВЕРКА НА #СРОЧНО ===
+        raw_caption = first.caption or ""
+        raw_text = last.text or ""
+        is_urgent = "#срочно" in (raw_caption + raw_text).lower()
+
+        if is_urgent:
+            urgent_post = (last, first, len(group_posts))
+
+        html = format_post(last, caption_override=first.caption, group_size=len(group_posts), is_urgent=is_urgent)
         if not html:
             continue
 
@@ -448,13 +473,21 @@ def main():
             continue
 
         if visible_count >= visible_limit:
-            html = html.replace("<article class='news-item'>", "<article class='news-item hidden'>")
+            html = html.replace("<article class='news-item", "<article class='news-item hidden")
 
         fresh_news.insert(0, html)
         visible_count += 1
         new_ids.add(post_id)
         seen_html_hashes.add(html_hash)
         any_new = True
+
+    # === ДОБАВЛЕНИЕ СРОЧНОЙ КАРТОЧКИ В САМЫЙ ВЕРХ ===
+    if urgent_post:
+        last, first, group_size = urgent_post
+        urgent_html = format_post(last, caption_override=first.caption, group_size=group_size, is_urgent=True)
+        if urgent_html not in fresh_news:
+            fresh_news.insert(0, urgent_html)
+            print("Добавлена СРОЧНАЯ карточка вверху")
 
     if not any_new and not archived_count:
         print("Новых или архивированных карточек нет — news.html не изменён")
