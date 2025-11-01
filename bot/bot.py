@@ -18,7 +18,6 @@ def clean_text(text):
     if not text:
         return ""
 
-    # === УДАЛЯЕМ ВСЕ ВАРИАНТЫ ПОДПИСКИ И ССЫЛКИ ===
     unwanted_patterns = [
         r"💪\s*Подписаться на новости для своих\s*🇷🇺",
         r"Подписаться на новости для своих",
@@ -28,7 +27,6 @@ def clean_text(text):
     for pattern in unwanted_patterns:
         text = re.sub(pattern, "", text, flags=re.IGNORECASE)
 
-    # === УДАЛЕНИЕ ВСЕХ ЭМОДЗИ ===
     emoji_pattern = (
         r'[\U0001F600-\U0001F64F'
         r'\U0001F300-\U0001F5FF'
@@ -40,9 +38,7 @@ def clean_text(text):
     )
     text = re.sub(emoji_pattern, '', text)
 
-    # === ОЧИСТКА ПРОБЕЛОВ ===
     text = re.sub(r'\s+', ' ', text).strip()
-
     return text
 
 def format_post(message, caption_override=None, group_size=1, is_urgent=False):
@@ -52,12 +48,11 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     caption = clean_text(caption_override or message.caption or "")
     text = clean_text(message.text or "")
 
-    # === УДАЛЯЕМ #СРОЧНО ИЗ ТЕКСТА (чтобы не дублировалось) ===
+    # === УДАЛЯЕМ #СРОЧНО ИЗ ТЕКСТА ===
     full_text = caption + " " + text
     full_text = re.sub(r'#срочно', '', full_text, flags=re.IGNORECASE).strip()
     if caption and text:
         caption = full_text.split(text)[0].strip()
-        text = text
     else:
         caption = full_text
         text = ""
@@ -73,7 +68,6 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     elif any(word in caption + text for word in ["Израиль", "Газа", "Мексика", "США", "Китай", "Тайвань", "Мир"]):
         html += "<h2>Мир</h2>\n"
 
-    # === СТИЛЬ ДЛЯ СРОЧНОЙ КАРТОЧКИ ===
     if is_urgent:
         html += "<article class='news-item' style='border-left: 6px solid #d32f2f; background: #ffebee;'>\n"
         html += "<p style='color: #d32f2f; font-weight: bold; margin-top: 0;'>СРОЧНО:</p>\n"
@@ -438,7 +432,7 @@ def main():
 
     # === ДОБАВЛЕНИЕ НОВЫХ ПОСТОВ ===
     grouped = {}
-    urgent_post = None  # Для хранения последней срочной новости
+    urgent_post = None  # Только одна срочная
 
     for post in posts:
         key = getattr(post, "media_group_id", None) or post.message_id
@@ -456,15 +450,15 @@ def main():
         if post_id in seen_ids or post_id in new_ids:
             continue
 
-        # === ПРОВЕРКА НА #СРОЧНО ===
         raw_caption = first.caption or ""
         raw_text = last.text or ""
         is_urgent = "#срочно" in (raw_caption + raw_text).lower()
 
         if is_urgent:
-            urgent_post = (last, first, len(group_posts))
+            urgent_post = (last, first, len(group_posts), post_id)
+            continue  # ← НЕ ДОБАВЛЯЕМ В ЛЕНТУ
 
-        html = format_post(last, caption_override=first.caption, group_size=len(group_posts), is_urgent=is_urgent)
+        html = format_post(last, caption_override=first.caption, group_size=len(group_posts), is_urgent=False)
         if not html:
             continue
 
@@ -481,13 +475,15 @@ def main():
         seen_html_hashes.add(html_hash)
         any_new = True
 
-    # === ДОБАВЛЕНИЕ СРОЧНОЙ КАРТОЧКИ В САМЫЙ ВЕРХ ===
+    # === ДОБАВЛЯЕМ СРОЧНУЮ КАРТОЧКУ ТОЛЬКО ВВЕРХУ ===
     if urgent_post:
-        last, first, group_size = urgent_post
+        last, first, group_size, post_id = urgent_post
         urgent_html = format_post(last, caption_override=first.caption, group_size=group_size, is_urgent=True)
-        if urgent_html not in fresh_news:
+        if urgent_html and urgent_html not in fresh_news:
             fresh_news.insert(0, urgent_html)
-            print("Добавлена СРОЧНАЯ карточка вверху")
+            new_ids.add(post_id)
+            print("Добавлена СРОЧНАЯ карточка (только вверху)")
+            any_new = True
 
     if not any_new and not archived_count:
         print("Новых или архивированных карточек нет — news.html не изменён")
@@ -552,9 +548,7 @@ document.getElementById("show-more").onclick = () => {
     save_seen_ids(seen_ids.union(new_ids))
     print(f"news.html обновлён, добавлено новых карточек: {len(new_ids)}")
     update_sitemap()
-    print("sitemap.xml обновлён")
     generate_rss(fresh_news)
-    print("RSS-файл создан")
 
 if __name__ == "__main__":
     main()
