@@ -15,13 +15,35 @@ bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone("Europe/Moscow")
 
 def clean_text(text):
-    unwanted = [
-        "Подписаться на новости для своих",
-        "https://t.me/newsSVOih",
+    if not text:
+        return ""
+    
+    # === УДАЛЯЕМ ВСЕ ВАРИАНТЫ ПОДПИСКИ И ССЫЛКИ ===
+    unwanted_patterns = [
+        r"💪\s*Подписаться на новости для своих\s*🇷🇺",  # с эмодзи
+        r"Подписаться на новости для своих",             # без эмодзи
+        r"https://t\.me/newsSVOih",                      # ссылка
     ]
-    for phrase in unwanted:
-        text = text.replace(phrase, "")
-    return text.strip()
+    
+    for pattern in unwanted_patterns:
+        text = re.sub(pattern, "", text, flags=re.IGNORECASE)
+    
+    # === УДАЛЕНИЕ ВСЕХ ЭМОДЗИ (ПОЛНЫЙ ДИАПАЗОН) ===
+    emoji_pattern = (
+        r'[\U0001F600-\U0001F64F'   # эмоции
+        r'\U0001F300-\U0001F5FF'   # символы
+        r'\U0001F680-\U0001F6FF'   # транспорт
+        r'\U0001F1E0-\U0001F1FF'   # флаги стран
+        r'\U00002600-\U000026FF'   # погода
+        r'\U00002700-\U000027BF'   # разные символы
+        r'\U0001F900-\U0001F9FF]+' # доп.
+    )
+    text = re.sub(emoji_pattern, '', text)
+    
+    # === ОЧИСТКА ПРОБЕЛОВ ===
+    text = re.sub(r'\s+', ' ', text).strip()
+    
+    return text
 
 def format_post(message, caption_override=None, group_size=1):
     timestamp = message.date
@@ -48,7 +70,7 @@ def format_post(message, caption_override=None, group_size=1):
         file_info = bot.get_file(photos[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
         html += f"<img src='{file_url}' alt='Фото' />\n"
-        thumb_url = file_url  # для microdata
+        thumb_url = file_url
 
     elif message.content_type == "video":
         try:
@@ -61,19 +83,16 @@ def format_post(message, caption_override=None, group_size=1):
             file_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
             html += f"<video controls src='{file_url}'></video>\n"
 
-            # === Превью видео ===
             if hasattr(message.video, "thumbnail") and message.video.thumbnail:
                 thumb_info = bot.get_file(message.video.thumbnail.file_id)
                 thumb_url = f"https://api.telegram.org/file/bot{TOKEN}/{thumb_info.file_path}"
 
-            # === Длительность ===
             duration_str = "PT1M"
             if hasattr(message.video, "duration") and message.video.duration:
                 mins = message.video.duration // 60
                 secs = message.video.duration % 60
                 duration_str = f"PT{mins}M{secs}S"
 
-            # === VideoObject ===
             video_schema = {
                 "@context": "https://schema.org",
                 "@type": "VideoObject",
@@ -106,7 +125,7 @@ def format_post(message, caption_override=None, group_size=1):
 
     html += f"<p class='timestamp' data-ts='{iso_time}'> {formatted_time}</p>\n"
     html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
-    html += f"<p class='source'>Источник: {message.chat.title}</p>\n"
+    html += f"<p class='source'>Источник: Новости для Своих</p>\n"  # ← ОСТАВЛЕНО ПО ТВОЕМУ ЖЕЛАНИЮ
 
     if group_size > 1:
         html += (
@@ -114,7 +133,6 @@ def format_post(message, caption_override=None, group_size=1):
             f"target='_blank'>Смотреть остальные фото/видео в Telegram</a></p>\n"
         )
 
-    # === NewsArticle microdata ===
     microdata = {
         "@context": "https://schema.org",
         "@type": "NewsArticle",
