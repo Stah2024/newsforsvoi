@@ -47,19 +47,16 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     file_url = thumb_url = None
     html = ""
 
-    # --- РАЗДЕЛЫ ---
     if any(x in full for x in ["Россия"]): html += "<h2>Россия</h2>\n"
     elif any(x in full for x in ["Космос"]): html += "<h2>Космос</h2>\n"
     elif any(x in full for x in ["Израиль", "Газа", "Мексика", "США", "Китай", "Тайвань", "Мир"]): html += "<h2>Мир</h2>\n"
 
-    # --- СТИЛЬ ---
     if is_urgent:
         html += "<article class='news-item' style='border-left:6px solid #d32f2f;background:#ffebee;'>\n"
         html += "<p style='color:#d32f2f;font-weight:bold;margin:0;'>СРОЧНО:</p>\n"
     else:
         html += "<article class='news-item'>\n"
 
-    # --- МЕДИА ---
     if message.content_type == "photo":
         fi = bot.get_file(message.photo[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{fi.file_path}"
@@ -70,7 +67,7 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
         try:
             if message.video.file_size > 20_000_000:
                 print("Видео >20MB — пропуск")
-                return ""
+                return "", None, None
             fi = bot.get_file(message.video.file_id)
             file_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{fi.file_path}"
             html += f"<video controls src='{file_url}'></video>\n"
@@ -79,13 +76,11 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
                 thumb_url = f"https://api.telegram.org/file/bot{TELEGRAM_TOKEN}/{ti.file_path}"
         except Exception as e:
             print(f"Видео ошибка: {e}")
-            return ""
+            return "", None, None
 
-    # --- ТЕКСТ ---
     if caption: html += f"<div class='text-block'><p>{caption}</p></div>\n"
     if text and text != caption: html += f"<div class='text-block'><p>{text}</p></div>\n"
 
-    # --- ФУТЕР ---
     html += f"<p class='timestamp' data-ts='{iso}'> {time_str}</p>\n"
     html += f"<a href='https://t.me/{CHANNEL_ID[1:]}/{message.message_id}' target='_blank'>Читать в Telegram</a>\n"
     html += f"<p class='source'>Источник: Новости для Своих</p>\n"
@@ -94,7 +89,7 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     html += "</article>\n"
     return html, file_url, thumb_url
 
-# ====================== РЕПОСТ В ВК ======================
+# ====================== ВК ======================
 def post_to_vk(caption, text, file_url=None, ctype=None):
     try:
         msg = f"{caption}\n\n{text}\n\nИсточник: Новости для Своих".strip()
@@ -133,14 +128,48 @@ def post_to_vk(caption, text, file_url=None, ctype=None):
 
 # ====================== УТИЛИТЫ ======================
 def hash_html_block(h): return hashlib.md5(h.encode()).hexdigest()
-def extract_timestamp(b):
-    m = re.search(r" (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", b)
-    return datetime.strptime(m.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow) if m else None
 
-# ====================== АРХИВ, SITEMAP, RSS ======================
-# (всё из твоего старого кода — вернул полностью, без изменений)
-# → вставь сюда функции update_sitemap(), generate_rss(), архивацию из прошлого ответа
-# (я сократил для читаемости, но в финальном файле — всё на месте)
+def load_seen_ids():
+    if not os.path.exists(SEEN_IDS_FILE):
+        return set()
+    with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
+        return set(line.strip() for line in f)
+
+def save_seen_ids(seen_ids):
+    with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
+        for i in seen_ids: f.write(f"{i}\n")
+
+def fetch_latest_posts():
+    updates = bot.get_updates()
+    posts = [u.channel_post for u in updates if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]]
+    return list(reversed(posts[-12:])) if posts else []
+
+# ====================== SITEMAP & RSS ======================
+def update_sitemap():
+    now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
+    sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://newsforsvoi.ru/index.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>
+  <url><loc>https://newsforsvoi.ru/news.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>0.9</priority></url>
+  <url><loc>https://newsforsvoi.ru/archive.html</loc><lastmod>{now}</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>
+</urlset>"""
+    with open("public/sitemap.xml", "w", encoding="utf-8") as f:
+        f.write(sitemap)
+    print("sitemap.xml обновлён")
+
+def generate_rss(fresh_news):
+    items = ""
+    for b in fresh_news[:10]:
+        title = re.search(r"<p>(.*?)</p>", b)
+        link = re.search(r"<a href='(https://t\.me/[^']+)'", b)
+        title = title.group(1) if title else "Новость"
+        link = link.group(1) if link else "https://t.me/newsSVOih"
+        items += f"<item><title>{title}</title><link>{link}</link><description>{title}</description></item>"
+    rss = f"""<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0"><channel><title>Новости для Своих</title><link>https://newsforsvoi.ru</link>{items}</channel></rss>"""
+    with open("public/rss.xml", "w", encoding="utf-8") as f:
+        f.write(rss)
+    print("rss.xml обновлён")
 
 # ====================== ОСНОВНОЙ ЦИКЛ ======================
 def main():
@@ -149,27 +178,25 @@ def main():
         print("Новых постов нет")
         return
 
+    os.makedirs("public", exist_ok=True)
     seen_ids = load_seen_ids()
     new_ids = set()
     seen_hashes = set()
     fresh_news = []
-    archived = 0
 
-    # --- ЧТЕНИЕ news.html ---
     if os.path.exists("public/news.html"):
         with open("public/news.html", "r", encoding="utf-8") as f:
             raw = f.read()
             fresh_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
             seen_hashes = {hash_html_block(b) for b in fresh_news}
 
-    # --- ГРУППИРОВКА ---
     grouped = {}
     urgent = None
+
     for p in posts:
         key = getattr(p, "media_group_id", None) or p.message_id
         grouped.setdefault(str(key), []).append(p)
 
-    # --- ОБРАБОТКА ---
     for gid, gp in grouped.items():
         pid = str(gid)
         if pid in seen_ids or pid in new_ids: continue
@@ -177,40 +204,33 @@ def main():
         first, last = gp[0], gp[-1]
         is_urg = "#срочно" in (first.caption or "" + last.text or "").lower()
 
-        html, url, _ = format_post(last, first.caption, len(gp), is_urgent=is_urg)
+        html, url, _ = format_post(last, first.caption, len(gp), is_urg)
         if not html: continue
         if hash_html_block(html) in seen_hashes: continue
 
-        # --- ВК ТОЛЬКО ДЛЯ НОВЫХ ---
-        if not is_urg:  # СРОЧНО не спамим в ВК
+        if not is_urg:
             post_to_vk(clean_text(first.caption or ""), clean_text(last.text or ""), url, last.content_type)
 
-        # --- СРОЧНО — только одна вверху ---
         if is_urg:
             urgent = (html, pid)
-            continue  # не в ленту
+            continue
 
-        # --- ОБЫЧНЫЕ ---
         fresh_news.insert(0, html)
         new_ids.add(pid)
         seen_hashes.add(hash_html_block(html))
 
-    # --- ДОБАВЛЯЕМ СРОЧНО В САМЫЙ ВЕРХ ---
     if urgent:
         html, pid = urgent
         fresh_news.insert(0, html)
         new_ids.add(pid)
         print(" СРОЧНО вверху!")
 
-    # --- ЗАПИСЬ news.html ---
     with open("public/news.html", "w", encoding="utf-8") as f:
         f.write("<style>body{font-family:sans-serif;line-height:1.6;padding:10px;background:#f9f9f9;}.news-item{margin-bottom:30px;padding:15px;background:#fff;border-radius:8px;box-shadow:0 0 5px rgba(0,0,0,0.05);border-left:4px solid #0077cc;}img,video{max-width:100%;margin:10px 0;border-radius:4px;}.timestamp{font-size:0.9em;color:#666;}.source{font-size:0.85em;color:#999;}h2{margin-top:40px;font-size:22px;border-bottom:2px solid #ccc;padding-bottom:5px;}</style>")
         for b in fresh_news: f.write(b + "\n")
-        if any("hidden" in b for b in fresh_news):
-            f.write('<button id="show-more">Показать ещё</button><script>document.getElementById("show-more").onclick=()=>{document.querySelectorAll(".hidden").forEach(e=>e.classList.remove("hidden"));this.style.display="none"};</script>')
 
     save_seen_ids(seen_ids | new_ids)
-    print(f" ГОТОВО! +{len(new_ids)} новостей, ВК запощен, СРОЧНО вверху")
+    print(f" ГОТОВО! +{len(new_ids)} новостей")
     update_sitemap()
     generate_rss(fresh_news)
 
