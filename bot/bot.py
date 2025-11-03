@@ -57,7 +57,7 @@ def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
 
         elif file_url and ctype == "video":
             size = len(requests.get(file_url, stream=True).content)
-            if size > 50_000_000:
+            if size > 20_000_000:
                 print(f"Видео {size/1e6:.1f}МБ — пропуск в ВК")
             else:
                 open("t.mp4","wb").write(requests.get(file_url).content)
