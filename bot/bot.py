@@ -9,7 +9,6 @@ import requests
 from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 
-# ── ТОКЕНЫ ──
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 VK_TOKEN = os.getenv("VK_TOKEN")
 VK_GROUP_ID = os.getenv("VK_GROUP_ID")
@@ -19,8 +18,6 @@ VK_POSTED = "vk_posted.txt"
 
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone("Europe/Moscow")
-
-# ── АНТИ-ДУБЛЬ ВК ──
 def load_vk():
     if not os.path.exists(VK_POSTED):
         return set()
@@ -31,12 +28,14 @@ def save_vk(posted_set):
     with open(VK_POSTED, "w", encoding="utf-8") as f:
         f.write("\n".join(sorted(posted_set)) + "\n")
 
-vk_seen = load_vk()
+def hash_post_content(caption, text):
+    return hashlib.md5(clean_text(caption + text).encode("utf-8")).hexdigest()
 
-# ── ПОСТ В ВК ──
 def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
-    if str(msg_id) in vk_seen:
-        print(f"ДУБЛЬ ВК {msg_id} — пропуск")
+    vk_seen = load_vk()
+    vk_key = hash_post_content(caption, text)
+    if vk_key in vk_seen:
+        print(f"ДУБЛЬ ВК — пропуск")
         return
     if not VK_TOKEN or not VK_GROUP_ID:
         print("VK не настроен")
@@ -86,12 +85,10 @@ def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
             "v": "5.199"
         })
         print("Запощено в ВК ✅")
-        vk_seen.add(str(msg_id))
+        vk_seen.add(vk_key)
         save_vk(vk_seen)
     except Exception as e:
         print(f"ВК ошибка: {e}")
-
-# ── ОЧИСТКА ТЕКСТА ──
 def clean_text(text):
     if not text:
         return ""
@@ -105,7 +102,6 @@ def clean_text(text):
     text = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF]+', '', text)
     return re.sub(r'\s+', ' ', text).strip()
 
-# ── ФОРМАТИРОВАНИЕ ПОСТА ──
 def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     ts = message.date
     fmt_time = datetime.fromtimestamp(ts, moscow).strftime("%d.%m.%Y %H:%M")
@@ -124,7 +120,6 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     tg_link = f"https://t.me/{CHANNEL_ID[1:]}/{message.message_id}"
     html = ""
 
-    # Категории
     if any(w in caption + text for w in ["Россия"]):
         html += "<h2>Россия</h2>\n"
     elif any(w in caption + text for w in ["Космос"]):
@@ -182,8 +177,6 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     html += f"<script type='application/ld+json'>{json.dumps(microdata, ensure_ascii=False)}</script>\n"
     html += "</article>\n"
     return html, file_url, content_type, tg_link
-
-# ── ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ──
 def extract_timestamp(block):
     m = re.search(r" (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", block)
     return datetime.strptime(m.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow) if m else None
@@ -203,7 +196,6 @@ def update_sitemap():
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
     print("sitemap.xml обновлён")
-
 def generate_rss(news_blocks):
     items = ""
     for b in news_blocks[:20]:
@@ -244,8 +236,6 @@ def fetch_latest_posts():
 
 def is_older_than_two_days(ts):
     return datetime.now(moscow) - datetime.fromtimestamp(ts, moscow) >= timedelta(days=2)
-
-# ── ОСНОВНОЙ ЦИКЛ ──
 def main():
     posts = fetch_latest_posts()
     if not posts:
@@ -258,69 +248,12 @@ def main():
     fresh_news = []
     os.makedirs("public", exist_ok=True)
 
-    # Читаем текущие новости
     if os.path.exists("public/news.html"):
         with open("public/news.html", "r", encoding="utf-8") as f:
             raw = f.read()
             fresh_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
             seen_hashes.update(hash_html_block(b) for b in fresh_news)
 
-    # Архивируем старые
-    retained = []
-    archived = 0
-    new_cards = []
-    old_cards = []
-    if os.path.exists("public/archive.html"):
-        with open("public/archive.html", "r", encoding="utf-8") as f:
-            old_cards = re.findall(r"<article class='news-preview.*?>.*?</article>", f.read(), re.DOTALL)
-
-    for block in fresh_news:
-        ts = extract_timestamp(block)
-        if ts and is_older_than_two_days(ts.timestamp()):
-            # Твоя архивация 100%
-            link = re.search(r"<a href='(https://t\.me/[^']+)'", block)
-            texts = re.findall(r"<p>(.*?)</p>", block)
-            cat = re.search(r"<h2>(.*?)</h2>", block)
-            img = re.search(r"src='([^']+)'", block)
-            link = link.group(1) if link else "https://t.me/newsSVOih"
-            category = cat.group(1) if cat else "Новости"
-            prev_img = img.group(1) if img else "https://newsforsvoi.ru/preview.jpg"
-            preview_text = " ".join(re.sub("<.*?>", "", t) for t in texts)[:200] + "..."
-            date_str = ts.strftime("%d.%m.%Y %H:%M")
-            iso_date = ts.strftime("%Y-%m-%d")
-            card_id = hashlib.md5(f"{link}{date_str}".encode()).hexdigest()
-            if card_id not in "".join(old_cards):
-                card = f"""
-<article class='news-preview' data-timestamp='{iso_date}' data-post-id='{link.split('/')[-1]}'>
-    <img src='{prev_img}' alt='Превью' style='max-width:200px;border-radius:8px;margin-bottom:10px;' />
-    <p><strong>{date_str} | <span style='color:#0077cc'>{category}</span></strong></p>
-    <p class='preview-text'>{preview_text}</p>
-    <p class='telegram-hint'>Смотри в Telegram</p>
-    <a href='{link}' target='_blank' class='telegram-link'>Открыть пост</a>
-</article>"""
-                new_cards.append(card)
-                archived += 1
-                print(f"АРХИВ: {preview_text[:30]}...")
-            # Удаляем старые медиа
-            for src in re.findall(r"src='([^']+)'", block):
-                path = os.path.join("public", os.path.basename(src))
-                if os.path.exists(path):
-                    os.remove(path)
-                    print(f"Удалён: {path}")
-        else:
-            retained.append(block)
-    fresh_news = retained
-
-    # Обновляем archive.html
-    all_cards = old_cards + new_cards
-    all_cards.sort(key=lambda c: re.search(r"data-timestamp='([^']+)'", c).group(1) if re.search(r"data-timestamp='([^']+)'", c) else "0000-00-00", reverse=True)
-    with open("public/archive.html", "w", encoding="utf-8") as f:
-        f.write("""<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Архив</title><link rel="stylesheet" href="style.css"></head><body>
-<header style="background:#222;color:#eee;text-align:center;padding:2rem;"><h1>Архив новостей</h1><a href="index.html" style="color:#4CAF50;">← Главная</a></header>
-<main style="max-width:900px;margin:auto;padding:1rem;">""" + "".join(all_cards) + "</main></body></html>")
-    print(f"archive.html: +{archived} новых")
-
-    # Группируем посты
     grouped = {}
     urgent = None
     for p in posts:
@@ -368,7 +301,7 @@ def main():
             any_new = True
             print("СРОЧНО → ВК + сайт")
 
-    if any_new or archived:
+    if any_new:
         with open("public/news.html", "w", encoding="utf-8") as f:
             f.write("<style>body{font-family:sans-serif;background:#f9f9f9;padding:10px;line-height:1.6}.news-item{background:#fff;padding:15px;margin-bottom:30px;border-radius:8px;box-shadow:0 0 5px rgba(0,0,0,.05);border-left:4px solid #0077cc}img,video{max-width:100%;border-radius:4px;margin:10px 0}.timestamp{color:#666;font-size:.9em}.source{color:#999;font-size:.85em}h2{margin-top:40px;border-bottom:2px solid #ccc;padding-bottom:5px}.hidden{display:none}</style>\n")
             for b in fresh_news:
@@ -380,7 +313,7 @@ def main():
         save_seen_ids(seen_ids | new_ids)
         update_sitemap()
         generate_rss(fresh_news)
-        print(f"ГОТОВО! +{len(new_ids)} новостей | ВК: {len(vk_seen)} записей")
+        print(f"ГОТОВО! +{len(new_ids)} новостей | ВК: {len(load_vk())} записей")
 
 if __name__ == "__main__":
     main()
