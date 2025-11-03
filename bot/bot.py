@@ -143,7 +143,7 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     elif message.content_type == "video":
         try:
             size = getattr(message.video, "file_size", 0)
-            if size > 50_000_000:
+            if size > 20_000_000:
                 print(f"Видео {size/1e6:.1f}МБ — слишком большое")
                 html += "<p style='color:#d32f2f'>Видео слишком большое для загрузки</p>"
             else:
