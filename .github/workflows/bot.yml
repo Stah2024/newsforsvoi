@@ -1,5 +1,5 @@
 name: Run Telegram Bot
-
+environment: production
 on:
   schedule:
     - cron: '*/10 * * * *'  # запуск каждые 10 минут
