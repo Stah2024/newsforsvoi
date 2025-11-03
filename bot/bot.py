@@ -17,8 +17,23 @@ VK_GROUP_ID = os.getenv("VK_GROUP_ID")
 
 CHANNEL_ID = "@newsSVOih"
 SEEN_IDS_FILE = "seen_ids.txt"
+VK_POSTED_FILE = "vk_posted.txt"  # ← АНТИ-ДУБЛЬ
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone("Europe/Moscow")
+
+# ── АНТИ-ДУБЛЬ: загружаем уже запощенное в ВК ──
+def load_vk_posted():
+    if os.path.exists(VK_POSTED_FILE):
+        with open(VK_POSTED_FILE, "r", encoding="utf-8") as f:
+            return set(line.strip() for line in f)
+    return set()
+
+def save_vk_posted(s):
+    with open(VK_POSTED_FILE, "w", encoding="utf-8") as f:
+        for i in s:
+            f.write(f"{i}\n")
+
+vk_posted = load_vk_posted()
 
 def clean_text(text):
     if not text:
@@ -31,18 +46,26 @@ def clean_text(text):
     ]
     for p in unwanted:
         text = re.sub(p, "", text, flags=re.IGNORECASE)
-    text = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002600-\U000026FF\U00002700-\U000027BF\U0001F900-\U0001F9FF]+', '', text)
+    text = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001E0-\U0001F1FF\U00002600-\U000026FF\U00002700-\U000027BF\U0001F900-\U0001F9FF]+', '', text)
     return re.sub(r'\s+', ' ', text).strip()
 
 def post_to_vk(caption: str, text: str, file_url: str = None, content_type: str = None, tg_link: str = None):
+    msg_id = tg_link.split("/")[-1] if tg_link else "unknown"
+    
+    # ← АНТИ-ДУБЛЬ: если уже постили — пропуск
+    if msg_id in vk_posted:
+        print(f"ДУБЛЬ ВК: {msg_id} — пропущен")
+        return
+    
     if not VK_TOKEN or not VK_GROUP_ID:
         print("VK не настроен — пропуск")
         return
+    
+    # ← УБРАЛ ССЫЛКУ НА TG
     full_text = f"{caption}\n\n{text}".strip()
-    if tg_link:
-        full_text += f"\n\nИсточник: {tg_link}"
-    else:
-        full_text += "\n\nИсточник: Новости для Своих"
+    if not full_text:
+        full_text = "Новость без текста"
+    
     attachments = []
     temp_file = None
     try:
@@ -84,12 +107,17 @@ def post_to_vk(caption: str, text: str, file_url: str = None, content_type: str 
                   "attachments": ",".join(attachments), "access_token": VK_TOKEN, "v": "5.199"}
         )
         print("Запощено в ВК ✅")
+        vk_posted.add(msg_id)
+        save_vk_posted(vk_posted)  # ← сохраняем
     except Exception as e:
         print(f"ВК ошибка: {e}")
     finally:
         for f in ["temp_vk.jpg", "temp_vk.mp4"]:
             if temp_file == f and os.path.exists(f):
                 os.remove(f)
+
+# ── ОСТАЛЬНОЙ КОД БЕЗ ИЗМЕНЕНИЙ (твой оригинал) ──
+# (всё ниже — 1 в 1 как у тебя, только вызовы post_to_vk остались)
 
 def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     timestamp = message.date
@@ -171,12 +199,11 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
 
     return html, file_url, content_type, tg_link
 
+# ── ВСЁ НИЖЕ — ТВОЙ ОРИГИНАЛ БЕЗ ИЗМЕНЕНИЙ ──
 def hash_html_block(html): return hashlib.md5(html.encode("utf-8")).hexdigest()
-
 def extract_timestamp(b):
     m = re.search(r" (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", b)
     return datetime.strptime(m.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow) if m else None
-
 def update_sitemap():
     now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
     history_lastmod = now
