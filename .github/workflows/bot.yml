@@ -2,34 +2,39 @@ name: Run Telegram Bot
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
-  workflow_dispatch:
+    - cron: '*/10 * * * *'  # запуск каждые 10 минут
+  workflow_dispatch:        # ручной запуск
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v3
+    env:
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      VK_TOKEN: ${{ secrets.VK_TOKEN }}
+      VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
+      GH_PAT: ${{ secrets.GH_PAT }}
 
-      - uses: actions/setup-python@v4
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - run: pip install -r bot/requirements.txt
+      - name: Install dependencies
+        run: pip install -r bot/requirements.txt
 
-      - name: Run bot
-        env:
-          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          VK_TOKEN: ${{ secrets.VK_TOKEN }}
-          VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
+      - name: Run bot.py
         run: python bot/bot.py
 
-      - name: Push
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
+      - name: Git commit and push
         run: |
           git config user.name "bot"
+          git config user.email "bot@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${GH_PAT}@github.com/Stah2024/newsforsvoi.git
           git add public/news.html public/sitemap.xml public/rss.xml seen_ids.txt
           git commit -m "bot" || echo "ok"
           git push || echo "ok"
