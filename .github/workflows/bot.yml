@@ -1,5 +1,4 @@
 name: Run Telegram Bot
-environment: production
 
 on:
   schedule:
@@ -9,38 +8,28 @@ on:
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-    environment: production   # ← это ВКЛЮЧАЕТ секреты из production
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-        with:
-          persist-credentials: false
+      - uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
-        run: |
-          pip install -r bot/requirements.txt
+      - run: pip install -r bot/requirements.txt
 
       - name: Run bot
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-          VK_TOKEN: ${{ secrets.VK_TOKEN }}          # ← ВК ОЖИЛ
-          VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}     # ← ВК ОЖИЛ
-        run: |
-          python bot/bot.py
+          VK_TOKEN: ${{ secrets.VK_TOKEN }}
+          VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
+        run: python bot/bot.py
 
-      - name: Commit updated files
+      - name: Push
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git remote set-url origin https://x-access-token:${GH_PAT}@github.com/${{ github.repository }}
+          git config user.name "bot"
           git add public/news.html public/sitemap.xml public/rss.xml seen_ids.txt
-          git commit -m "Update news.html, sitemap.xml, rss.xml and seen_ids from bot" || echo "No changes"
-          git push
+          git commit -m "bot" || echo "ok"
+          git push || echo "ok"
