@@ -167,14 +167,14 @@ main {
   animation: fadeIn 1s ease;
 }
 
-/* MASONRY GRID — 3 КОЛОНКИ */
+/* MASONRY GRID — 3 КОЛОНКИ НА ДЕСКТОПЕ */
 .news-grid {
   width: 100%;
   margin: 0 auto;
 }
 
 .news-item {
-  width: calc(33.333% - 16px);
+  width: 32%; /* ← ЭТО ГЛАВНОЕ ИЗМЕНЕНИЕ */
   margin-bottom: 24px;
   background-color: #fff;
   padding: 1.5rem;
