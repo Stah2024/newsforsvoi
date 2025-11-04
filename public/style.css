@@ -1,4 +1,4 @@
-/* 🆕 СОВРЕМЕННЫЙ ДИЗАЙН 2025 - ВАШИ СТИЛИ + УЛУЧШЕНИЯ */
+/* СОВРЕМЕННЫЙ ДИЗАЙН 2025 - ВАШИ СТИЛИ + УЛУЧШЕНИЯ */
 body {
   margin: 0;
   padding: 0;
@@ -10,7 +10,6 @@ body {
   flex-direction: column;
 }
 
-/* 🇷🇺 НОВАЯ ПАТРИОТИЧЕСКАЯ ШАПКА */
 header {
   background: linear-gradient(135deg, #ff0000, #0038a8);
   color: white;
@@ -94,7 +93,7 @@ h2 {
 }
 
 .search-wrapper::after {
-  content: "🔍";
+  content: "Поиск";
   position: absolute;
   right: 14px;
   top: 50%;
@@ -167,15 +166,18 @@ main {
   animation: fadeIn 1s ease;
 }
 
-/* 🆕 MASONRY GRID */
+/* CSS GRID MASONRY — 3 КОЛОНКИ */
 .news-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  grid-auto-rows: 10px;
   width: 100%;
   margin: 0 auto;
 }
 
 .news-item {
-  width: calc(33.333% - 16px);
-  margin-bottom: 24px;
+  grid-row-end: span var(--row-span, 30);
   background-color: #fff;
   padding: 1.5rem;
   border-radius: 12px;
@@ -284,14 +286,14 @@ footer a {
 
 /* АДАПТИВ */
 @media (max-width: 900px) {
-  .news-item {
-    width: calc(50% - 12px);
+  .news-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 600px) {
-  .news-item {
-    width: 100%;
+  .news-grid {
+    grid-template-columns: 1fr;
   }
 
   .header-content {
