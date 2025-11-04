@@ -52,6 +52,9 @@
   }
   </script>
 
+  <!-- Masonry.js -->
+  <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
+
   <style>
     .card-overlay {
       position: fixed;
@@ -247,12 +250,17 @@
           }
           enableCardEnlargement();
 
-          // CSS Grid Masonry: высота
-          document.querySelectorAll('.news-item').forEach(item => {
-            const height = item.offsetHeight;
-            const rowSpan = Math.max(20, Math.ceil(height / 10) + 5);
-            item.style.setProperty('--row-span', rowSpan);
-          });
+          // Masonry с правильными настройками
+          if (window.Masonry) {
+            const msnry = new Masonry(container, {
+              itemSelector: '.news-item',
+              percentPosition: true,
+              gutter: 24,
+              columnWidth: '.news-item'
+            });
+            // Пересчитываем после загрузки изображений
+            imagesLoaded(container, () => msnry.layout());
+          }
         }
 
         document.getElementById('load-more').addEventListener('click', () => {
@@ -291,6 +299,12 @@
       });
     }
 
+    // Добавляем imagesLoaded для корректного Masonry
+    const imagesLoadedScript = document.createElement('script');
+    imagesLoadedScript.src = 'https://unpkg.com/imagesloaded@4/imagesloaded.pkgd.min.js';
+    document.head.appendChild(imagesLoadedScript);
+
+    // Yandex.Metrika и остальное — без изменений
     (function(m,e,t,r,i,k,a){
       if (getCookie('cookies_accepted') === 'false') return;
       m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
