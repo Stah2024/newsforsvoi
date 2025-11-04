@@ -1,49 +1,176 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Новости для Своих — независимые новости России и мира</title>
-<link rel="stylesheet" href="style.css" />
-<link rel="icon" type="image/x-icon" href="/favicon.ico" />
-<link rel="alternate" type="application/rss+xml" title="Новости для Своих" href="/rss.xml" />
-<meta name="description" content="Актуальные новости России и мира без фейков и лишнего шума. Главные события, аналитика, обзоры и факты — коротко и по делу." />
-<meta name="keywords" content="новости, Telegram, SVOih, события, видео, фото, Россия" />
-<meta name="author" content="SVOih News Team" />
-<meta name="robots" content="index, follow" />
-<link rel="canonical" href="https://newsforsvoi.ru/" />
-<meta property="og:title" content="Новости для Своих" />
-<meta property="og:description" content="Честные новости России и мира" />
-<meta property="og:url" content="https://newsforsvoi.ru/" />
-<meta property="og:type" content="website" />
-<meta property="og:image" content="https://newsforsvoi.ru/preview.jpg" />
-<meta property="og:image:type" content="image/jpeg" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
-<meta name="yandex-verification" content="3a33e674e5836564" />
-<meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Новости для Своих" />
-<meta name="twitter:description" content="Честные новости России и мира" />
-<meta name="twitter:image" content="https://newsforsvoi.ru/preview.jpg" />
-<script type="application/ld+json">
-{
-"@context": "https://schema.org",
-"@type": "NewsMediaOrganization",
-"name": "Новости для Своих",
-"url": "https://newsforsvoi.ru/",
-"logo": {
-"@type": "ImageObject",
-"url": "https://newsforsvoi.ru/logo.png"
-},
-"sameAs": [
-"https://t.me/newsSVOih",
-"https://dzen.ru/britancirazvedos"
-]
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Новости для Своих — независимые новости России и мира</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="alternate" type="application/rss+xml" title="Новости для Своих" href="/rss.xml" />
+  <meta name="description" content="Актуальные новости России и мира без фейков и лишнего шума. Главные события, аналитика, обзоры и факты — коротко и по делу." />
+  <meta name="keywords" content="новости, Telegram, SVOih, события, видео, фото, Россия" />
+  <meta name="author" content="SVOih News Team" />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://newsforsvoi.ru/" />
+  <meta property="og:title" content="Новости для Своих" />
+  <meta property="og:description" content="Честные новости России и мира" />
+  <meta property="og:url" content="https://newsforsvoi.ru/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://newsforsvoi.ru/preview.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="yandex-verification" content="3a33e674e5836564" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Новости для Своих" />
+  <meta name="twitter:description" content="Честные новости России и мира" />
+  <meta name="twitter:image" content="https://newsforsvoi.ru/preview.jpg" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "NewsMediaOrganization",
+    "name": "Новости для Своих",
+    "url": "https://newsforsvoi.ru/",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://newsforsvoi.ru/logo.png"
+    },
+    "sameAs": [
+      "https://t.me/newsSVOih",
+      "https://dzen.ru/britancirazvedos"
+    ]
+  }
+  </script>
+  <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
+  <script src="https://unpkg.com/imagesloaded@4/imagesloaded.pkgd.min.js"></script>
+<style>
+.card-overlay {
+position: fixed;
+top: 0;
+left: 0;
+width: 100vw;
+height: 100vh;
+background: rgba(0,0,0,0.6);
+display: flex;
+align-items: center;
+justify-content: center;
+z-index: 9999;
 }
-</script>
-<script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
-<script src="https://unpkg.com/imagesloaded@4/imagesloaded.pkgd.min.js"></script>
-</head>
+.card-overlay .news-item {
+max-width: 600px;
+max-height: 90vh;
+overflow-y: auto;
+background: white;
+padding: 20px;
+border-radius: 8px;
+transform: scale(1.05);
+transition: transform 0.3s ease;
+box-shadow: 0 0 20px rgba(0,0,0,0.3);
+}
+.subscribe-success {
+background: #d4edda !important;
+color: #155724 !important;
+border: 2px solid #c3e6cb !important;
+padding: 15px !important;
+border-radius: 10px !important;
+margin: 10px 0 !important;
+text-align: center;
+}
+.subscribe-error {
+background: #f8d7da !important;
+color: #721c24 !important;
+border: 2px solid #f5c6cb !important;
+padding: 15px !important;
+border-radius: 10px !important;
+margin: 10px 0 !important;
+text-align: center;
+}
+.rsya-info {
+font-size: 12px;
+color: #888;
+padding: 10px;
+background: #f9f9f9;
+margin: 20px 0;
+border-radius: 4px;
+text-align: center;
+}
+.tg2vk-sidebar {
+position: fixed;
+right: 0;
+top: 180px;
+width: 280px;
+background: linear-gradient(135deg, #ff0000, #0038a8);
+color: white;
+border-radius: 16px 0 0 16px;
+box-shadow: -4px 4px 15px rgba(0,0,0,0.2);
+z-index: 999;
+font-family: "Segoe UI", Roboto, sans-serif;
+overflow: hidden;
+transition: all 0.3s ease;
+cursor: pointer;
+}
+.sidebar-header {
+padding: 14px 16px;
+background: rgba(255,255,255,0.1);
+display: flex;
+justify-content: space-between;
+align-items: center;
+font-weight: bold;
+font-size: 0.95rem;
+}
+.toggle-arrow {
+font-size: 1.2rem;
+transition: transform 0.3s ease;
+}
+.sidebar-content {
+padding: 0 16px;
+font-size: 0.85rem;
+line-height: 1.4;
+max-height: 0;
+overflow: hidden;
+transition: max-height 0.4s ease, padding 0.4s ease;
+}
+.sidebar-content ul {
+margin: 10px 0;
+padding-left: 18px;
+}
+.sidebar-content a.sidebar-btn {
+display: inline-block;
+background: #ffc107;
+color: #0038a8;
+padding: 10px 16px;
+border-radius: 20px;
+text-decoration: none;
+font-weight: bold;
+font-size: 0.9rem;
+margin: 10px 0;
+}
+.sidebar-content .small {
+font-size: 0.75rem;
+opacity: 0.9;
+margin-top: 10px;
+}
+.tg2vk-sidebar.open .sidebar-content {
+max-height: 500px;
+padding: 16px;
+}
+.tg2vk-sidebar.open .toggle-arrow {
+transform: rotate(180deg);
+}
+@media (max-width: 768px) {
+.tg2vk-sidebar {
+position: static;
+width: 100%;
+margin: 20px auto;
+border-radius: 16px;
+box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.sidebar-header {
+justify-content: center;
+gap: 10px;
+}
+}
+</style>
 <body>
 <header>
 <div class="history-info">
@@ -127,16 +254,20 @@ Email: <a href="mailto:art364@yandex.ru">art364@yandex.ru</a> |
 <div id="modal" class="card-overlay" style="display:none;"></div>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-const grid = document.querySelector('.news-grid');
-if (!grid) return;
-imagesLoaded(grid, function () {
-new Masonry(grid, {
-itemSelector: '.news-item',
-percentPosition: true,
-gutter: 24
+  const grid = document.querySelector('.news-grid');
+  if (!grid) return;
+  imagesLoaded(grid, function () {
+    new Masonry(grid, {
+      itemSelector: '.news-item',
+      percentPosition: true,
+      gutter: 24
+    });
+  });
 });
-});
-});
+function toggleSidebar() {
+  const sidebar = document.getElementById('tg2vk-sidebar');
+  sidebar.classList.toggle('open');
+}
 </script>
 </body>
 </html>
