@@ -110,6 +110,93 @@
       border-radius: 4px;
       text-align: center;
     }
+
+    /* === БОКОВОЙ БАННЕР TG2VK === */
+    .tg2vk-sidebar {
+      position: fixed;
+      right: 0;
+      top: 180px;
+      width: 280px;
+      background: linear-gradient(135deg, #ff0000, #0038a8);
+      color: white;
+      border-radius: 16px 0 0 16px;
+      box-shadow: -4px 4px 15px rgba(0,0,0,0.2);
+      z-index: 999;
+      font-family: "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .sidebar-header {
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+
+    .toggle-arrow {
+      font-size: 1.2rem;
+      transition: transform 0.3s ease;
+    }
+
+    .sidebar-content {
+      padding: 0 16px;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.4s ease;
+    }
+
+    .sidebar-content ul {
+      margin: 10px 0;
+      padding-left: 18px;
+    }
+
+    .sidebar-content a.sidebar-btn {
+      display: inline-block;
+      background: #ffc107;
+      color: #0038a8;
+      padding: 10px 16px;
+      border-radius: 20px;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 0.9rem;
+      margin: 10px 0;
+    }
+
+    .sidebar-content .small {
+      font-size: 0.75rem;
+      opacity: 0.9;
+      margin-top: 10px;
+    }
+
+    .tg2vk-sidebar.open .sidebar-content {
+      max-height: 500px;
+      padding: 16px;
+    }
+
+    .tg2vk-sidebar.open .toggle-arrow {
+      transform: rotate(180deg);
+    }
+
+    @media (max-width: 768px) {
+      .tg2vk-sidebar {
+        position: static;
+        width: 100%;
+        margin: 20px auto;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+      .sidebar-header {
+        justify-content: center;
+        gap: 10px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -149,6 +236,27 @@
       <input type="search" id="search-box" placeholder="Поиск по новостям…" />
     </div>
   </header>
+
+  <!-- БОКОВОЙ БАННЕР TG2VK -->
+  <aside id="tg2vk-sidebar" class="tg2vk-sidebar">
+    <div class="sidebar-header" onclick="toggleSidebar()">
+      <span>TG2VK → ВК + сайт</span>
+      <span class="toggle-arrow">></span>
+    </div>
+    <div class="sidebar-content">
+      <p><strong>Публикуйте в Telegram — посты автоматически в ВК и на сайт</strong></p>
+      <p>Без webhook, polling, VPN. Установка под ключ.</p>
+      <ul>
+        <li>Репост в группу ВКонтакте</li>
+        <li>Публикация на сайт (HTML/JSON)</li>
+        <li>Поддержка медиа, хештегов</li>
+        <li>DNS через Яндекс.Облако</li>
+      </ul>
+      <p><strong>От 7000 ₽</strong></p>
+      <a href="https://t.me/Artstah" target="_blank" class="sidebar-btn">Написать @Artstah</a>
+      <p class="small">Примеры — по запросу</p>
+    </div>
+  </aside>
 
   <main>
     <section id="news-feed">
@@ -250,7 +358,6 @@
           }
           enableCardEnlargement();
 
-          // Masonry с правильными настройками
           if (window.Masonry) {
             const msnry = new Masonry(container, {
               itemSelector: '.news-item',
@@ -258,7 +365,6 @@
               gutter: 24,
               columnWidth: '.news-item'
             });
-            // Пересчитываем после загрузки изображений
             imagesLoaded(container, () => msnry.layout());
           }
         }
@@ -299,12 +405,12 @@
       });
     }
 
-    // Добавляем imagesLoaded для корректного Masonry
+    // imagesLoaded
     const imagesLoadedScript = document.createElement('script');
     imagesLoadedScript.src = 'https://unpkg.com/imagesloaded@4/imagesloaded.pkgd.min.js';
     document.head.appendChild(imagesLoadedScript);
 
-    // Yandex.Metrika и остальное — без изменений
+    // Yandex.Metrika
     (function(m,e,t,r,i,k,a){
       if (getCookie('cookies_accepted') === 'false') return;
       m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
@@ -370,6 +476,12 @@
       document.getElementById('cookie-consent').style.display = 'block';
     } else if (getCookie('cookies_accepted') === 'false') {
       document.querySelector('#yandex_rtb_R-A-17560420-2').innerHTML = '';
+    }
+
+    // === ФУНКЦИЯ СВЕРТЫВАНИЯ БАННЕРА ===
+    function toggleSidebar() {
+      const sidebar = document.getElementById('tg2vk-sidebar');
+      sidebar.classList.toggle('open');
     }
   </script>
 
