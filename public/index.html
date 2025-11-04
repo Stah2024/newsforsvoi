@@ -6,7 +6,7 @@
   <title>Новости для Своих — независимые новости России и мира</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-  <link rel="alternate" type="application/rss+xml" title="Новости для Своих" href="/rss.xml" />
+  <link rel="alternate" type="application/rss+xml" title="Новости для Своих" href:href="/rss.xml" />
 
   <!-- SEO -->
   <meta name="description" content="Актуальные новости России и мира без фейков и лишнего шума. Главные события, аналитика, обзоры и факты — коротко и по делу." />
@@ -52,7 +52,7 @@
   }
   </script>
 
-  <!-- imagesLoaded и Masonry (в правильном порядке) -->
+  <!-- imagesLoaded и Masonry (ВАЖНО: порядок!) -->
   <script src="https://unpkg.com/imagesloaded@4/imagesloaded.pkgd.min.js"></script>
   <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
 
@@ -198,45 +198,6 @@
         gap: 10px;
       }
     }
-
-    /* === НОВАЯ СЕТКА ДЛЯ MASONRY === */
-    .news-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 24px;
-      justify-content: center;
-      margin: 0 auto;
-      padding: 0 12px;
-    }
-
-    .news-item {
-      width: calc(33.333% - 16px);
-      box-sizing: border-box;
-      background: white;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-    }
-
-    .news-item img {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
-
-    @media (max-width: 1024px) {
-      .news-item {
-        width: calc(50% - 12px);
-      }
-    }
-
-    @media (max-width: 600px) {
-      .news-item {
-        width: 100%;
-      }
-    }
   </style>
 </head>
 <body>
@@ -280,7 +241,7 @@
   <!-- БОКОВОЙ БАННЕР TG2VK -->
   <aside id="tg2vk-sidebar" class="tg2vk-sidebar">
     <div class="sidebar-header" onclick="toggleSidebar()">
-      <span>TG2VK → ВК + сайт</span>
+      <span>TG2VK to ВК + сайт</span>
       <span class="toggle-arrow">></span>
     </div>
     <div class="sidebar-content">
@@ -373,7 +334,7 @@
       }
     });
 
-    // === ЗАГРУЗКА НОВОСТЕЙ + MASONRY ===
+    // === ЗАГРУЗКА НОВОСТЕЙ + MASONRY (БЕЗ columnWidth) ===
     fetch('/news.html')
       .then(response => response.text())
       .then(html => {
@@ -396,11 +357,7 @@
           items.slice(0, visibleCount).forEach(item => container.appendChild(item));
 
           const loadMoreBtn = document.getElementById('load-more');
-          if (visibleCount >= items.length) {
-            loadMoreBtn.style.display = 'none';
-          } else {
-            loadMoreBtn.style.display = 'block';
-          }
+          loadMoreBtn.style.display = visibleCount >= items.length ? 'none' : 'block';
 
           enableCardEnlargement();
 
@@ -411,6 +368,7 @@
                 itemSelector: '.news-item',
                 percentPosition: true,
                 gutter: 24
+                // columnWidth убран — теперь по твоим стилям
               });
             }
           });
