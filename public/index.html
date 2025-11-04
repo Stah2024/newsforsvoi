@@ -52,8 +52,10 @@
   }
   </script>
 
+  <!-- Masonry.js -->
+  <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
+
   <style>
-    /* Существующие стили остаются без изменений */
     .card-overlay {
       position: fixed;
       top: 0;
@@ -171,7 +173,6 @@
     </section>
   </main>
 
-  <!-- ОБНОВЛЁННЫЙ ФУТЕР -->
   <footer>
     © 2025 Новости для Своих | 
     Сделано: <a href="https://t.me/Artstah" target="_blank">@Artstah</a> | 
@@ -189,25 +190,20 @@
       dateElement.textContent = `Сегодня: ${today}`;
     }
 
-    // Вызов функции при загрузке страницы
     document.addEventListener('DOMContentLoaded', updateDate);
 
-    // Существующий JavaScript для формы Unisender
+    // Форма Unisender
     document.getElementById('unisender-form').addEventListener('submit', async function(e) {
       e.preventDefault();
-
       const email = document.getElementById('email-input').value;
       const messageEl = document.getElementById('subscribe-message');
-
       messageEl.innerHTML = '<p>Подписываемся...</p>';
       messageEl.className = '';
 
       try {
         const response = await fetch('https://api.unisender.com/ru/api/subscribe', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({
             'api_key': '6jhinetoegc4sgwdpc1x44k3wk1gpqjyhn5bqiwe',
             'list_ids': '1',
@@ -215,9 +211,7 @@
             'double_optin': '2'
           })
         });
-
         const result = await response.json();
-
         if (result.code === 'success') {
           messageEl.innerHTML = '<p>✅ Подписка оформлена! Вы получите новости на ' + email + '</p>';
           messageEl.className = 'subscribe-success';
@@ -233,7 +227,7 @@
       }
     });
 
-    // Существующий JavaScript для новостей, поиска и модалки
+    // Загрузка новостей + Masonry
     fetch('/news.html')
       .then(response => response.text())
       .then(html => {
@@ -258,6 +252,15 @@
             document.getElementById('load-more').style.display = 'none';
           }
           enableCardEnlargement();
+
+          // Инициализация Masonry после рендера
+          if (window.Masonry) {
+            new Masonry(container, {
+              itemSelector: '.news-item',
+              percentPosition: true,
+              gutter: 24
+            });
+          }
         }
 
         document.getElementById('load-more').addEventListener('click', () => {
@@ -272,6 +275,7 @@
         console.error('Ошибка загрузки news.html:', error);
       });
 
+    // Поиск
     document.getElementById('search-box').addEventListener('input', function(e) {
       const query = e.target.value.toLowerCase();
       document.querySelectorAll('.news-item').forEach(item => {
@@ -279,6 +283,7 @@
       });
     });
 
+    // Модалка
     function enableCardEnlargement() {
       const modal = document.getElementById('modal');
       modal.onclick = (e) => {
@@ -295,10 +300,8 @@
         });
       });
     }
-  </script>
 
-  <!-- Yandex.Metrika counter — УСЛОВНАЯ ЗАГРУЗКА -->
-  <script type="text/javascript">
+    // Yandex.Metrika
     (function(m,e,t,r,i,k,a){
       if (getCookie('cookies_accepted') === 'false') return;
       m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
@@ -315,19 +318,9 @@
           webvisor:true
       });
     }
-  </script>
-  <noscript>
-    <div>
-      <img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" />
-    </div>
-  </noscript>
 
-  <!-- YANDEX.RTB РЕКЛАМА — УСЛОВНАЯ ЗАГРУЗКА -->
-  <script>window.yaContextCb=window.yaContextCb||[]</script>
-  <script src="https://yandex.ru/ads/system/context.js" async></script>
-
-  <div id="yandex_rtb_R-A-17560420-2" style="margin: 30px 0; text-align: center;"></div>
-  <script>
+    // Реклама
+    window.yaContextCb = window.yaContextCb || [];
     if (getCookie('cookies_accepted') !== 'false') {
       window.yaContextCb.push(() => {
           Ya.Context.AdvManager.render({
@@ -336,34 +329,8 @@
           })
       })
     }
-  </script>
 
-  <!-- БАННЕР СОГЛАСИЯ НА COOKIES -->
-  <div id="cookie-consent" style="
-    position: fixed; bottom: 0; left: 0; right: 0; 
-    background: #333; color: white; padding: 20px; z-index: 10001; 
-    font-family: sans-serif; box-shadow: 0 -2px 20px rgba(0,0,0,0.3);
-    display: none;
-  ">
-    <div style="max-width: 800px; margin: 0 auto;">
-      <p style="margin: 0 0 10px 0; font-size: 14px;">
-        Мы используем <strong>cookies</strong> и передаём данные Яндексу для персонализированной рекламы и аналитики. 
-        <a href="/privacy.html" style="color: #0077cc;" target="_blank">Подробнее</a>
-      </p>
-      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button onclick="acceptCookies()" style="
-          background: #0077cc; color: white; border: none; padding: 12px 24px; 
-          border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;
-        ">✅ Принять</button>
-        <button onclick="rejectCookies()" style="
-          background: transparent; color: white; border: 2px solid white; 
-          padding: 10px 20px; border-radius: 6px; cursor: pointer;
-        ">❌ Отклонить</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
+    // Cookies
     function setCookie(name, value, days) {
       let expires = "";
       if (days) {
@@ -398,13 +365,29 @@
       location.reload();
     }
 
-    // Показ баннера
     if (!getCookie('cookies_accepted')) {
       document.getElementById('cookie-consent').style.display = 'block';
     } else if (getCookie('cookies_accepted') === 'false') {
-      // Отключаем рекламу, если уже отказались
       document.querySelector('#yandex_rtb_R-A-17560420-2').innerHTML = '';
     }
   </script>
+
+  <noscript><div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+
+  <div id="yandex_rtb_R-A-17560420-2" style="margin: 30px 0; text-align: center;"></div>
+  <script src="https://yandex.ru/ads/system/context.js" async></script>
+
+  <div id="cookie-consent" style="position: fixed; bottom: 0; left: 0; right: 0; background: #333; color: white; padding: 20px; z-index: 10001; font-family: sans-serif; box-shadow: 0 -2px 20px rgba(0,0,0,0.3); display: none;">
+    <div style="max-width: 800px; margin: 0 auto;">
+      <p style="margin: 0 0 10px 0; font-size: 14px;">
+        Мы используем <strong>cookies</strong> и передаём данные Яндексу для персонализированной рекламы и аналитики. 
+        <a href="/privacy.html" style="color: #0077cc;" target="_blank">Подробнее</a>
+      </p>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="acceptCookies()" style="background: #0077cc; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">✅ Принять</button>
+        <button onclick="rejectCookies()" style="background: transparent; color: white; border: 2px solid white; padding: 10px 20px; border-radius: 6px; cursor: pointer;">❌ Отклонить</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
