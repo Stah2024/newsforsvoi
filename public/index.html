@@ -334,7 +334,7 @@
       }
     });
 
-    // === ЗАГРУЗКА НОВОСТЕЙ + MASONRY (ФИКС) ===
+    // === ЗАГРУЗКА НОВОСТЕЙ + MASONRY (ФИНАЛЬНЫЙ ФИКС БЕЗ FOUC) ===
     fetch('/news.html')
       .then(response => response.text())
       .then(html => {
@@ -361,7 +361,7 @@
 
           enableCardEnlargement();
 
-          // === MASONRY FIX: grid-sizer + columnWidth ===
+          // === MASONRY: СКРЫТ ДО ЗАГРУЗКИ ===
           imagesLoaded(container, () => {
             if (window.Masonry) {
               let sizer = container.querySelector('.grid-sizer');
@@ -371,12 +371,16 @@
                 container.appendChild(sizer);
               }
 
-              new Masonry(container, {
+              const msnry = new Masonry(container, {
                 itemSelector: '.news-item',
                 columnWidth: '.grid-sizer',
                 gutter: 24,
                 transitionDuration: 0
               });
+
+              // Показываем только после раскладки
+              container.classList.add('loaded');
+              msnry.layout();
             }
           });
         }
