@@ -163,6 +163,7 @@ main {
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   animation: fadeIn 1s ease;
 }
+
 /* MASONRY GRID — 3 КОЛОНКИ НА ДЕСКТОПЕ */
 .news-grid {
   width: 100%;
@@ -260,6 +261,7 @@ main {
   color: #444;
   font-size: 0.95rem;
 }
+
 footer {
   text-align: center;
   font-size: 0.9rem;
@@ -381,4 +383,22 @@ footer a {
 .subscribe-form .button:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+}
+
+/* === MASONRY GRID-SIZER FIX === */
+.grid-sizer {
+  width: 32%;
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .grid-sizer {
+    width: 48%;
+  }
+}
+
+@media (max-width: 600px) {
+  .grid-sizer {
+    width: 100%;
+  }
 }
