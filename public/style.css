@@ -1,60 +1,495 @@
-// === ЗАГРУЗКА НОВОСТЕЙ + MASONRY БЕЗ FOUC ===
-fetch('/news.html')
-  .then(response => response.text())
-  .then(html => {
-    const container = document.getElementById('news-container');
-    const temp = document.createElement('div');
-    temp.innerHTML = html;
+/* 🆕 СОВРЕМЕННЫЙ ДИЗАЙН 2025 - ВАШИ СТИЛИ + УЛУЧШЕНИЯ */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  color: #222;
+  background: url("channel-banner.jpg") center center / cover no-repeat fixed;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
-    const items = Array.from(temp.querySelectorAll('.news-item'));
+/* 🇷🇺 НОВАЯ ПАТРИОТИЧЕСКАЯ ШАПКА */
+header {
+  background: linear-gradient(135deg, #ff0000, #0038a8);
+  color: white;
+  text-align: center;
+  padding: 3rem 1rem 2rem;
+  border-bottom: 4px solid #ffc107;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 
-    items.sort((a, b) => {
-      const timeA = new Date(a.querySelector('.timestamp')?.dataset.ts || 0);
-      const timeB = new Date(b.querySelector('.timestamp')?.dataset.ts || 0);
-      return timeB - timeA;
-    });
+.history-info {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
-    let visibleCount = 9;
+.history-date {
+  font-family: "Segoe UI", Roboto, sans-serif;
+  font-size: 1.2rem;
+  color: #fff;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
 
-    function renderItems() {
-      container.innerHTML = '';
-      items.slice(0, visibleCount).forEach(item => container.appendChild(item));
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
 
-      const loadMoreBtn = document.getElementById('load-more');
-      loadMoreBtn.style.display = visibleCount >= items.length ? 'none' : 'block';
+.flag-icon {
+  width: 48px;
+  height: auto;
+}
 
-      enableCardEnlargement();
+h1 {
+  font-size: 2.4rem;
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
 
-      // === MASONRY: СКРЫТ ДО ЗАГРУЗКИ ===
-      imagesLoaded(container, () => {
-        let sizer = container.querySelector('.grid-sizer');
-        if (!sizer) {
-          sizer = document.createElement('div');
-          sizer.className = 'grid-sizer';
-          container.appendChild(sizer);
-        }
+h2 {
+  font-size: 1.2rem;
+  font-weight: normal;
+  color: #fff;
+}
 
-        const msnry = new Masonry(container, {
-          itemSelector: '.news-item',
-          columnWidth: '.grid-sizer',
-          gutter: 24,
-          transitionDuration: 0
-        });
+/* 🆕 КАТЕГОРИИ */
+.category-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+}
 
-        // Показываем после раскладки
-        container.classList.add('loaded');
-        msnry.layout();
-      });
-    }
+.tab {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
 
-    document.getElementById('load-more').addEventListener('click', () => {
-      visibleCount += 9;
-      renderItems();
-    });
+.tab.active, .tab:hover {
+  background: #ffc107;
+  color: #0038a8;
+  transform: translateY(-2px);
+}
 
-    renderItems();
-  })
-  .catch(error => {
-    document.getElementById('news-container').innerHTML = '<p style="text-align:center;color:#666;">Не удалось загрузить новости.</p>';
-    console.error('Ошибка загрузки news.html:', error);
-  });
+/* 🆕 SEARCH - АДАПТИРОВАЛ ПОД НОВУЮ ШАПКУ */
+.search-wrapper {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  max-width: 280px;
+  margin: 0;
+  background: rgba(255,255,255,0.15);
+  border-radius: 25px;
+  padding: 5px;
+  backdrop-filter: blur(10px);
+}
+
+#search-box {
+  width: 100%;
+  padding: 12px 40px 12px 16px;
+  border-radius: 20px;
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 1rem;
+}
+
+#search-box::placeholder { 
+  color: rgba(255,255,255,0.8); 
+}
+
+.search-wrapper::after {
+  content: "🔍";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.2rem;
+  color: rgba(255,255,255,0.8);
+}
+
+/* 🆕 КНОПКИ В ШАПКЕ */
+.button-bar {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.button.small {
+  font-size: 14px;
+  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  font-weight: bold;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff0000, #0038a8);
+  color: white;
+  transition: background 0.3s, transform 0.2s;
+  max-width: 150px;
+  white-space: nowrap;
+}
+
+.button.small:hover {
+  background: linear-gradient(135deg, #cc0000, #00288f);
+  transform: scale(1.03);
+}
+
+.button.small img.icon {
+  height: 16px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* 🆕 ОСНОВНОЙ КНОПКИ (ДЛЯ ДРУГИХ МЕСТ) */
+.button {
+  display: inline-block;
+  background: linear-gradient(135deg, #ff0000, #0038a8);
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  padding: 14px 28px;
+  border-radius: 25px;
+  transition: all 0.3s ease;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+}
+
+.button.secondary {
+  background: linear-gradient(135deg, #ffc107, #ff8c00);
+  color: #0038a8;
+}
+
+/* 🆕 ОСНОВНОЙ КОНТЕЙНЕР */
+main {
+  max-width: 1200px;
+  margin: 3rem auto;
+  background: rgba(255,255,255,0.95);
+  padding: 2rem;
+  border-radius: 16px;
+  text-align: center;
+  flex: 1;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  animation: fadeIn 1s ease;
+}
+
+/* 🆕 NEWS GRID - МУЛЬТИКОЛОНКА + ГРИД */
+.news-grid {
+  column-count: 3;
+  column-gap: 1.5rem;
+  padding-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.news-item {
+  break-inside: avoid;
+  margin-bottom: 1.5rem;
+  background-color: #fff;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  animation: fadeIn 0.6s ease;
+  text-align: left;
+  transition: transform 0.3s ease;
+  cursor: zoom-in;
+  border-left: 4px solid #ff0000;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 🆕 БЕДЖ КАТЕГОРИИ */
+.category-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #ffc107;
+  color: #0038a8;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.news-item img,
+.news-item video {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.news-item img:hover,
+.news-item video:hover {
+  transform: scale(1.05);
+  cursor: zoom-in;
+}
+
+.news-item p {
+  margin-bottom: 0.8rem;
+  font-size: 1rem;
+  transition: transform 0.2s ease;
+}
+
+.news-item p:hover {
+  transform: scale(1.05);
+  cursor: zoom-in;
+}
+
+.timestamp {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
+
+.source {
+  font-size: 0.85rem;
+  color: #999;
+  margin-top: 0.3rem;
+}
+
+.news-item a {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  color: #ff0000;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 6px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+
+.news-item a:hover {
+  background: #ff0000;
+  color: white;
+}
+
+.telegram-video-link {
+  display: block;
+  margin-top: 0.5rem;
+  color: #444;
+  font-size: 0.95rem;
+}
+
+/* 🆕 LOADING & ERROR */
+.loading, .error {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.error { 
+  color: #dc3545; 
+  grid-column: 1 / -1;
+}
+
+/* FOOTER */
+footer {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #fff;
+  padding: 2rem 0;
+  background: linear-gradient(135deg, #ff0000, #0038a8);
+  margin-top: auto;
+}
+
+footer a { 
+  color: #ffc107; 
+  text-decoration: underline; 
+}
+
+/* АНИМАЦИИ */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* МОБИЛЬНАЯ ВЕРСИЯ */
+@media (max-width: 900px) {
+  .news-grid {
+    column-count: 2;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .news-grid {
+    column-count: 1;
+    grid-template-columns: 1fr;
+    padding: 0 1rem;
+  }
+
+  .news-item {
+    margin-bottom: 1.2rem;
+    padding: 1rem;
+  }
+
+  .header-content {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  h1 { font-size: 1.8rem; }
+  h2 { font-size: 1rem; }
+
+  .search-wrapper {
+    position: static;
+    margin: 1rem auto;
+    max-width: 90%;
+  }
+
+  .flag-icon {
+    position: static;
+    width: 36px;
+  }
+
+  .button-bar {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .button.small {
+    margin: 5px 0;
+    max-width: 150px;
+    width: auto;
+  }
+
+  .history-info {
+    position: static;
+    margin: 1rem auto;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+}
+
+/* 🔍 МОДАЛЬНОЕ УВЕЛИЧЕНИЕ КАРТОЧКИ */
+.news-item.enlarged-1 {
+  transform: scale(1.05);
+  z-index: 5;
+  position: relative;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+}
+
+.news-item.enlarged-2 {
+  transform: scale(1.10);
+  z-index: 10;
+  position: relative;
+  box-shadow: 0 12px 35px rgba(0,0,0,0.3);
+}
+
+.news-item.enlarged-1 img,
+.news-item.enlarged-2 img,
+.news-item.enlarged-1 video,
+.news-item.enlarged-2 video {
+  transform: scale(1.10);
+}
+
+.card-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.card-overlay .news-item {
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  transform: scale(1.05);
+}
+
+/* 🆕 СТИЛИ ДЛЯ ФОРМЫ UNISENDER */
+.subscribe-wrapper {
+  max-width: 500px;
+  margin: 2rem auto;
+  text-align: center;
+}
+
+.subscribe-form {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.subscribe-form input[type="email"] {
+  padding: 12px;
+  border-radius: 25px;
+  border: none;
+  width: 250px;
+  font-size: 1rem;
+  background: #f8f9fa;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.subscribe-form .button {
+  background: linear-gradient(135deg, #ff0000, #0038a8);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.subscribe-form .button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+}
+
+@media (max-width: 600px) {
+  .subscribe-form {
+    flex-direction: column;
+    align-items: center;
+  }
+  .subscribe-form input[type="email"] {
+    width: 100%;
+    max-width: 300px;
+  }
+}
