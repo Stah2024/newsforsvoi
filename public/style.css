@@ -67,33 +67,6 @@ h2 {
   color: #fff;
 }
 
-/* 🆕 КАТЕГОРИИ */
-.category-tabs {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin: 1.5rem 0;
-  flex-wrap: wrap;
-}
-
-.tab {
-  background: rgba(255,255,255,0.2);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 500;
-}
-
-.tab.active, .tab:hover {
-  background: #ffc107;
-  color: #0038a8;
-  transform: translateY(-2px);
-}
-
-/* 🆕 SEARCH - АДАПТИРОВАЛ ПОД НОВУЮ ШАПКУ */
 .search-wrapper {
   position: absolute;
   top: 20px;
@@ -130,7 +103,6 @@ h2 {
   color: rgba(255,255,255,0.8);
 }
 
-/* 🆕 КНОПКИ В ШАПКЕ */
 .button-bar {
   display: flex;
   gap: 10px;
@@ -165,7 +137,6 @@ h2 {
   vertical-align: middle;
 }
 
-/* 🆕 ОСНОВНОЙ КНОПКИ (ДЛЯ ДРУГИХ МЕСТ) */
 .button {
   display: inline-block;
   background: linear-gradient(135deg, #ff0000, #0038a8);
@@ -184,12 +155,6 @@ h2 {
   box-shadow: 0 6px 15px rgba(0,0,0,0.3);
 }
 
-.button.secondary {
-  background: linear-gradient(135deg, #ffc107, #ff8c00);
-  color: #0038a8;
-}
-
-/* 🆕 ОСНОВНОЙ КОНТЕЙНЕР */
 main {
   max-width: 1200px;
   margin: 3rem auto;
@@ -202,19 +167,15 @@ main {
   animation: fadeIn 1s ease;
 }
 
-/* 🆕 NEWS GRID - МУЛЬТИКОЛОНКА + ГРИД */
+/* 🆕 MASONRY GRID */
 .news-grid {
-  column-count: 3;
-  column-gap: 1.5rem;
-  padding-top: 1rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .news-item {
-  break-inside: avoid;
-  margin-bottom: 1.5rem;
+  width: calc(33.333% - 16px);
+  margin-bottom: 24px;
   background-color: #fff;
   padding: 1.5rem;
   border-radius: 12px;
@@ -226,9 +187,9 @@ main {
   border-left: 4px solid #ff0000;
   position: relative;
   overflow: hidden;
+  break-inside: avoid;
 }
 
-/* 🆕 БЕДЖ КАТЕГОРИИ */
 .category-badge {
   position: absolute;
   top: 10px;
@@ -259,7 +220,6 @@ main {
 .news-item p {
   margin-bottom: 0.8rem;
   font-size: 1rem;
-  transition: transform 0.2s ease;
 }
 
 .news-item p:hover {
@@ -303,21 +263,6 @@ main {
   font-size: 0.95rem;
 }
 
-/* 🆕 LOADING & ERROR */
-.loading, .error {
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 3rem;
-  font-size: 1.2rem;
-  color: #666;
-}
-
-.error { 
-  color: #dc3545; 
-  grid-column: 1 / -1;
-}
-
-/* FOOTER */
 footer {
   text-align: center;
   font-size: 0.9rem;
@@ -332,30 +277,21 @@ footer a {
   text-decoration: underline; 
 }
 
-/* АНИМАЦИИ */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* МОБИЛЬНАЯ ВЕРСИЯ */
+/* АДАПТИВ */
 @media (max-width: 900px) {
-  .news-grid {
-    column-count: 2;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  .news-item {
+    width: calc(50% - 12px);
   }
 }
 
 @media (max-width: 600px) {
-  .news-grid {
-    column-count: 1;
-    grid-template-columns: 1fr;
-    padding: 0 1rem;
-  }
-
   .news-item {
-    margin-bottom: 1.2rem;
-    padding: 1rem;
+    width: 100%;
   }
 
   .header-content {
@@ -395,55 +331,17 @@ footer a {
     align-items: center;
     gap: 5px;
   }
+
+  .subscribe-form {
+    flex-direction: column;
+    align-items: center;
+  }
+  .subscribe-form input[type="email"] {
+    width: 100%;
+    max-width: 300px;
+  }
 }
 
-/* 🔍 МОДАЛЬНОЕ УВЕЛИЧЕНИЕ КАРТОЧКИ */
-.news-item.enlarged-1 {
-  transform: scale(1.05);
-  z-index: 5;
-  position: relative;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-}
-
-.news-item.enlarged-2 {
-  transform: scale(1.10);
-  z-index: 10;
-  position: relative;
-  box-shadow: 0 12px 35px rgba(0,0,0,0.3);
-}
-
-.news-item.enlarged-1 img,
-.news-item.enlarged-2 img,
-.news-item.enlarged-1 video,
-.news-item.enlarged-2 video {
-  transform: scale(1.10);
-}
-
-.card-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0,0,0,0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-
-.card-overlay .news-item {
-  max-width: 90vw;
-  max-height: 90vh;
-  overflow-y: auto;
-  background: #fff;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 0 30px rgba(0,0,0,0.5);
-  transform: scale(1.05);
-}
-
-/* 🆕 СТИЛИ ДЛЯ ФОРМЫ UNISENDER */
 .subscribe-wrapper {
   max-width: 500px;
   margin: 2rem auto;
@@ -481,15 +379,4 @@ footer a {
 .subscribe-form .button:hover {
   transform: translateY(-3px);
   box-shadow: 0 6px 15px rgba(0,0,0,0.3);
-}
-
-@media (max-width: 600px) {
-  .subscribe-form {
-    flex-direction: column;
-    align-items: center;
-  }
-  .subscribe-form input[type="email"] {
-    width: 100%;
-    max-width: 300px;
-  }
 }
