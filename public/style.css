@@ -1,4 +1,4 @@
-/* 🆕 СОВРЕМЕННЫЙ ДИЗАЙН 2025 - ВАШИ СТИЛИ + УЛУЧШЕНИЯ */
+/* СОВРЕМЕННЫЙ ДИЗАЙН 2025 - ВАШИ СТИЛИ + УЛУЧШЕНИЯ */
 body {
   margin: 0;
   padding: 0;
@@ -10,7 +10,7 @@ body {
   flex-direction: column;
 }
 
-/* 🇷🇺 НОВАЯ ПАТРИОТИЧЕСКАЯ ШАПКА */
+/* ПАТРИОТИЧЕСКАЯ ШАПКА */
 header {
   background: linear-gradient(135deg, #ff0000, #0038a8);
   color: white;
@@ -67,7 +67,7 @@ h2 {
   color: #fff;
 }
 
-/* 🆕 КАТЕГОРИИ */
+/* КАТЕГОРИИ */
 .category-tabs {
   display: flex;
   justify-content: center;
@@ -93,7 +93,7 @@ h2 {
   transform: translateY(-2px);
 }
 
-/* 🆕 SEARCH - АДАПТИРОВАЛ ПОД НОВУЮ ШАПКУ */
+/* SEARCH - АДАПТИРОВАЛ ПОД НОВУЮ ШАПКУ */
 .search-wrapper {
   position: absolute;
   top: 20px;
@@ -121,7 +121,7 @@ h2 {
 }
 
 .search-wrapper::after {
-  content: "🔍";
+  content: "search";
   position: absolute;
   right: 14px;
   top: 50%;
@@ -130,7 +130,7 @@ h2 {
   color: rgba(255,255,255,0.8);
 }
 
-/* 🆕 КНОПКИ В ШАПКЕ */
+/* КНОПКИ В ШАПКЕ */
 .button-bar {
   display: flex;
   gap: 10px;
@@ -165,7 +165,7 @@ h2 {
   vertical-align: middle;
 }
 
-/* 🆕 ОСНОВНОЙ КНОПКИ (ДЛЯ ДРУГИХ МЕСТ) */
+/* ОСНОВНОЙ КНОПКИ (ДЛЯ ДРУГИХ МЕСТ) */
 .button {
   display: inline-block;
   background: linear-gradient(135deg, #ff0000, #0038a8);
@@ -189,7 +189,7 @@ h2 {
   color: #0038a8;
 }
 
-/* 🆕 ОСНОВНОЙ КОНТЕЙНЕР */
+/* ОСНОВНОЙ КОНТЕЙНЕР */
 main {
   max-width: 1200px;
   margin: 3rem auto;
@@ -202,19 +202,8 @@ main {
   animation: fadeIn 1s ease;
 }
 
-/* 🆕 NEWS GRID - МУЛЬТИКОЛОНКА + ГРИД */
-.news-grid {
-  column-count: 3;
-  column-gap: 1.5rem;
-  padding-top: 1rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
-}
-
+/* NEWS ITEM - БЕЗ margin-bottom и break-inside */
 .news-item {
-  break-inside: avoid;
-  margin-bottom: 1.5rem;
   background-color: #fff;
   padding: 1.5rem;
   border-radius: 12px;
@@ -228,7 +217,7 @@ main {
   overflow: hidden;
 }
 
-/* 🆕 БЕДЖ КАТЕГОРИИ */
+/* БЕДЖ КАТЕГОРИИ */
 .category-badge {
   position: absolute;
   top: 10px;
@@ -303,7 +292,7 @@ main {
   font-size: 0.95rem;
 }
 
-/* 🆕 LOADING & ERROR */
+/* LOADING & ERROR */
 .loading, .error {
   grid-column: 1 / -1;
   text-align: center;
@@ -339,22 +328,8 @@ footer a {
 }
 
 /* МОБИЛЬНАЯ ВЕРСИЯ */
-@media (max-width: 900px) {
-  .news-grid {
-    column-count: 2;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  }
-}
-
 @media (max-width: 600px) {
-  .news-grid {
-    column-count: 1;
-    grid-template-columns: 1fr;
-    padding: 0 1rem;
-  }
-
   .news-item {
-    margin-bottom: 1.2rem;
     padding: 1rem;
   }
 
@@ -397,7 +372,7 @@ footer a {
   }
 }
 
-/* 🔍 МОДАЛЬНОЕ УВЕЛИЧЕНИЕ КАРТОЧКИ */
+/* МОДАЛЬНОЕ УВЕЛИЧЕНИЕ КАРТОЧКИ */
 .news-item.enlarged-1 {
   transform: scale(1.05);
   z-index: 5;
@@ -443,7 +418,7 @@ footer a {
   transform: scale(1.05);
 }
 
-/* 🆕 СТИЛИ ДЛЯ ФОРМЫ UNISENDER */
+/* СТИЛИ ДЛЯ ФОРМЫ UNISENDER */
 .subscribe-wrapper {
   max-width: 500px;
   margin: 2rem auto;
