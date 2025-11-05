@@ -21,6 +21,7 @@ header {
   flex-direction: column;
   align-items: center;
 }
+
 .history-info {
   position: absolute;
   left: 20px;
@@ -62,6 +63,7 @@ h2 {
   font-weight: normal;
   color: #fff;
 }
+
 .button-bar {
   display: flex;
   gap: 10px;
@@ -130,6 +132,7 @@ h2 {
   font-size: 1.2rem;
   color: rgba(255,255,255,0.8);
 }
+
 .news-grid {
   display: block;
 }
@@ -148,9 +151,8 @@ h2 {
 @media (max-width: 600px) {
   .grid-item { width: 100%; }
 }
+
 .news-item {
-  break-inside: avoid;
-  margin-bottom: 1.5rem;
   background-color: #fff;
   padding: 1.5rem;
   border-radius: 12px;
@@ -187,6 +189,7 @@ h2 {
   font-size: 0.85rem;
   color: #999;
 }
+
 .card-overlay {
   position: fixed;
   top: 0;
@@ -223,4 +226,9 @@ footer {
 footer a {
   color: #ffc107;
   text-decoration: underline;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
