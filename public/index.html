@@ -8,13 +8,14 @@
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />
   <link rel="alternate" type="application/rss+xml" title="Новости для Своих" href="/rss.xml" />
 
-  <!-- SEO, Open Graph, Yandex, Twitter -->
+  <!-- SEO -->
   <meta name="description" content="Актуальные новости России и мира без фейков и лишнего шума. Главные события, аналитика, обзоры и факты — коротко и по делу." />
   <meta name="keywords" content="новости, Telegram, SVOih, события, видео, фото, Россия" />
   <meta name="author" content="SVOih News Team" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://newsforsvoi.ru/" />
 
+  <!-- Open Graph -->
   <meta property="og:title" content="Новости для Своих" />
   <meta property="og:description" content="Честные новости России и мира" />
   <meta property="og:url" content="https://newsforsvoi.ru/" />
@@ -24,8 +25,10 @@
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
 
+  <!-- Yandex -->
   <meta name="yandex-verification" content="3a33e674e5836564" />
 
+  <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Новости для Своих" />
   <meta name="twitter:description" content="Честные новости России и мира" />
@@ -49,47 +52,64 @@
   }
   </script>
 
-  <!-- MASONRY + IMAGESLOADED -->
-  <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
-  <script src="https://unpkg.com/imagesloaded@5/imagesloaded.pkgd.min.js"></script>
-
   <style>
-    /* === УБИРАЕМ ОГРАНИЧЕНИЯ === */
-    main {
-      max-width: none;
-      margin: 0.5rem 0;
-      padding: 0.5rem;
-      width: 100%;
-      box-sizing: border-box;
+    /* Существующие стили остаются без изменений */
+    .card-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
     }
 
-    #news-container {
-      width: 100%;
-      max-width: none;
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    .card-overlay .news-item {
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      transform: scale(1.05);
+      transition: transform 0.3s ease;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
     }
 
-    /* === MASONRY: 3 КОЛОНКИ === */
-    .grid-item {
-      width: 33.333%;
-      box-sizing: border-box;
+    .subscribe-success {
+      background: #d4edda !important;
+      color: #155724 !important;
+      border: 2px solid #c3e6cb !important;
+      padding: 15px !important;
+      border-radius: 10px !important;
+      margin: 10px 0 !important;
+      text-align: center;
     }
 
-    @media (max-width: 900px) {
-      .grid-item { width: 50%; }
+    .subscribe-error {
+      background: #f8d7da !important;
+      color: #721c24 !important;
+      border: 2px solid #f5c6cb !important;
+      padding: 15px !important;
+      border-radius: 10px !important;
+      margin: 10px 0 !important;
+      text-align: center;
     }
 
-    @media (max-width: 600px) {
-      .grid-item { width: 100%; }
+    .rsya-info {
+      font-size: 12px;
+      color: #888;
+      padding: 10px;
+      background: #f9f9f9;
+      margin: 20px 0;
+      border-radius: 4px;
+      text-align: center;
     }
 
-    .news-grid {
-      display: block;
-    }
-
-    /* === БОКОВОЙ БАННЕР === */
+    /* === БОКОВОЙ БАННЕР TG2VK === */
     .tg2vk-sidebar {
       position: fixed;
       right: 0;
@@ -166,8 +186,7 @@
       .tg2vk-sidebar {
         position: static;
         width: 100%;
-        max-width: 1200px;
-        margin: 1rem auto;
+        margin: 20px auto;
         border-radius: 16px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
       }
@@ -179,7 +198,6 @@
   </style>
 </head>
 <body>
-  <!-- ВСЁ ОСТАЛЬНОЕ — КАК БЫЛО -->
   <header>
     <div class="history-info">
       <span id="current-date" class="history-date"></span>
@@ -217,6 +235,7 @@
     </div>
   </header>
 
+  <!-- БОКОВОЙ БАННЕР TG2VK -->
   <aside id="tg2vk-sidebar" class="tg2vk-sidebar">
     <div class="sidebar-header" onclick="toggleSidebar()">
       <span>TG2VK → ВК + сайт</span>
@@ -239,12 +258,13 @@
 
   <main>
     <section id="news-feed">
+      <h3>Последние новости</h3>
       <div id="news-container" class="news-grid"></div>
       <button id="load-more" class="button">Показать ещё</button>
     </section>
 
     <div class="rsya-info">
-      <strong>Информация</strong> Независимые новости на основе <em>открытых источников</em> | 
+      <strong>ℹ️</strong> Независимые новости на основе <em>открытых источников</em> | 
       <a href="/about.html">О проекте</a> | 
       <a href="mailto:art364@yandex.ru">Контакты</a>
     </div>
@@ -259,6 +279,7 @@
     </section>
   </main>
 
+  <!-- ОБНОВЛЁННЫЙ ФУТЕР -->
   <footer>
     © 2025 Новости для Своих | 
     Сделано: <a href="https://t.me/Artstah" target="_blank">@Artstah</a> | 
@@ -268,22 +289,33 @@
 
   <div id="modal" class="card-overlay" style="display:none;"></div>
 
-  <!-- СКРИПТЫ — БЕЗ ИЗМЕНЕНИЙ -->
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('current-date').textContent = 
-        `Сегодня: ${new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}`;
-    });
+    // Функция для отображения динамической даты
+    function updateDate() {
+      const dateElement = document.getElementById('current-date');
+      const today = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+      dateElement.textContent = `Сегодня: ${today}`;
+    }
 
-    document.getElementById('unisender-form').addEventListener('submit', async e => {
+    // Вызов функции при загрузке страницы
+    document.addEventListener('DOMContentLoaded', updateDate);
+
+    // Существующий JavaScript для формы Unisender
+    document.getElementById('unisender-form').addEventListener('submit', async function(e) {
       e.preventDefault();
+
       const email = document.getElementById('email-input').value;
-      const msg = document.getElementById('subscribe-message');
-      msg.innerHTML = '<p>Подписываемся...</p>'; msg.className = '';
+      const messageEl = document.getElementById('subscribe-message');
+
+      messageEl.innerHTML = '<p>Подписываемся...</p>';
+      messageEl.className = '';
+
       try {
-        const res = await fetch('https://api.unisender.com/ru/api/subscribe', {
+        const response = await fetch('https://api.unisender.com/ru/api/subscribe', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
           body: new URLSearchParams({
             'api_key': '6jhinetoegc4sgwdpc1x44k3wk1gpqjyhn5bqiwe',
             'list_ids': '1',
@@ -291,125 +323,204 @@
             'double_optin': '2'
           })
         });
-        const data = await res.json();
-        msg.innerHTML = data.code === 'success' 
-          ? `<p>Подписка оформлена! Письмо на ${email}</p>`
-          : `<p>Ошибка: ${data.error || 'Неизвестная'}</p>`;
-        msg.className = data.code === 'success' ? 'subscribe-success' : 'subscribe-error';
-        if (data.code === 'success') document.getElementById('email-input').value = '';
-      } catch (err) {
-        msg.innerHTML = '<p>Ошибка соединения.</p>';
-        msg.className = 'subscribe-error';
+
+        const result = await response.json();
+
+        if (result.code === 'success') {
+          messageEl.innerHTML = '<p>✅ Подписка оформлена! Вы получите новости на ' + email + '</p>';
+          messageEl.className = 'subscribe-success';
+          document.getElementById('email-input').value = '';
+        } else {
+          messageEl.innerHTML = '<p>❌ Ошибка: ' + (result.error || 'Неизвестная ошибка') + '</p>';
+          messageEl.className = 'subscribe-error';
+        }
+      } catch (error) {
+        messageEl.innerHTML = '<p>❌ Ошибка соединения. Попробуйте позже.</p>';
+        messageEl.className = 'subscribe-error';
+        console.error('Unisender error:', error);
       }
     });
 
-    const container = document.getElementById('news-container');
-    let items = [], visibleCount = 9, masonry = null;
-
+    // Существующий JavaScript для новостей, поиска и модалки
     fetch('/news.html')
-      .then(r => r.text())
+      .then(response => response.text())
       .then(html => {
-        const temp = document.createElement('div'); temp.innerHTML = html;
-        items = Array.from(temp.querySelectorAll('.news-item'));
+        const container = document.getElementById('news-container');
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+
+        const items = Array.from(temp.querySelectorAll('.news-item'));
+
         items.sort((a, b) => {
-          const ta = a.querySelector('.timestamp')?.dataset.ts || 0;
-          const tb = b.querySelector('.timestamp')?.dataset.ts || 0;
-          return new Date(tb) - new Date(ta);
+          const timeA = new Date(a.querySelector('.timestamp')?.dataset.ts);
+          const timeB = new Date(b.querySelector('.timestamp')?.dataset.ts);
+          return timeB - timeA;
         });
+
+        let visibleCount = 9;
+
+        function renderItems() {
+          container.innerHTML = '';
+          items.slice(0, visibleCount).forEach(item => container.appendChild(item));
+          if (visibleCount >= items.length) {
+            document.getElementById('load-more').style.display = 'none';
+          }
+          enableCardEnlargement();
+        }
+
+        document.getElementById('load-more').addEventListener('click', () => {
+          visibleCount += 9;
+          renderItems();
+        });
+
         renderItems();
+      })
+      .catch(error => {
+        document.getElementById('news-container').innerHTML = '<p>Не удалось загрузить новости.</p>';
+        console.error('Ошибка загрузки news.html:', error);
       });
 
-    function renderItems() {
-      container.innerHTML = '';
-      const fragment = document.createDocumentFragment();
-      items.slice(0, visibleCount).forEach(item => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'grid-item';
-        const clone = item.cloneNode(true);
-        clone.querySelectorAll('img').forEach(img => img.setAttribute('loading', 'lazy'));
-        wrapper.appendChild(clone);
-        fragment.appendChild(wrapper);
-      });
-      container.appendChild(fragment);
-
-      imagesLoaded(container, () => {
-        if (masonry) masonry.destroy();
-        masonry = new Masonry(container, {
-          itemSelector: '.grid-item',
-          columnWidth: '.grid-item',
-          percentPosition: true,
-          gutter: 12,
-          transitionDuration: '0.2s'
-        });
-        document.getElementById('load-more').style.display = visibleCount >= items.length ? 'none' : 'block';
-        enableModal();
-      });
-    }
-
-    document.getElementById('load-more').onclick = () => { visibleCount += 9; renderItems(); };
-
-    document.getElementById('search-box').oninput = e => {
-      const q = e.target.value.toLowerCase();
-      items.forEach(item => { item.dataset.visible = item.textContent.toLowerCase().includes(q); });
-      renderItems();
-      document.querySelectorAll('.grid-item').forEach(w => {
-        const news = w.querySelector('.news-item');
-        const idx = items.findIndex(i => i.isEqualNode(news));
-        w.style.display = items[idx]?.dataset.visible === 'true' ? '' : 'none';
-      });
-      if (masonry) masonry.layout();
-    };
-
-    function enableModal() {
-      const modal = document.getElementById('modal');
-      modal.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
+    document.getElementById('search-box').addEventListener('input', function(e) {
+      const query = e.target.value.toLowerCase();
       document.querySelectorAll('.news-item').forEach(item => {
-        item.onclick = e => {
-          e.stopPropagation();
+        item.style.display = item.textContent.toLowerCase().includes(query) ? '' : 'none';
+      });
+    });
+
+    function enableCardEnlargement() {
+      const modal = document.getElementById('modal');
+      modal.onclick = (e) => {
+        if (e.target === modal) {
+          modal.style.display = 'none';
+          modal.innerHTML = '';
+        }
+      };
+
+      document.querySelectorAll('.news-item').forEach(item => {
+        item.addEventListener('click', () => {
           modal.innerHTML = item.outerHTML;
           modal.style.display = 'flex';
-        };
+        });
       });
     }
 
-    window.toggleSidebar = () => {
-      document.getElementById('tg2vk-sidebar').classList.toggle('open');
-    };
+    // === ФУНКЦИЯ СВЕРТЫВАНИЯ БАННЕРА ===
+    function toggleSidebar() {
+      const sidebar = document.getElementById('tg2vk-sidebar');
+      sidebar.classList.toggle('open');
+    }
 
-    const setCookie = (n, v, d) => document.cookie = `${n}=${v}; path=/; max-age=${d*86400}; SameSite=Lax`;
-    const getCookie = n => document.cookie.split('; ').find(c => c.startsWith(n+'='))?.split('=')[1];
-    window.acceptCookies = () => { setCookie('cookies_accepted', 'true', 365); location.reload(); };
-    window.rejectCookies = () => { setCookie('cookies_accepted', 'false', 365); document.querySelector('#yandex_rtb_R-A-17560420-2').innerHTML = ''; location.reload(); };
+    // === COOKIES ===
+    function setCookie(name, value, days) {
+      let expires = "";
+      if (days) {
+        let date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
+      }
+      document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
+    }
 
-    if (!getCookie('cookies_accepted')) document.getElementById('cookie-consent').style.display = 'block';
-    else if (getCookie('cookies_accepted') === 'false') document.querySelector('#yandex_rtb_R-A-17560420-2').innerHTML = '';
-  </script>
+    function getCookie(name) {
+      let nameEQ = name + "=";
+      let ca = document.cookie.split(';');
+      for(let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+      }
+      return null;
+    }
 
-  <!-- Yandex.Metrika, RTB, Cookie Banner — БЕЗ ИЗМЕНЕНИЙ -->
-  <script>
-    if (getCookie('cookies_accepted') !== 'false') {
-      (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0];k.async=1;k.src=r;a.parentNode.insertBefore(k,a)})
-      (window, document, "script", "https://mc.yandex.ru/metrika/metrika.js", "ym");
-      ym(104596413, "init", {clickmap:true,trackLinks:true,accurateTrackBounce:true});
+    function acceptCookies() {
+      setCookie('cookies_accepted', 'true', 365);
+      document.getElementById('cookie-consent').style.display = 'none';
+      location.reload();
+    }
+
+    function rejectCookies() {
+      setCookie('cookies_accepted', 'false', 365);
+      document.getElementById('cookie-consent').style.display = 'none';
+      document.querySelector('#yandex_rtb_R-A-17560420-2').innerHTML = '';
+      location.reload();
+    }
+
+    // Показ баннера
+    if (!getCookie('cookies_accepted')) {
+      document.getElementById('cookie-consent').style.display = 'block';
+    } else if (getCookie('cookies_accepted') === 'false') {
+      document.querySelector('#yandex_rtb_R-A-17560420-2').innerHTML = '';
     }
   </script>
-  <noscript><div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 
-  <div id="yandex_rtb_R-A-17560420-2" style="margin:20px 0;text-align:center;"></div>
+  <!-- Yandex.Metrika counter — ЛЁГКАЯ ВЕРСИЯ БЕЗ WEBVISOR -->
+  <script type="text/javascript">
+    (function(m,e,t,r,i,k,a){
+      if (getCookie('cookies_accepted') === 'false') return;
+
+      m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+      m[i].l=1*new Date();
+
+      k=e.createElement(t),a=e.getElementsByTagName(t)[0];
+      k.async=1;
+      k.src="https://mc.yandex.ru/metrika/metrika.js";
+      a.parentNode.insertBefore(k,a);
+
+      ym(104596413, "init", {
+        clickmap: true,
+        trackLinks: true,
+        accurateTrackBounce: true
+      });
+    })(window, document, "script", "https://mc.yandex.ru/metrika/metrika.js", "ym");
+  </script>
+  <noscript>
+    <div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div>
+  </noscript>
+
+  <!-- YANDEX.RTB — УСЛОВНАЯ ЗАГРУЗКА -->
+  <div id="yandex_rtb_R-A-17560420-2" style="margin: 30px 0; text-align: center;"></div>
   <script>
     if (getCookie('cookies_accepted') !== 'false') {
-      const s = document.createElement('script'); s.src = 'https://yandex.ru/ads/system/context.js'; s.async = true;
-      s.onload = () => { window.yaContextCb = window.yaContextCb || []; window.yaContextCb.push(() => Ya.Context.AdvManager.render({blockId:"R-A-17560420-2",renderTo:"yandex_rtb_R-A-17560420-2"})); };
-      document.head.appendChild(s);
+      const advBlock = document.getElementById('yandex_rtb_R-A-17560420-2');
+      if (advBlock) {
+        const script = document.createElement('script');
+        script.src = 'https://yandex.ru/ads/system/context.js';
+        script.async = true;
+        script.onload = () => {
+          window.yaContextCb = window.yaContextCb || [];
+          window.yaContextCb.push(() => {
+            Ya.Context.AdvManager.render({
+              blockId: "R-A-17560420-2",
+              renderTo: "yandex_rtb_R-A-17560420-2"
+            });
+          });
+        };
+        document.head.appendChild(script);
+      }
     }
   </script>
 
-  <div id="cookie-consent" style="position:fixed;bottom:0;left:0;right:0;background:#333;color:white;padding:15px;z-index:10001;font-family:sans-serif;display:none;">
-    <div style="max-width:800px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-      <p style="margin:0;font-size:14px;">Мы используем <strong>cookies</strong> для рекламы и аналитики. <a href="/privacy.html" style="color:#0077cc;" target="_blank">Подробнее</a></p>
-      <div>
-        <button onclick="acceptCookies()" style="background:#0077cc;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:14px;">Принять</button>
-        <button onclick="rejectCookies()" style="background:transparent;color:white;border:1px solid white;padding:8px 16px;border-radius:6px;cursor:pointer;margin-left:5px;">Отклонить</button>
+  <!-- БАННЕР СОГЛАСИЯ НА COOKIES -->
+  <div id="cookie-consent" style="
+    position: fixed; bottom: 0; left: 0; right: 0; 
+    background: #333; color: white; padding: 20px; z-index: 10001; 
+    font-family: sans-serif; box-shadow: 0 -2px 20px rgba(0,0,0,0.3);
+    display: none;
+  ">
+    <div style="max-width: 800px; margin: 0 auto;">
+      <p style="margin: 0 0 10px 0; font-size: 14px;">
+        Мы используем <strong>cookies</strong> и передаём данные Яндексу для персонализированной рекламы и аналитики. 
+        <a href="/privacy.html" style="color: #0077cc;" target="_blank">Подробнее</a>
+      </p>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button onclick="acceptCookies()" style="
+          background: #0077cc; color: white; border: none; padding: 12px 24px; 
+          border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;
+        ">Принять</button>
+        <button onclick="rejectCookies()" style="
+          background: transparent; color: white; border: 2px solid white; 
+          padding: 10px 20px; border-radius: 6px; cursor: pointer;
+        ">Отклонить</button>
       </div>
     </div>
   </div>
