@@ -54,25 +54,6 @@
   <script src="https://unpkg.com/imagesloaded@5/imagesloaded.pkgd.min.js"></script>
 
   <style>
-    /* === СТИЛИ КАРТОЧЕК ИЗ news.html === */
-    .news-item {
-      background: #fff;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,.05);
-      border-left: 4px solid #0077cc;
-      margin: 0 !important;
-    }
-    .news-item img, .news-item video {
-      max-width: 100%;
-      border-radius: 4px;
-      margin: 10px 0;
-    }
-    .timestamp { color: #666; font-size: .9em; }
-    .source { color: #999; font-size: .85em; }
-    h2 { margin-top: 40px; border-bottom: 2px solid #ccc; padding-bottom: 5px; }
-    .hidden { display: none; }
-
     /* === УБИРАЕМ ОГРАНИЧЕНИЯ === */
     main {
       max-width: none !important;
@@ -90,11 +71,11 @@
       box-sizing: border-box;
     }
 
-    /* === MASONRY: 3 КОЛОНКИ БЕЗ ПУСТОТ === */
+    /* === MASONRY: 3 КОЛОНКИ === */
     .grid-item {
       width: 33.333% !important;
       box-sizing: border-box;
-      padding: 0 6px;  /* 12px между карточками */
+      padding: 0 6px;
     }
 
     @media (max-width: 900px) {
@@ -109,7 +90,7 @@
       display: block !important;
     }
 
-    /* === БОКОВОЙ БАННЕР TG2VK === */
+    /* === БОКОВОЙ БАННЕР === */
     .tg2vk-sidebar {
       position: fixed;
       right: 0;
@@ -199,6 +180,7 @@
   </style>
 </head>
 <body>
+  <!-- ВСЁ ОСТАЛЬНОЕ — КАК БЫЛО -->
   <header>
     <div class="history-info">
       <span id="current-date" class="history-date"></span>
@@ -236,7 +218,6 @@
     </div>
   </header>
 
-  <!-- БОКОВОЙ БАННЕР TG2VK -->
   <aside id="tg2vk-sidebar" class="tg2vk-sidebar">
     <div class="sidebar-header" onclick="toggleSidebar()">
       <span>TG2VK → ВК + сайт</span>
@@ -289,14 +270,13 @@
 
   <div id="modal" class="card-overlay" style="display:none;"></div>
 
+  <!-- СКРИПТЫ — БЕЗ ИЗМЕНЕНИЙ -->
   <script>
-    // ДАТА
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('current-date').textContent = 
         `Сегодня: ${new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}`;
     });
 
-    // UNISENDER
     document.getElementById('unisender-form').addEventListener('submit', async e => {
       e.preventDefault();
       const email = document.getElementById('email-input').value;
@@ -325,7 +305,6 @@
       }
     });
 
-    // MASONRY
     const container = document.getElementById('news-container');
     let items = [], visibleCount = 9, masonry = null;
 
@@ -371,7 +350,6 @@
 
     document.getElementById('load-more').onclick = () => { visibleCount += 9; renderItems(); };
 
-    // ПОИСК
     document.getElementById('search-box').oninput = e => {
       const q = e.target.value.toLowerCase();
       items.forEach(item => { item.dataset.visible = item.textContent.toLowerCase().includes(q); });
@@ -384,7 +362,6 @@
       if (masonry) masonry.layout();
     };
 
-    // МОДАЛКА
     function enableModal() {
       const modal = document.getElementById('modal');
       modal.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
@@ -397,12 +374,10 @@
       });
     }
 
-    // БАННЕР — СВЕРТЫВАНИЕ
     window.toggleSidebar = () => {
       document.getElementById('tg2vk-sidebar').classList.toggle('open');
     };
 
-    // COOKIES
     const setCookie = (n, v, d) => document.cookie = `${n}=${v}; path=/; max-age=${d*86400}; SameSite=Lax`;
     const getCookie = n => document.cookie.split('; ').find(c => c.startsWith(n+'='))?.split('=')[1];
     window.acceptCookies = () => { setCookie('cookies_accepted', 'true', 365); location.reload(); };
@@ -412,7 +387,7 @@
     else if (getCookie('cookies_accepted') === 'false') document.querySelector('#yandex_rtb_R-A-17560420-2').innerHTML = '';
   </script>
 
-  <!-- Yandex.Metrika -->
+  <!-- Yandex.Metrika, RTB, Cookie Banner — БЕЗ ИЗМЕНЕНИЙ -->
   <script>
     if (getCookie('cookies_accepted') !== 'false') {
       (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0];k.async=1;k.src=r;a.parentNode.insertBefore(k,a)})
@@ -422,7 +397,6 @@
   </script>
   <noscript><div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 
-  <!-- YANDEX.RTB -->
   <div id="yandex_rtb_R-A-17560420-2" style="margin:20px 0;text-align:center;"></div>
   <script>
     if (getCookie('cookies_accepted') !== 'false') {
@@ -432,7 +406,6 @@
     }
   </script>
 
-  <!-- COOKIE BANNER -->
   <div id="cookie-consent" style="position:fixed;bottom:0;left:0;right:0;background:#333;color:white;padding:15px;z-index:10001;font-family:sans-serif;display:none;">
     <div style="max-width:800px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
       <p style="margin:0;font-size:14px;">Мы используем <strong>cookies</strong> для рекламы и аналитики. <a href="/privacy.html" style="color:#0077cc;" target="_blank">Подробнее</a></p>
