@@ -67,23 +67,22 @@
       width: 100% !important;
       max-width: none !important;
       margin: 0 !important;
-      padding: 0 0.25rem !important;
+      padding: 0 !important;
       box-sizing: border-box;
     }
 
     /* === MASONRY: 3 КОЛОНКИ БЕЗ ПУСТОТ === */
     .grid-item {
-      width: calc(33.333% - 8px) !important;
-      margin: 4px !important;
+      width: 33.333% !important;
       box-sizing: border-box;
     }
 
     @media (max-width: 900px) {
-      .grid-item { width: calc(50% - 8px) !important; }
+      .grid-item { width: 50% !important; }
     }
 
     @media (max-width: 600px) {
-      .grid-item { width: 100% !important; margin: 4px 0 !important; }
+      .grid-item { width: 100% !important; }
     }
 
     .news-grid {
@@ -342,7 +341,7 @@
           itemSelector: '.grid-item',
           columnWidth: '.grid-item',
           percentPosition: true,
-          gutter: 8,
+          gutter: 12,
           transitionDuration: '0.2s'
         });
         document.getElementById('load-more').style.display = visibleCount >= items.length ? 'none' : 'block';
@@ -396,7 +395,7 @@
   <!-- Yandex.Metrika -->
   <script>
     if (getCookie('cookies_accepted') !== 'false') {
-      (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};mGuess[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0];k.async=1;k.src=r;a.parentNode.insertBefore(k,a)})
+      (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0];k.async=1;k.src=r;a.parentNode.insertBefore(k,a)})
       (window, document, "script", "https://mc.yandex.ru/metrika/metrika.js", "ym");
       ym(104596413, "init", {clickmap:true,trackLinks:true,accurateTrackBounce:true});
     }
