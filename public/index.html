@@ -54,39 +54,77 @@
   <script src="https://unpkg.com/imagesloaded@5/imagesloaded.pkgd.min.js"></script>
 
   <style>
-    /* === ПЕРЕОПРЕДЕЛЕНИЕ ДЛЯ MASONRY (ПОСЛЕ style.css) === */
-    .news-grid {
-      display: block !important;
-      column-count: unset !important;
-      grid-template-columns: unset !important;
-      padding: 0 !important;
+    /* === УБИРАЕМ ОГРАНИЧЕНИЯ ИЗ style.css === */
+    main {
+      max-width: none !important;
+      margin: 0.5rem 0 !important;
+      padding: 0.5rem !important;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* === MASONRY: 3 КОЛОНКИ НА ВЕСЬ ЭКРАН === */
+    #news-container {
+      width: 100% !important;
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 0.5rem !important;
+      box-sizing: border-box;
     }
 
     .grid-item {
-      width: 33.333% !important;
-      padding: 0.75rem;
+      width: calc(33.333% - 1rem) !important;
+      margin: 0.5rem !important;
       box-sizing: border-box;
     }
 
     @media (max-width: 900px) {
-      .grid-item { width: 50% !important; }
+      .grid-item { width: calc(50% - 1rem) !important; }
     }
 
     @media (max-width: 600px) {
-      .grid-item { width: 100% !important; }
+      .grid-item { 
+        width: 100% !important; 
+        margin: 0.5rem 0 !important; 
+      }
+    }
+
+    .news-grid {
+      display: block !important;
+      column-count: unset !important;
+      grid-template-columns: unset !important;
     }
 
     .news-item {
       break-inside: unset !important;
       margin: 0 !important;
-      display: block;
     }
 
-    /* Остальные стили — как у тебя */
-    .card-overlay, .subscribe-success, .subscribe-error, .rsya-info,
-    .tg2vk-sidebar, .sidebar-header, .toggle-arrow, .sidebar-content,
-    .sidebar-content ul, .sidebar-content a.sidebar-btn, .sidebar-content .small,
-    .tg2vk-sidebar.open .sidebar-content, .tg2vk-sidebar.open .toggle-arrow { /* оставь как есть */ }
+    /* === БАННЕР TG2VK — ПОД ШАПКОЙ === */
+    .tg2vk-sidebar {
+      position: static !important;
+      width: 100% !important;
+      max-width: 1200px !important;
+      margin: 0.5rem auto !important;
+      border-radius: 16px !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      display: block !important;
+    }
+
+    .tg2vk-sidebar.open .sidebar-content {
+      max-height: 500px !important;
+      padding: 16px !important;
+    }
+
+    .tg2vk-sidebar.open .toggle-arrow {
+      transform: rotate(180deg) !important;
+    }
+
+    @media (max-width: 768px) {
+      .tg2vk-sidebar {
+        margin: 1rem auto !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -127,7 +165,8 @@
     </div>
   </header>
 
-  <aside id="tg2vk-sidebar" class="tg2vk-sidebar">
+  <!-- БАННЕР TG2VK — ПОД ШАПКОЙ -->
+  <div class="tg2vk-sidebar" id="tg2vk-sidebar">
     <div class="sidebar-header" onclick="toggleSidebar()">
       <span>TG2VK → ВК + сайт</span>
       <span class="toggle-arrow">></span>
@@ -145,7 +184,7 @@
       <a href="https://t.me/Artstah" target="_blank" class="sidebar-btn">Написать @Artstah</a>
       <p class="small">Примеры — по запросу</p>
     </div>
-  </aside>
+  </div>
 
   <main>
     <section id="news-feed">
@@ -180,19 +219,18 @@
   <div id="modal" class="card-overlay" style="display:none;"></div>
 
   <script>
-    // === ДАТА ===
+    // ДАТА
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('current-date').textContent = 
         `Сегодня: ${new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}`;
     });
 
-    // === UNISENDER ===
+    // UNISENDER
     document.getElementById('unisender-form').addEventListener('submit', async e => {
       e.preventDefault();
       const email = document.getElementById('email-input').value;
       const msg = document.getElementById('subscribe-message');
       msg.innerHTML = '<p>Подписываемся...</p>'; msg.className = '';
-
       try {
         const res = await fetch('https://api.unisender.com/ru/api/subscribe', {
           method: 'POST',
@@ -205,37 +243,31 @@
           })
         });
         const data = await res.json();
-        if (data.code === 'success') {
-          msg.innerHTML = `<p>Подписка оформлена! Письмо отправлено на ${email}</p>`;
-          msg.className = 'subscribe-success';
-          document.getElementById('email-input').value = '';
-        } else {
-          msg.innerHTML = `<p>Ошибка: ${data.error || 'Неизвестная ошибка'}</p>`;
-          msg.className = 'subscribe-error';
-        }
+        msg.innerHTML = data.code === 'success' 
+          ? `<p>Подписка оформлена! Письмо на ${email}</p>`
+          : `<p>Ошибка: ${data.error || 'Неизвестная'}</p>`;
+        msg.className = data.code === 'success' ? 'subscribe-success' : 'subscribe-error';
+        if (data.code === 'success') document.getElementById('email-input').value = '';
       } catch (err) {
-        msg.innerHTML = '<p>Ошибка соединения. Попробуйте позже.</p>';
+        msg.innerHTML = '<p>Ошибка соединения.</p>';
         msg.className = 'subscribe-error';
       }
     });
 
-    // === MASONRY + НОВОСТИ ===
+    // MASONRY
     const container = document.getElementById('news-container');
     let items = [], visibleCount = 9, masonry = null;
 
     fetch('/news.html')
       .then(r => r.text())
       .then(html => {
-        const temp = document.createElement('div');
-        temp.innerHTML = html;
+        const temp = document.createElement('div'); temp.innerHTML = html;
         items = Array.from(temp.querySelectorAll('.news-item'));
-
         items.sort((a, b) => {
           const ta = a.querySelector('.timestamp')?.dataset.ts || 0;
           const tb = b.querySelector('.timestamp')?.dataset.ts || 0;
           return new Date(tb) - new Date(ta);
         });
-
         renderItems();
       });
 
@@ -258,7 +290,7 @@
           itemSelector: '.grid-item',
           columnWidth: '.grid-item',
           percentPosition: true,
-          gutter: 24,
+          gutter: 16,
           transitionDuration: '0.3s'
         });
         document.getElementById('load-more').style.display = visibleCount >= items.length ? 'none' : 'block';
@@ -266,12 +298,9 @@
       });
     }
 
-    document.getElementById('load-more').onclick = () => {
-      visibleCount += 9;
-      renderItems();
-    };
+    document.getElementById('load-more').onclick = () => { visibleCount += 9; renderItems(); };
 
-    // === ПОИСК ===
+    // ПОИСК
     document.getElementById('search-box').oninput = e => {
       const q = e.target.value.toLowerCase();
       items.forEach(item => { item.dataset.visible = item.textContent.toLowerCase().includes(q); });
@@ -284,7 +313,7 @@
       if (masonry) masonry.layout();
     };
 
-    // === МОДАЛКА ===
+    // МОДАЛКА
     function enableModal() {
       const modal = document.getElementById('modal');
       modal.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
@@ -297,10 +326,12 @@
       });
     }
 
-    // === БАННЕР ===
-    window.toggleSidebar = () => document.getElementById('tg2vk-sidebar').classList.toggle('open');
+    // БАННЕР
+    window.toggleSidebar = () => {
+      document.getElementById('tg2vk-sidebar').classList.toggle('open');
+    };
 
-    // === COOKIES ===
+    // COOKIES
     const setCookie = (n, v, d) => document.cookie = `${n}=${v}; path=/; max-age=${d*86400}; SameSite=Lax`;
     const getCookie = n => document.cookie.split('; ').find(c => c.startsWith(n+'='))?.split('=')[1];
     window.acceptCookies = () => { setCookie('cookies_accepted', 'true', 365); location.reload(); };
@@ -321,22 +352,22 @@
   <noscript><div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 
   <!-- YANDEX.RTB -->
-  <div id="yandex_rtb_R-A-17560420-2" style="margin:30px 0;text-align:center;"></div>
+  <div id="yandex_rtb_R-A-17560420-2" style="margin:20px 0;text-align:center;"></div>
   <script>
     if (getCookie('cookies_accepted') !== 'false') {
       const s = document.createElement('script'); s.src = 'https://yandex.ru/ads/system/context.js'; s.async = true;
-      s.onload = () => { window.yaContextCb.push(() => Ya.Context.AdvManager.render({blockId:"R-A-17560420-2",renderTo:"yandex_rtb_R-A-17560420-2"})); };
+      s.onload = () => { window.yaContextCb = window.yaContextCb || []; window.yaContextCb.push(() => Ya.Context.AdvManager.render({blockId:"R-A-17560420-2",renderTo:"yandex_rtb_R-A-17560420-2"})); };
       document.head.appendChild(s);
     }
   </script>
 
   <!-- COOKIE BANNER -->
-  <div id="cookie-consent" style="position:fixed;bottom:0;left:0;right:0;background:#333;color:white;padding:20px;z-index:10001;font-family:sans-serif;box-shadow:0 -2px 20px rgba(0,0,0,0.3);display:none;">
-    <div style="max-width:800px;margin:0 auto;">
-      <p style="margin:0 0 10px;font-size:14px;">Мы используем <strong>cookies</strong> и передаём данные Яндексу для рекламы и аналитики. <a href="/privacy.html" style="color:#0077cc;" target="_blank">Подробнее</a></p>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button onclick="acceptCookies()" style="background:#0077cc;color:white;border:none;padding:12px 24px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:14px;">Принять</button>
-        <button onclick="rejectCookies()" style="background:transparent;color:white;border:2px solid white;padding:10px 20px;border-radius:6px;cursor:pointer;">Отклонить</button>
+  <div id="cookie-consent" style="position:fixed;bottom:0;left:0;right:0;background:#333;color:white;padding:15px;z-index:10001;font-family:sans-serif;display:none;">
+    <div style="max-width:800px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <p style="margin:0;font-size:14px;">Мы используем <strong>cookies</strong> для рекламы и аналитики. <a href="/privacy.html" style="color:#0077cc;" target="_blank">Подробнее</a></p>
+      <div>
+        <button onclick="acceptCookies()" style="background:#0077cc;color:white;border:none;padding:10px 20px;border-radius:6px;cursor:pointer;font-weight:bold;font-size:14px;">Принять</button>
+        <button onclick="rejectCookies()" style="background:transparent;color:white;border:1px solid white;padding:8px 16px;border-radius:6px;cursor:pointer;margin-left:5px;">Отклонить</button>
       </div>
     </div>
   </div>
