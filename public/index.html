@@ -52,38 +52,33 @@
   }
   </script>
 
-  <!-- Masonry + ImagesLoaded -->
-  <script src="https://unpkg.com/masonry-layout@4/dist/masonry.pkgd.min.js"></script>
-  <script src="https://unpkg.com/imagesloaded@5/imagesloaded.pkgd.min.js"></script>
-
   <style>
-    /* === MASONRY СТИЛИ === */
-    .news-grid {
-      margin: 0 auto;
-      max-width: 1200px;
+    /* Существующие стили остаются без изменений */
+    .card-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
     }
 
-    .grid-item {
-      width: 33.333%;
-      padding: 0.75rem;
-      box-sizing: border-box;
+    .card-overlay .news-item {
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      transform: scale(1.05);
+      transition: transform 0.3s ease;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
     }
 
-    @media (max-width: 900px) {
-      .grid-item { width: 50%; }
-    }
-
-    @media (max-width: 600px) {
-      .grid-item { width: 100%; }
-    }
-
-    /* Убираем старые стили grid из .news-grid */
-    .news-grid {
-      display: block !important;
-      column-count: unset !important;
-    }
-
-    /* === ДОПОЛНИТЕЛЬНЫЕ СТИЛИ === */
     .subscribe-success {
       background: #d4edda !important;
       color: #155724 !important;
@@ -114,6 +109,7 @@
       text-align: center;
     }
 
+    /* === БОКОВОЙ БАННЕР TG2VK === */
     .tg2vk-sidebar {
       position: fixed;
       right: 0;
@@ -283,6 +279,7 @@
     </section>
   </main>
 
+  <!-- ОБНОВЛЁННЫЙ ФУТЕР -->
   <footer>
     © 2025 Новости для Своих | 
     Сделано: <a href="https://t.me/Artstah" target="_blank">@Artstah</a> | 
@@ -293,26 +290,32 @@
   <div id="modal" class="card-overlay" style="display:none;"></div>
 
   <script>
-    // === ДАТА ===
+    // Функция для отображения динамической даты
     function updateDate() {
       const dateElement = document.getElementById('current-date');
       const today = new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
       dateElement.textContent = `Сегодня: ${today}`;
     }
+
+    // Вызов функции при загрузке страницы
     document.addEventListener('DOMContentLoaded', updateDate);
 
-    // === UNISENDER ===
+    // Существующий JavaScript для формы Unisender
     document.getElementById('unisender-form').addEventListener('submit', async function(e) {
       e.preventDefault();
+
       const email = document.getElementById('email-input').value;
       const messageEl = document.getElementById('subscribe-message');
+
       messageEl.innerHTML = '<p>Подписываемся...</p>';
       messageEl.className = '';
 
       try {
         const response = await fetch('https://api.unisender.com/ru/api/subscribe', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
           body: new URLSearchParams({
             'api_key': '6jhinetoegc4sgwdpc1x44k3wk1gpqjyhn5bqiwe',
             'list_ids': '1',
@@ -320,108 +323,70 @@
             'double_optin': '2'
           })
         });
+
         const result = await response.json();
+
         if (result.code === 'success') {
-          messageEl.innerHTML = '<p>Подписка оформлена! Вы получите новости на ' + email + '</p>';
+          messageEl.innerHTML = '<p>✅ Подписка оформлена! Вы получите новости на ' + email + '</p>';
           messageEl.className = 'subscribe-success';
           document.getElementById('email-input').value = '';
         } else {
-          messageEl.innerHTML = '<p>Ошибка: ' + (result.error || 'Неизвестная ошибка') + '</p>';
+          messageEl.innerHTML = '<p>❌ Ошибка: ' + (result.error || 'Неизвестная ошибка') + '</p>';
           messageEl.className = 'subscribe-error';
         }
       } catch (error) {
-        messageEl.innerHTML = '<p>Ошибка соединения. Попробуйте позже.</p>';
+        messageEl.innerHTML = '<p>❌ Ошибка соединения. Попробуйте позже.</p>';
         messageEl.className = 'subscribe-error';
         console.error('Unisender error:', error);
       }
     });
 
-    // === НОВОСТИ + MASONRY ===
-    const container = document.getElementById('news-container');
-    let items = [];
-    let visibleCount = 9;
-    let masonryInstance = null;
-
+    // Существующий JavaScript для новостей, поиска и модалки
     fetch('/news.html')
       .then(response => response.text())
       .then(html => {
+        const container = document.getElementById('news-container');
         const temp = document.createElement('div');
         temp.innerHTML = html;
-        items = Array.from(temp.querySelectorAll('.news-item'));
+
+        const items = Array.from(temp.querySelectorAll('.news-item'));
 
         items.sort((a, b) => {
-          const timeA = new Date(a.querySelector('.timestamp')?.dataset.ts || 0);
-          const timeB = new Date(b.querySelector('.timestamp')?.dataset.ts || 0);
+          const timeA = new Date(a.querySelector('.timestamp')?.dataset.ts);
+          const timeB = new Date(b.querySelector('.timestamp')?.dataset.ts);
           return timeB - timeA;
+        });
+
+        let visibleCount = 9;
+
+        function renderItems() {
+          container.innerHTML = '';
+          items.slice(0, visibleCount).forEach(item => container.appendChild(item));
+          if (visibleCount >= items.length) {
+            document.getElementById('load-more').style.display = 'none';
+          }
+          enableCardEnlargement();
+        }
+
+        document.getElementById('load-more').addEventListener('click', () => {
+          visibleCount += 9;
+          renderItems();
         });
 
         renderItems();
       })
       .catch(error => {
-        container.innerHTML = '<p class="error">Не удалось загрузить новости.</p>';
+        document.getElementById('news-container').innerHTML = '<p>Не удалось загрузить новости.</p>';
         console.error('Ошибка загрузки news.html:', error);
       });
 
-    function renderItems() {
-      container.innerHTML = '';
-      const fragment = document.createDocumentFragment();
-      const visibleItems = items.slice(0, visibleCount);
-
-      visibleItems.forEach(item => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'grid-item';
-        wrapper.appendChild(item.cloneNode(true));
-        fragment.appendChild(wrapper);
-      });
-
-      container.appendChild(fragment);
-
-      imagesLoaded(container, () => {
-        if (masonryInstance) masonryInstance.destroy();
-
-        masonryInstance = new Masonry(container, {
-          itemSelector: '.grid-item',
-          columnWidth: '.grid-item',
-          percentPosition: true,
-          gutter: 24,
-          transitionDuration: '0.3s'
-        });
-
-        document.getElementById('load-more').style.display =
-          visibleCount >= items.length ? 'none' : 'block';
-
-        enableCardEnlargement();
-      });
-    }
-
-    document.getElementById('load-more').addEventListener('click', () => {
-      visibleCount += 9;
-      renderItems();
-    });
-
-    // === ПОИСК ===
     document.getElementById('search-box').addEventListener('input', function(e) {
       const query = e.target.value.toLowerCase();
-      items.forEach((item, i) => {
-        const shouldShow = item.textContent.toLowerCase().includes(query);
-        item.dataset.visible = shouldShow;
+      document.querySelectorAll('.news-item').forEach(item => {
+        item.style.display = item.textContent.toLowerCase().includes(query) ? '' : 'none';
       });
-
-      renderItems();
-
-      document.querySelectorAll('.grid-item').forEach((wrapper, i) => {
-        const index = Array.from(container.children).indexOf(wrapper);
-        const originalIndex = items.indexOf(items.find(it => it.isEqualNode(wrapper.querySelector('.news-item'))));
-        const shouldShow = items[originalIndex]?.dataset.visible === 'true';
-        wrapper.style.display = shouldShow ? '' : 'none';
-      });
-
-      if (masonryInstance) {
-        masonryInstance.layout();
-      }
     });
 
-    // === МОДАЛКА ===
     function enableCardEnlargement() {
       const modal = document.getElementById('modal');
       modal.onclick = (e) => {
@@ -432,17 +397,17 @@
       };
 
       document.querySelectorAll('.news-item').forEach(item => {
-        item.onclick = (e) => {
-          e.stopPropagation();
+        item.addEventListener('click', () => {
           modal.innerHTML = item.outerHTML;
           modal.style.display = 'flex';
-        };
+        });
       });
     }
 
-    // === БАННЕР TG2VK ===
+    // === ФУНКЦИЯ СВЕРТЫВАНИЯ БАННЕРА ===
     function toggleSidebar() {
-      document.getElementById('tg2vk-sidebar').classList.toggle('open');
+      const sidebar = document.getElementById('tg2vk-sidebar');
+      sidebar.classList.toggle('open');
     }
 
     // === COOKIES ===
@@ -480,6 +445,7 @@
       location.reload();
     }
 
+    // Показ баннера
     if (!getCookie('cookies_accepted')) {
       document.getElementById('cookie-consent').style.display = 'block';
     } else if (getCookie('cookies_accepted') === 'false') {
@@ -487,22 +453,31 @@
     }
   </script>
 
-  <!-- Yandex.Metrika -->
+  <!-- Yandex.Metrika counter — ЛЁГКАЯ ВЕРСИЯ БЕЗ WEBVISOR -->
   <script type="text/javascript">
     (function(m,e,t,r,i,k,a){
       if (getCookie('cookies_accepted') === 'false') return;
+
       m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
       m[i].l=1*new Date();
+
       k=e.createElement(t),a=e.getElementsByTagName(t)[0];
       k.async=1;
       k.src="https://mc.yandex.ru/metrika/metrika.js";
       a.parentNode.insertBefore(k,a);
-      ym(104596413, "init", { clickmap: true, trackLinks: true, accurateTrackBounce: true });
+
+      ym(104596413, "init", {
+        clickmap: true,
+        trackLinks: true,
+        accurateTrackBounce: true
+      });
     })(window, document, "script", "https://mc.yandex.ru/metrika/metrika.js", "ym");
   </script>
-  <noscript><div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+  <noscript>
+    <div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div>
+  </noscript>
 
-  <!-- YANDEX.RTB -->
+  <!-- YANDEX.RTB — УСЛОВНАЯ ЗАГРУЗКА -->
   <div id="yandex_rtb_R-A-17560420-2" style="margin: 30px 0; text-align: center;"></div>
   <script>
     if (getCookie('cookies_accepted') !== 'false') {
@@ -525,16 +500,27 @@
     }
   </script>
 
-  <!-- COOKIE BANNER -->
-  <div id="cookie-consent" style="position: fixed; bottom: 0; left: 0; right: 0; background: #333; color: white; padding: 20px; z-index: 10001; font-family: sans-serif; box-shadow: 0 -2px 20px rgba(0,0,0,0.3); display: none;">
+  <!-- БАННЕР СОГЛАСИЯ НА COOKIES -->
+  <div id="cookie-consent" style="
+    position: fixed; bottom: 0; left: 0; right: 0; 
+    background: #333; color: white; padding: 20px; z-index: 10001; 
+    font-family: sans-serif; box-shadow: 0 -2px 20px rgba(0,0,0,0.3);
+    display: none;
+  ">
     <div style="max-width: 800px; margin: 0 auto;">
       <p style="margin: 0 0 10px 0; font-size: 14px;">
         Мы используем <strong>cookies</strong> и передаём данные Яндексу для персонализированной рекламы и аналитики. 
         <a href="/privacy.html" style="color: #0077cc;" target="_blank">Подробнее</a>
       </p>
       <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-        <button onclick="acceptCookies()" style="background: #0077cc; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;">Принять</button>
-        <button onclick="rejectCookies()" style="background: transparent; color: white; border: 2px solid white; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Отклонить</button>
+        <button onclick="acceptCookies()" style="
+          background: #0077cc; color: white; border: none; padding: 12px 24px; 
+          border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px;
+        ">Принять</button>
+        <button onclick="rejectCookies()" style="
+          background: transparent; color: white; border: 2px solid white; 
+          padding: 10px 20px; border-radius: 6px; cursor: pointer;
+        ">Отклонить</button>
       </div>
     </div>
   </div>
