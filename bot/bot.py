@@ -18,7 +18,6 @@ VK_POSTED = "vk_posted.txt"
 
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone("Europe/Moscow")
-
 def load_vk():
     if not os.path.exists(VK_POSTED):
         return set()
@@ -85,19 +84,18 @@ def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
             "access_token": VK_TOKEN,
             "v": "5.199"
         })
-        print("Запощено в ВК")
+        print("Запощено в ВК ✅")
         vk_seen.add(vk_key)
         save_vk(vk_seen)
     except Exception as e:
         print(f"ВК ошибка: {e}")
-
 def clean_text(text):
     if not text:
         return ""
     patterns = [
         r"Подписаться на новости для своих",
         r"https://t\.me/newsSVOih",
-        r"🇷🇺"
+        r"💪.*🇷🇺"
     ]
     for p in patterns:
         text = re.sub(p, "", text, flags=re.IGNORECASE)
@@ -179,7 +177,6 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     html += f"<script type='application/ld+json'>{json.dumps(microdata, ensure_ascii=False)}</script>\n"
     html += "</article>\n"
     return html, file_url, content_type, tg_link
-
 def extract_timestamp(block):
     m = re.search(r" (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", block)
     return datetime.strptime(m.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow) if m else None
@@ -199,7 +196,6 @@ def update_sitemap():
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
     print("sitemap.xml обновлён")
-
 def generate_rss(news_blocks):
     items = ""
     for b in news_blocks[:20]:
@@ -240,7 +236,6 @@ def fetch_latest_posts():
 
 def is_older_than_two_days(ts):
     return datetime.now(moscow) - datetime.fromtimestamp(ts, moscow) >= timedelta(days=2)
-
 def main():
     posts = fetch_latest_posts()
     if not posts:
@@ -307,11 +302,8 @@ def main():
             print("СРОЧНО → ВК + сайт")
 
     if any_new:
-        # === КЛЮЧЕВАЯ ПРАВКА: УБРАЛИ margin-bottom: 30px ===
-        style_block = "<style>body{font-family:sans-serif;background:#f9f9f9;padding:10px;line-height:1.6}.news-item{background:#fff;padding:15px;border-radius:8px;box-shadow:0 0 5px rgba(0,0,0,.05);border-left:4px solid #0077cc}img,video{max-width:100%;border-radius:4px;margin:10px 0}.timestamp{color:#666;font-size:.9em}.source{color:#999;font-size:.85em}h2{margin-top:40px;border-bottom:2px solid #ccc;padding-bottom:5px}.hidden{display:none}</style>\n"
-
         with open("public/news.html", "w", encoding="utf-8") as f:
-            f.write(style_block)
+            f.write("<style>body{font-family:sans-serif;background:#f9f9f9;padding:10px;line-height:1.6}.news-item{background:#fff;padding:15px;margin-bottom:30px;border-radius:8px;box-shadow:0 0 5px rgba(0,0,0,.05);border-left:4px solid #0077cc}img,video{max-width:100%;border-radius:4px;margin:10px 0}.timestamp{color:#666;font-size:.9em}.source{color:#999;font-size:.85em}h2{margin-top:40px;border-bottom:2px solid #ccc;padding-bottom:5px}.hidden{display:none}</style>\n")
             for b in fresh_news:
                 f.write(b + "\n")
             if any("hidden" in b for b in fresh_news):
