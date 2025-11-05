@@ -18,6 +18,7 @@ VK_POSTED = "vk_posted.txt"
 
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone("Europe/Moscow")
+
 def load_vk():
     if not os.path.exists(VK_POSTED):
         return set()
@@ -66,6 +67,7 @@ def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
             size = len(requests.get(file_url, stream=True).content)
             if size > 20_000_000:
                 print(f"Видео {size/1e6:.1f}МБ — слишком большое для ВК")
+                return  # ПРОПУСК ВК
             else:
                 open("temp.mp4", "wb").write(requests.get(file_url).content)
                 video = requests.post("https://api.vk.com/method/video.save", data={
@@ -84,18 +86,19 @@ def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
             "access_token": VK_TOKEN,
             "v": "5.199"
         })
-        print("Запощено в ВК ✅")
+        print("Запощено в ВК")
         vk_seen.add(vk_key)
         save_vk(vk_seen)
     except Exception as e:
         print(f"ВК ошибка: {e}")
+
 def clean_text(text):
     if not text:
         return ""
     patterns = [
         r"Подписаться на новости для своих",
         r"https://t\.me/newsSVOih",
-        r"💪.*🇷🇺"
+        r"🇷🇺"
     ]
     for p in patterns:
         text = re.sub(p, "", text, flags=re.IGNORECASE)
@@ -142,8 +145,8 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
         try:
             size = message.video.file_size or 0
             if size > 20_000_000:
-                print(f"Видео {size/1e6:.1f}МБ — пропуск")
-                html += "<p style='color:#d32f2f'>Видео слишком большое</p>"
+                print(f"Видео {size/1e6:.1f}МБ — пропуск (сайт + ВК)")
+                return "", None, None, tg_link  # ПОЛНЫЙ ПРОПУСК
             else:
                 fi = bot.get_file(message.video.file_id)
                 file_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
@@ -151,6 +154,7 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
                 content_type = "video"
         except Exception as e:
             print(f"Видео ошибка: {e}")
+            return "", None, None, tg_link  # ПРОПУСК ПРИ ОШИБКЕ
 
     if caption:
         html += f"<div class='text-block'><p>{caption}</p></div>\n"
@@ -177,6 +181,7 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     html += f"<script type='application/ld+json'>{json.dumps(microdata, ensure_ascii=False)}</script>\n"
     html += "</article>\n"
     return html, file_url, content_type, tg_link
+
 def extract_timestamp(block):
     m = re.search(r" (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", block)
     return datetime.strptime(m.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow) if m else None
@@ -196,6 +201,7 @@ def update_sitemap():
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
     print("sitemap.xml обновлён")
+
 def generate_rss(news_blocks):
     items = ""
     for b in news_blocks[:20]:
@@ -234,8 +240,6 @@ def fetch_latest_posts():
     posts = [u.channel_post for u in updates if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]]
     return list(reversed(posts[-15:])) if posts else []
 
-def is_older_than_two_days(ts):
-    return datetime.now(moscow) - datetime.fromtimestamp(ts, moscow) >= timedelta(days=2)
 def main():
     posts = fetch_latest_posts()
     if not posts:
@@ -279,7 +283,10 @@ def main():
             continue
 
         html, url, ct, _ = format_post(last, first.caption, len(group), False)
-        if not html or hash_html_block(html) in seen_hashes:
+        if not html:  # ← Если видео > 20 МБ → html = ""
+            continue
+
+        if hash_html_block(html) in seen_hashes:
             continue
 
         post_to_vk(clean_text(first.caption or ""), clean_text(last.text or ""), url, ct, pid)
@@ -294,7 +301,7 @@ def main():
 
     if urgent:
         html, url, ct, _ = format_post(urgent[0], urgent[1].caption, urgent[2], True)
-        if html:
+        if html:  # ← Только если не видео > 20 МБ
             post_to_vk(clean_text(urgent[1].caption or ""), clean_text(urgent[0].text or ""), url, ct, urgent[3])
             fresh_news.insert(0, html)
             new_ids.add(urgent[3])
@@ -303,12 +310,11 @@ def main():
 
     if any_new:
         with open("public/news.html", "w", encoding="utf-8") as f:
-            f.write("<style>body{font-family:sans-serif;background:#f9f9f9;padding:10px;line-height:1.6}.news-item{background:#fff;padding:15px;margin-bottom:30px;border-radius:8px;box-shadow:0 0 5px rgba(0,0,0,.05);border-left:4px solid #0077cc}img,video{max-width:100%;border-radius:4px;margin:10px 0}.timestamp{color:#666;font-size:.9em}.source{color:#999;font-size:.85em}h2{margin-top:40px;border-bottom:2px solid #ccc;padding-bottom:5px}.hidden{display:none}</style>\n")
             for b in fresh_news:
                 f.write(b + "\n")
             if any("hidden" in b for b in fresh_news):
-                f.write('<button id="show-more" style="padding:10px 20px;background:#0077cc;color:#fff;border:none;border-radius:4px;cursor:pointer">Показать ещё</button>')
-                f.write('<script>document.getElementById("show-more").onclick=()=>{document.querySelectorAll(".hidden").forEach(e=>e.classList.remove("hidden"));this.style.display="none"};</script>')
+                f.write('<button id="show-more" style="padding:10px 20px;background:#0077cc;color:#fff;border:none;border-radius:4px;cursor:pointer">Показать ещё</button>\n')
+                f.write('<script>document.getElementById("show-more").onclick=()=>{document.querySelectorAll(".hidden").forEach(e=>e.classList.remove("hidden"));this.style.display="none"};</script>\n')
 
         save_seen_ids(seen_ids | new_ids)
         update_sitemap()
