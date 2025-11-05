@@ -54,7 +54,7 @@
   <script src="https://unpkg.com/imagesloaded@5/imagesloaded.pkgd.min.js"></script>
 
   <style>
-    /* === УБИРАЕМ ОГРАНИЧЕНИЯ ИЗ style.css === */
+    /* === УБИРАЕМ ОГРАНИЧЕНИЯ === */
     main {
       max-width: none !important;
       margin: 0.5rem 0 !important;
@@ -63,66 +63,118 @@
       box-sizing: border-box;
     }
 
-    /* === MASONRY: 3 КОЛОНКИ НА ВЕСЬ ЭКРАН === */
     #news-container {
       width: 100% !important;
       max-width: none !important;
       margin: 0 !important;
-      padding: 0 0.5rem !important;
+      padding: 0 0.25rem !important;
       box-sizing: border-box;
     }
 
+    /* === MASONRY: 3 КОЛОНКИ БЕЗ ПУСТОТ === */
     .grid-item {
-      width: calc(33.333% - 1rem) !important;
-      margin: 0.5rem !important;
+      width: calc(33.333% - 8px) !important;
+      margin: 4px !important;
       box-sizing: border-box;
     }
 
     @media (max-width: 900px) {
-      .grid-item { width: calc(50% - 1rem) !important; }
+      .grid-item { width: calc(50% - 8px) !important; }
     }
 
     @media (max-width: 600px) {
-      .grid-item { 
-        width: 100% !important; 
-        margin: 0.5rem 0 !important; 
-      }
+      .grid-item { width: 100% !important; margin: 4px 0 !important; }
     }
 
     .news-grid {
       display: block !important;
-      column-count: unset !important;
-      grid-template-columns: unset !important;
     }
 
-    .news-item {
-      break-inside: unset !important;
-      margin: 0 !important;
-    }
-
-    /* === БАННЕР TG2VK — ПОД ШАПКОЙ === */
+    /* === БОКОВОЙ БАННЕР TG2VK — КАК В ПРИМЕРЕ === */
     .tg2vk-sidebar {
-      position: static !important;
-      width: 100% !important;
-      max-width: 1200px !important;
-      margin: 0.5rem auto !important;
-      border-radius: 16px !important;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      display: block !important;
+      position: fixed;
+      right: 0;
+      top: 180px;
+      width: 280px;
+      background: linear-gradient(135deg, #ff0000, #0038a8);
+      color: white;
+      border-radius: 16px 0 0 16px;
+      box-shadow: -4px 4px 15px rgba(0,0,0,0.2);
+      z-index: 999;
+      font-family: "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .sidebar-header {
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: bold;
+      font-size: 0.95rem;
+    }
+
+    .toggle-arrow {
+      font-size: 1.2rem;
+      transition: transform 0.3s ease;
+    }
+
+    .sidebar-content {
+      padding: 0 16px;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.4s ease;
+    }
+
+    .sidebar-content ul {
+      margin: 10px 0;
+      padding-left: 18px;
+    }
+
+    .sidebar-content a.sidebar-btn {
+      display: inline-block;
+      background: #ffc107;
+      color: #0038a8;
+      padding: 10px 16px;
+      border-radius: 20px;
+      text-decoration: none;
+      font-weight: bold;
+      font-size: 0.9rem;
+      margin: 10px 0;
+    }
+
+    .sidebar-content .small {
+      font-size: 0.75rem;
+      opacity: 0.9;
+      margin-top: 10px;
     }
 
     .tg2vk-sidebar.open .sidebar-content {
-      max-height: 500px !important;
-      padding: 16px !important;
+      max-height: 500px;
+      padding: 16px;
     }
 
     .tg2vk-sidebar.open .toggle-arrow {
-      transform: rotate(180deg) !important;
+      transform: rotate(180deg);
     }
 
     @media (max-width: 768px) {
       .tg2vk-sidebar {
-        margin: 1rem auto !important;
+        position: static;
+        width: 100%;
+        max-width: 1200px;
+        margin: 1rem auto;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+      .sidebar-header {
+        justify-content: center;
+        gap: 10px;
       }
     }
   </style>
@@ -165,8 +217,8 @@
     </div>
   </header>
 
-  <!-- БАННЕР TG2VK — ПОД ШАПКОЙ -->
-  <div class="tg2vk-sidebar" id="tg2vk-sidebar">
+  <!-- БОКОВОЙ БАННЕР TG2VK — КАК В ПРИМЕРЕ -->
+  <aside id="tg2vk-sidebar" class="tg2vk-sidebar">
     <div class="sidebar-header" onclick="toggleSidebar()">
       <span>TG2VK → ВК + сайт</span>
       <span class="toggle-arrow">></span>
@@ -184,7 +236,7 @@
       <a href="https://t.me/Artstah" target="_blank" class="sidebar-btn">Написать @Artstah</a>
       <p class="small">Примеры — по запросу</p>
     </div>
-  </div>
+  </aside>
 
   <main>
     <section id="news-feed">
@@ -290,8 +342,8 @@
           itemSelector: '.grid-item',
           columnWidth: '.grid-item',
           percentPosition: true,
-          gutter: 16,
-          transitionDuration: '0.3s'
+          gutter: 8,
+          transitionDuration: '0.2s'
         });
         document.getElementById('load-more').style.display = visibleCount >= items.length ? 'none' : 'block';
         enableModal();
@@ -326,7 +378,7 @@
       });
     }
 
-    // БАННЕР
+    // БАННЕР — СВЕРТЫВАНИЕ
     window.toggleSidebar = () => {
       document.getElementById('tg2vk-sidebar').classList.toggle('open');
     };
@@ -344,7 +396,7 @@
   <!-- Yandex.Metrika -->
   <script>
     if (getCookie('cookies_accepted') !== 'false') {
-      (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0];k.async=1;k.src=r;a.parentNode.insertBefore(k,a)})
+      (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};mGuess[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0];k.async=1;k.src=r;a.parentNode.insertBefore(k,a)})
       (window, document, "script", "https://mc.yandex.ru/metrika/metrika.js", "ym");
       ym(104596413, "init", {clickmap:true,trackLinks:true,accurateTrackBounce:true});
     }
