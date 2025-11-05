@@ -54,6 +54,25 @@
   <script src="https://unpkg.com/imagesloaded@5/imagesloaded.pkgd.min.js"></script>
 
   <style>
+    /* === СТИЛИ КАРТОЧЕК ИЗ news.html === */
+    .news-item {
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,.05);
+      border-left: 4px solid #0077cc;
+      margin: 0 !important;
+    }
+    .news-item img, .news-item video {
+      max-width: 100%;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .timestamp { color: #666; font-size: .9em; }
+    .source { color: #999; font-size: .85em; }
+    h2 { margin-top: 40px; border-bottom: 2px solid #ccc; padding-bottom: 5px; }
+    .hidden { display: none; }
+
     /* === УБИРАЕМ ОГРАНИЧЕНИЯ === */
     main {
       max-width: none !important;
@@ -75,21 +94,22 @@
     .grid-item {
       width: 33.333% !important;
       box-sizing: border-box;
+      padding: 0 6px;  /* 12px между карточками */
     }
 
     @media (max-width: 900px) {
-      .grid-item { width: 50% !important; }
+      .grid-item { width: 50% !important; padding: 0 6px; }
     }
 
     @media (max-width: 600px) {
-      .grid-item { width: 100% !important; }
+      .grid-item { width: 100% !important; padding: 0; }
     }
 
     .news-grid {
       display: block !important;
     }
 
-    /* === БОКОВОЙ БАННЕР TG2VK — КАК В ПРИМЕРЕ === */
+    /* === БОКОВОЙ БАННЕР TG2VK === */
     .tg2vk-sidebar {
       position: fixed;
       right: 0;
@@ -216,7 +236,7 @@
     </div>
   </header>
 
-  <!-- БОКОВОЙ БАННЕР TG2VK — КАК В ПРИМЕРЕ -->
+  <!-- БОКОВОЙ БАННЕР TG2VK -->
   <aside id="tg2vk-sidebar" class="tg2vk-sidebar">
     <div class="sidebar-header" onclick="toggleSidebar()">
       <span>TG2VK → ВК + сайт</span>
