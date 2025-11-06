@@ -65,6 +65,7 @@ h2 {
   font-weight: normal;
   color: #fff;
 }
+
 /* 🆕 КАТЕГОРИИ */
 .category-tabs {
   display: flex;
@@ -161,10 +162,11 @@ h2 {
   margin-right: 6px;
   vertical-align: middle;
 }
-/* 🆕 ОСНОВНОЙ КОНТЕЙНЕР */
+
+/* 🆕 ОСНОВНОЙ КОНТЕЙНЕР — FLEX ДЛЯ КНОПКИ */
 main {
   max-width: 1200px;
-  margin: 3rem auto;
+  margin: 3rem auto 0;
   background: rgba(255,255,255,0.95);
   padding: 2rem;
   border-radius: 16px;
@@ -172,15 +174,18 @@ main {
   flex: 1;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   animation: fadeIn 1s ease;
+  display: flex;
+  flex-direction: column;
 }
 
-/* ✅ MASONRY-СЕТКА — БЕЗ GRID */
+/* ✅ MASONRY-СЕТКА — БЕЗ GRID, РАБОТАЕТ КАК РАНЬШЕ */
 .news-grid {
   column-count: 3;
   column-gap: 1.5rem;
   padding-top: 1rem;
   max-width: 1200px;
   margin: 0 auto;
+  flex: 1;
 }
 
 /* 🧱 КАРТОЧКИ */
@@ -273,6 +278,39 @@ main {
   color: #444;
   font-size: 0.95rem;
 }
+
+/* 🆕 КНОПКА "НА ГЛАВНУЮ" — ВНЕ MASONRY, В MAIN */
+.back-home {
+  margin: 2rem auto 1rem;
+  text-align: center;
+  flex-shrink: 0;
+  padding: 1rem 0;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  max-width: 1200px;
+  width: 90%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.back-home .button.small {
+  background: linear-gradient(135deg, #ffc107, #ff8c00);
+  color: #0038a8;
+  font-weight: bold;
+  padding: 12px 28px;
+  border-radius: 25px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.back-home .button.small:hover {
+  background: #ff8c00;
+  color: white;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+}
+
 /* 🆕 LOADING & ERROR */
 .loading, .error {
   text-align: center;
@@ -356,7 +394,13 @@ footer a {
     align-items: center;
     gap: 5px;
   }
+
+  .back-home {
+    margin: 1.5rem auto;
+    width: 85%;
+  }
 }
+
 /* 🔍 МОДАЛЬНОЕ УВЕЛИЧЕНИЕ КАРТОЧКИ */
 .news-item.enlarged-1 {
   transform: scale(1.05);
@@ -452,25 +496,4 @@ footer a {
     width: 100%;
     max-width: 300px;
   }
-}
-.back-home {
-  margin: 2rem auto;
-  text-align: center;
-}
-
-.back-home .button.small {
-  background: linear-gradient(135deg, #ffc107, #ff8c00);
-  color: #0038a8;
-  font-weight: bold;
-  padding: 10px 20px;
-  border-radius: 20px;
-  text-decoration: none;
-  display: inline-block;
-  transition: all 0.3s ease;
-}
-
-.back-home .button.small:hover {
-  background: #ff8c00;
-  color: white;
-  transform: translateY(-2px);
 }
