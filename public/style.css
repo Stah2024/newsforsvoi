@@ -34,7 +34,6 @@ header {
 }
 
 .history-date {
-  font-family: "Segoe UI", Roboto, sans-serif;
   font-size: 1.2rem;
   color: #fff;
   text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
@@ -66,7 +65,6 @@ h2 {
   font-weight: normal;
   color: #fff;
 }
-
 /* 🆕 КАТЕГОРИИ */
 .category-tabs {
   display: flex;
@@ -99,7 +97,6 @@ h2 {
   top: 20px;
   right: 20px;
   max-width: 280px;
-  margin: 0;
   background: rgba(255,255,255,0.15);
   border-radius: 25px;
   padding: 5px;
@@ -164,31 +161,6 @@ h2 {
   margin-right: 6px;
   vertical-align: middle;
 }
-
-/* 🆕 ОСНОВНОЙ КНОПКИ (ДЛЯ ДРУГИХ МЕСТ) */
-.button {
-  display: inline-block;
-  background: linear-gradient(135deg, #ff0000, #0038a8);
-  color: white;
-  text-decoration: none;
-  font-weight: bold;
-  padding: 14px 28px;
-  border-radius: 25px;
-  transition: all 0.3s ease;
-  font-size: 1.1rem;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-}
-
-.button:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 15px rgba(0,0,0,0.3);
-}
-
-.button.secondary {
-  background: linear-gradient(135deg, #ffc107, #ff8c00);
-  color: #0038a8;
-}
-
 /* 🆕 ОСНОВНОЙ КОНТЕЙНЕР */
 main {
   max-width: 1200px;
@@ -202,16 +174,16 @@ main {
   animation: fadeIn 1s ease;
 }
 
-/* 🆕 NEWS GRID - МУЛЬТИКОЛОНКА + ГРИД */
+/* ✅ MASONRY-СЕТКА — БЕЗ GRID */
 .news-grid {
   column-count: 3;
   column-gap: 1.5rem;
   padding-top: 1rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
+/* 🧱 КАРТОЧКИ */
 .news-item {
   break-inside: avoid;
   margin-bottom: 1.5rem;
@@ -228,7 +200,6 @@ main {
   overflow: hidden;
 }
 
-/* 🆕 БЕДЖ КАТЕГОРИИ */
 .category-badge {
   position: absolute;
   top: 10px;
@@ -302,20 +273,14 @@ main {
   color: #444;
   font-size: 0.95rem;
 }
-
 /* 🆕 LOADING & ERROR */
 .loading, .error {
-  grid-column: 1 / -1;
   text-align: center;
   padding: 3rem;
   font-size: 1.2rem;
   color: #666;
 }
-
-.error { 
-  color: #dc3545; 
-  grid-column: 1 / -1;
-}
+.error { color: #dc3545; }
 
 /* FOOTER */
 footer {
@@ -326,7 +291,6 @@ footer {
   background: linear-gradient(135deg, #ff0000, #0038a8);
   margin-top: auto;
 }
-
 footer a { 
   color: #ffc107; 
   text-decoration: underline; 
@@ -338,18 +302,15 @@ footer a {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* МОБИЛЬНАЯ ВЕРСИЯ */
+/* МОБИЛЬНАЯ АДАПТАЦИЯ */
 @media (max-width: 900px) {
   .news-grid {
     column-count: 2;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   }
 }
-
 @media (max-width: 600px) {
   .news-grid {
     column-count: 1;
-    grid-template-columns: 1fr;
     padding: 0 1rem;
   }
 
@@ -396,7 +357,6 @@ footer a {
     gap: 5px;
   }
 }
-
 /* 🔍 МОДАЛЬНОЕ УВЕЛИЧЕНИЕ КАРТОЧКИ */
 .news-item.enlarged-1 {
   transform: scale(1.05);
