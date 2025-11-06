@@ -51,8 +51,7 @@
     ]
   }
   </script>
-
-  <style>
+<style>
     /* Существующие стили остаются без изменений */
     .card-overlay {
       position: fixed;
@@ -205,6 +204,7 @@
         <img src="/calendar-icon.svg" alt="Календарь" class="icon" /> Этот день в истории
       </a>
     </div>
+
     <div class="header-content">
       <img src="/rf-flag.svg" alt="Флаг России" class="flag-icon" />
       <div class="text-block">
@@ -234,8 +234,7 @@
       <input type="search" id="search-box" placeholder="Поиск по новостям…" />
     </div>
   </header>
-
-  <!-- БОКОВОЙ БАННЕР TG2VK -->
+<!-- БОКОВОЙ БАННЕР TG2VK -->
   <aside id="tg2vk-sidebar" class="tg2vk-sidebar">
     <div class="sidebar-header" onclick="toggleSidebar()">
       <span>TG2VK → ВК + сайт</span>
@@ -278,8 +277,7 @@
       <div id="subscribe-message"></div>
     </section>
   </main>
-
-  <!-- ОБНОВЛЁННЫЙ ФУТЕР -->
+<!-- ОБНОВЛЁННЫЙ ФУТЕР -->
   <footer>
     © 2025 Новости для Своих | 
     Сделано: <a href="https://t.me/Artstah" target="_blank">@Artstah</a> | 
@@ -297,10 +295,9 @@
       dateElement.textContent = `Сегодня: ${today}`;
     }
 
-    // Вызов функции при загрузке страницы
     document.addEventListener('DOMContentLoaded', updateDate);
 
-    // Существующий JavaScript для формы Unisender
+    // Подписка через Unisender
     document.getElementById('unisender-form').addEventListener('submit', async function(e) {
       e.preventDefault();
 
@@ -313,9 +310,7 @@
       try {
         const response = await fetch('https://api.unisender.com/ru/api/subscribe', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({
             'api_key': '6jhinetoegc4sgwdpc1x44k3wk1gpqjyhn5bqiwe',
             'list_ids': '1',
@@ -341,7 +336,7 @@
       }
     });
 
-    // Существующий JavaScript для новостей, поиска и модалки
+    // Загрузка новостей
     fetch('/news.html')
       .then(response => response.text())
       .then(html => {
@@ -380,6 +375,7 @@
         console.error('Ошибка загрузки news.html:', error);
       });
 
+    // Поиск по карточкам
     document.getElementById('search-box').addEventListener('input', function(e) {
       const query = e.target.value.toLowerCase();
       document.querySelectorAll('.news-item').forEach(item => {
@@ -387,6 +383,7 @@
       });
     });
 
+    // Модальное увеличение карточки
     function enableCardEnlargement() {
       const modal = document.getElementById('modal');
       modal.onclick = (e) => {
@@ -445,7 +442,6 @@
       location.reload();
     }
 
-    // Показ баннера
     if (!getCookie('cookies_accepted')) {
       document.getElementById('cookie-consent').style.display = 'block';
     } else if (getCookie('cookies_accepted') === 'false') {
@@ -496,11 +492,7 @@
           });
         };
         document.head.appendChild(script);
-      }
-    }
-  </script>
-
-  <!-- БАННЕР СОГЛАСИЯ НА COOKIES -->
+<!-- БАННЕР СОГЛАСИЯ НА COOKIES -->
   <div id="cookie-consent" style="
     position: fixed; bottom: 0; left: 0; right: 0; 
     background: #333; color: white; padding: 20px; z-index: 10001; 
