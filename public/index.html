@@ -51,7 +51,7 @@
     ]
   }
   </script>
-<style>
+  <style>
     /* Существующие стили остаются без изменений */
     .card-overlay {
       position: fixed;
@@ -194,6 +194,26 @@
         gap: 10px;
       }
     }
+
+    /* === ДОБАВЛЕНО ПО ТЗ: КНОПКА ЗАКРЫТИЯ МОДАЛЬНОГО ОКНА === */
+    .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: #fff;
+      color: #333;
+      border: none;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 10000;
+      padding: 4px 10px;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .close-btn:hover {
+      background: #eee;
+    }
   </style>
 </head>
 <body>
@@ -234,7 +254,8 @@
       <input type="search" id="search-box" placeholder="Поиск по новостям…" />
     </div>
   </header>
-<!-- БОКОВОЙ БАННЕР TG2VK -->
+
+  <!-- БОКОВОЙ БАННЕР TG2VK -->
   <aside id="tg2vk-sidebar" class="tg2vk-sidebar">
     <div class="sidebar-header" onclick="toggleSidebar()">
       <span>TG2VK → ВК + сайт</span>
@@ -263,7 +284,7 @@
     </section>
 
     <div class="rsya-info">
-      <strong>ℹ️</strong> Независимые новости на основе <em>открытых источников</em> | 
+      <strong>Информация</strong> Независимые новости на основе <em>открытых источников</em> | 
       <a href="/about.html">О проекте</a> | 
       <a href="mailto:art364@yandex.ru">Контакты</a>
     </div>
@@ -277,7 +298,8 @@
       <div id="subscribe-message"></div>
     </section>
   </main>
-<!-- ОБНОВЛЁННЫЙ ФУТЕР -->
+
+  <!-- ОБНОВЛЁННЫЙ ФУТЕР -->
   <footer>
     © 2025 Новости для Своих | 
     Сделано: <a href="https://t.me/Artstah" target="_blank">@Artstah</a> | 
@@ -322,15 +344,15 @@
         const result = await response.json();
 
         if (result.code === 'success') {
-          messageEl.innerHTML = '<p>✅ Подписка оформлена! Вы получите новости на ' + email + '</p>';
+          messageEl.innerHTML = '<p>Подписка оформлена! Вы получите новости на ' + email + '</p>';
           messageEl.className = 'subscribe-success';
           document.getElementById('email-input').value = '';
         } else {
-          messageEl.innerHTML = '<p>❌ Ошибка: ' + (result.error || 'Неизвестная ошибка') + '</p>';
+          messageEl.innerHTML = '<p>Ошибка: ' + (result.error || 'Неизвестная ошибка') + '</p>';
           messageEl.className = 'subscribe-error';
         }
       } catch (error) {
-        messageEl.innerHTML = '<p>❌ Ошибка соединения. Попробуйте позже.</p>';
+        messageEl.innerHTML = '<p>Ошибка соединения. Попробуйте позже.</p>';
         messageEl.className = 'subscribe-error';
         console.error('Unisender error:', error);
       }
@@ -360,7 +382,7 @@
           if (visibleCount >= items.length) {
             document.getElementById('load-more').style.display = 'none';
           }
-          enableCardEnlargement();
+          enableCardEnlargement(); // ← Обновление обработчиков после рендера
         }
 
         document.getElementById('load-more').addEventListener('click', () => {
@@ -383,7 +405,7 @@
       });
     });
 
-    // Модальное увеличение карточки
+    // === ОБНОВЛЁННАЯ ФУНКЦИЯ УВЕЛИЧЕНИЯ КАРТОЧКИ С КНОПКОЙ ЗАКРЫТИЯ ===
     function enableCardEnlargement() {
       const modal = document.getElementById('modal');
       modal.onclick = (e) => {
@@ -395,10 +417,19 @@
 
       document.querySelectorAll('.news-item').forEach(item => {
         item.addEventListener('click', () => {
-          modal.innerHTML = item.outerHTML;
+          modal.innerHTML = `
+            <button class="close-btn" onclick="closeModal()">×</button>
+            ${item.outerHTML}
+          `;
           modal.style.display = 'flex';
         });
       });
+    }
+
+    function closeModal() {
+      const modal = document.getElementById('modal');
+      modal.style.display = 'none';
+      modal.innerHTML = '';
     }
 
     // === ФУНКЦИЯ СВЕРТЫВАНИЯ БАННЕРА ===
@@ -492,7 +523,11 @@
           });
         };
         document.head.appendChild(script);
-<!-- БАННЕР СОГЛАСИЯ НА COOKIES -->
+      }
+    }
+  </script>
+
+  <!-- БАННЕР СОГЛАСИЯ НА COOKIES -->
   <div id="cookie-consent" style="
     position: fixed; bottom: 0; left: 0; right: 0; 
     background: #333; color: white; padding: 20px; z-index: 10001; 
