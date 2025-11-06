@@ -454,6 +454,23 @@ footer a {
   }
 }
 .back-home {
-  margin: 20px 0;
+  margin: 2rem auto;
   text-align: center;
+}
+
+.back-home .button.small {
+  background: linear-gradient(135deg, #ffc107, #ff8c00);
+  color: #0038a8;
+  font-weight: bold;
+  padding: 10px 20px;
+  border-radius: 20px;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+
+.back-home .button.small:hover {
+  background: #ff8c00;
+  color: white;
+  transform: translateY(-2px);
 }
