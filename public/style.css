@@ -453,3 +453,7 @@ footer a {
     max-width: 300px;
   }
 }
+.back-home {
+  margin: 20px 0;
+  text-align: center;
+}
