@@ -98,7 +98,7 @@ def clean_text(text):
     patterns = [
         r"Подписаться на новости для своих",
         r"https://t\.me/newsSVOih",
-        r"🇷🇺"
+        r"РФ"
     ]
     for p in patterns:
         text = re.sub(p, "", text, flags=re.IGNORECASE)
@@ -189,13 +189,43 @@ def extract_timestamp(block):
 def hash_html_block(html):
     return hashlib.md5(html.encode("utf-8")).hexdigest()
 
+# === НОВАЯ ФУНКЦИЯ: АРХИВАЦИЯ ===
+def move_to_archive(fresh_news):
+    cutoff = datetime.now(moscow) - timedelta(days=2)
+    remaining = []
+    archived = []
+
+    for block in fresh_news:
+        ts = extract_timestamp(block)
+        if not ts:
+            remaining.append(block)
+            continue
+
+        if ts < cutoff:
+            # Убираем медиа и JSON-микроданные
+            clean_block = re.sub(r"<img[^>]*>|<video[^>]*>.*?</video>", "", block, flags=re.DOTALL)
+            clean_block = re.sub(r"<script type='application/ld\+json'>.*?</script>", "", clean_block, flags=re.DOTALL)
+            archived.append(clean_block)
+        else:
+            remaining.append(block)
+
+    if archived:
+        archive_path = "public/archive.html"
+        os.makedirs("public", exist_ok=True)
+        with open(archive_path, "a", encoding="utf-8") as f:
+            for b in archived:
+                f.write(b + "\n")
+        print(f"В архив: {len(archived)} карточек")
+
+    return remaining
+
 def update_sitemap():
     now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
     sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://newsforsvoi.ru/index.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>
   <url><loc>https://newsforsvoi.ru/news.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>0.9</priority></url>
-  <url><loc>https://newsforsvoi.ru/archive.html</loc><lastmod>{now}</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://newsforsvoi.ru/archive.html</loc><lastmod>{now}</lastmod><changefreq>daily</changefreq><priority>0.7</priority></url>
   <url><loc>https://newsforsvoi.ru/history.html</loc><lastmod>{now}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>
 </urlset>"""
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
@@ -257,6 +287,9 @@ def main():
             raw = f.read()
             fresh_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
             seen_hashes.update(hash_html_block(b) for b in fresh_news)
+
+    # === АРХИВАЦИЯ: УДАЛЯЕМ СТАРЫЕ ИЗ news.html, ПЕРЕНОСИМ В archive.html ===
+    fresh_news = move_to_archive(fresh_news)
 
     grouped = {}
     urgent = None
