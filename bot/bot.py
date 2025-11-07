@@ -189,7 +189,7 @@ def extract_timestamp(block):
 def hash_html_block(html):
     return hashlib.md5(html.encode("utf-8")).hexdigest()
 
-# === НОВАЯ ФУНКЦИЯ: АРХИВАЦИЯ ===
+# === БЕЗОПАСНАЯ АРХИВАЦИЯ ===
 def move_to_archive(fresh_news):
     cutoff = datetime.now(moscow) - timedelta(days=2)
     remaining = []
@@ -202,7 +202,7 @@ def move_to_archive(fresh_news):
             continue
 
         if ts < cutoff:
-            # Убираем медиа и JSON-микроданные
+            # Убираем медиа и JSON
             clean_block = re.sub(r"<img[^>]*>|<video[^>]*>.*?</video>", "", block, flags=re.DOTALL)
             clean_block = re.sub(r"<script type='application/ld\+json'>.*?</script>", "", clean_block, flags=re.DOTALL)
             archived.append(clean_block)
@@ -212,9 +212,19 @@ def move_to_archive(fresh_news):
     if archived:
         archive_path = "public/archive.html"
         os.makedirs("public", exist_ok=True)
-        with open(archive_path, "a", encoding="utf-8") as f:
+
+        # Безопасно: если файл пуст или отсутствует — не ломаем
+        write_mode = "a"
+        if not os.path.exists(archive_path) or os.path.getsize(archive_path) == 0:
+            write_mode = "w"
+            print("archive.html пуст или отсутствует — начинаем с чистого листа")
+
+        with open(archive_path, write_mode, encoding="utf-8") as f:
+            if write_mode == "w":
+                # Не трогаем <main> — просто начинаем писать карточки
+                f.write("  <!-- Архивные карточки -->\n")
             for b in archived:
-                f.write(b + "\n")
+                f.write("  " + b.strip() + "\n")
         print(f"В архив: {len(archived)} карточек")
 
     return remaining
@@ -288,7 +298,7 @@ def main():
             fresh_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
             seen_hashes.update(hash_html_block(b) for b in fresh_news)
 
-    # === АРХИВАЦИЯ: УДАЛЯЕМ СТАРЫЕ ИЗ news.html, ПЕРЕНОСИМ В archive.html ===
+    # === АРХИВАЦИЯ: БЕЗОПАСНО ===
     fresh_news = move_to_archive(fresh_news)
 
     grouped = {}
@@ -316,7 +326,7 @@ def main():
             continue
 
         html, url, ct, _ = format_post(last, first.caption, len(group), False)
-        if not html:  # ← Если видео > 20 МБ → html = ""
+        if not html:
             continue
 
         if hash_html_block(html) in seen_hashes:
@@ -334,7 +344,7 @@ def main():
 
     if urgent:
         html, url, ct, _ = format_post(urgent[0], urgent[1].caption, urgent[2], True)
-        if html:  # ← Только если не видео > 20 МБ
+        if html:
             post_to_vk(clean_text(urgent[1].caption or ""), clean_text(urgent[0].text or ""), url, ct, urgent[3])
             fresh_news.insert(0, html)
             new_ids.add(urgent[3])
