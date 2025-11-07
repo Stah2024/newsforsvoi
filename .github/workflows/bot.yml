@@ -2,7 +2,7 @@ name: Run Telegram Bot
 
 on:
   schedule:
-    - cron: '*/10 * * * *'  # запуск каждые 10 минут
+    - cron: '*/20 * * * *'  # запуск каждые 20 минут
   workflow_dispatch:        # ручной запуск
 
 jobs:
