@@ -105,6 +105,7 @@ def clean_text(text):
     text = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF]+', '', text)
     return re.sub(r'\s+', ' ', text).strip()
 
+# === УЛУЧШЕННЫЙ HTML: SEO + ДОСТУПНОСТЬ + ВАЛИДНОСТЬ ===
 def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     ts = message.date
     fmt_time = datetime.fromtimestamp(ts, moscow).strftime("%d.%m.%Y %H:%M")
@@ -118,27 +119,45 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
         caption = full
         text = ""
 
+    # Заголовок для SEO (первые 100 символов)
+    headline = (caption or text or "Новость")[:100]
+    if len(caption + text) > 100:
+        headline += "..."
+
     file_url = None
     content_type = None
     tg_link = f"https://t.me/{CHANNEL_ID[1:]}/{message.message_id}"
+    post_id = f"post-{message.message_id}"
     html = ""
 
+    # === Категория: <h2> (один раз на группу) ===
+    category = None
     if any(w in caption + text for w in ["Россия"]):
-        html += "<h2>Россия</h2>\n"
+        category = "Россия"
     elif any(w in caption + text for w in ["Космос"]):
-        html += "<h2>Космос</h2>\n"
+        category = "Космос"
     elif any(w in caption + text for w in ["Израиль", "Газа", "Мексика", "США", "Китай", "Тайвань", "Мир"]):
-        html += "<h2>Мир</h2>\n"
+        category = "Мир"
 
-    style = " style='border-left:6px solid #d32f2f;background:#ffebee;'" if is_urgent else ""
-    html += f"<article class='news-item'{style}>\n"
+    if category:
+        html += f"<h2 class='category-header'>{category}</h2>\n"
+
+    # === <article> с id, lang, классом urgent (без инлайн-стилей) ===
+    urgency_class = " urgent" if is_urgent else ""
+    html += f"<article class='news-item{urgency_class}' id='{post_id}' lang='ru'>\n"
+
+    # === СРОЧНО: как класс, не инлайн ===
     if is_urgent:
-        html += "<p style='color:#d32f2f;font-weight:bold;margin-top:0;'>СРОЧНО:</p>\n"
+        html += "<p class='urgency-label'>СРОЧНО:</p>\n"
 
+    # === Заголовок новости: <h3> (SEO + доступность) ===
+    html += f"<h3 class='news-headline'>{headline}</h3>\n"
+
+    # === Медиа ===
     if message.content_type == "photo":
         fi = bot.get_file(message.photo[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
-        html += f"<img src='{file_url}' alt='Фото' />\n"
+        html += f"<img src='{file_url}' alt='Фото: {headline}' loading='lazy' />\n"
         content_type = "photo"
 
     elif message.content_type == "video":
@@ -146,39 +165,46 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
             size = message.video.file_size or 0
             if size > 20_000_000:
                 print(f"Видео {size/1e6:.1f}МБ — пропуск (сайт + ВК)")
-                return "", None, None, tg_link  # ПОЛНЫЙ ПРОПУСК
+                return "", None, None, tg_link
             else:
                 fi = bot.get_file(message.video.file_id)
                 file_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
-                html += f"<video controls src='{file_url}'></video>\n"
+                html += f"<video controls preload='metadata'>\n"
+                html += f"  <source src='{file_url}' type='video/mp4'>\n"
+                html += f"  Ваш браузер не поддерживает видео.\n"
+                html += f"</video>\n"
                 content_type = "video"
         except Exception as e:
             print(f"Видео ошибка: {e}")
-            return "", None, None, tg_link  # ПРОПУСК ПРИ ОШИБКЕ
+            return "", None, None, tg_link
 
+    # === Текст (без лишних div) ===
     if caption:
-        html += f"<div class='text-block'><p>{caption}</p></div>\n"
+        html += f"<p class='news-text'>{caption}</p>\n"
     if text and text != caption:
-        html += f"<div class='text-block'><p>{text}</p></div>\n"
+        html += f"<p class='news-text'>{text}</p>\n"
 
-    html += f"<p class='timestamp' data-ts='{iso_time}'> {fmt_time}</p>\n"
-    html += f"<a href='{tg_link}' target='_blank'>Читать в Telegram</a>\n"
-    html += "<p class='source'>Источник: Новости для Своих</p>\n"
+    # === Метаданные ===
+    html += f"<p class='timestamp' data-ts='{iso_time}'>{fmt_time}</p>\n"
+    html += f"<p class='source'>Источник: <a href='{tg_link}' target='_blank' rel='noopener'>Новости для Своих</a></p>\n"
+
     if group_size > 1:
-        html += f"<p><a href='{tg_link}' target='_blank'>Остальные фото/видео в Telegram</a></p>\n"
+        html += f"<p class='more-media'><a href='{tg_link}' target='_blank' rel='noopener'>Ещё {group_size-1} фото/видео в Telegram</a></p>\n"
 
+    # === Микроданные (JSON-LD) ===
     microdata = {
         "@context": "https://schema.org", "@type": "NewsArticle",
-        "headline": caption or text or "Новость",
+        "headline": headline,
         "datePublished": iso_time,
         "author": {"@type": "Organization", "name": "Новости для Своих"},
         "publisher": {"@type": "Organization", "name": "Новости для Своих",
                       "logo": {"@type": "ImageObject", "url": "https://newsforsvoi.ru/logo.png"}},
-        "articleBody": (caption + "\n" + text).strip()
+        "articleBody": (caption + "\n" + text).strip(),
+        "url": tg_link
     }
     if file_url:
         microdata["image"] = file_url
-    html += f"<script type='application/ld+json'>{json.dumps(microdata, ensure_ascii=False)}</script>\n"
+    html += f"<script type='application/ld+json'>{json.dumps(microdata, ensure_ascii=False, indent=2)}</script>\n"
     html += "</article>\n"
     return html, file_url, content_type, tg_link
 
@@ -189,7 +215,7 @@ def extract_timestamp(block):
 def hash_html_block(html):
     return hashlib.md5(html.encode("utf-8")).hexdigest()
 
-# === БЕЗОПАСНАЯ АРХИВАЦИЯ ===
+# === БЕЗОПАСНАЯ АРХИВАЦИЯ (сохраняет твой archive.html) ===
 def move_to_archive(fresh_news):
     cutoff = datetime.now(moscow) - timedelta(days=2)
     remaining = []
@@ -213,7 +239,6 @@ def move_to_archive(fresh_news):
         archive_path = "public/archive.html"
         os.makedirs("public", exist_ok=True)
 
-        # Безопасно: если файл пуст или отсутствует — не ломаем
         write_mode = "a"
         if not os.path.exists(archive_path) or os.path.getsize(archive_path) == 0:
             write_mode = "w"
@@ -221,7 +246,6 @@ def move_to_archive(fresh_news):
 
         with open(archive_path, write_mode, encoding="utf-8") as f:
             if write_mode == "w":
-                # Не трогаем <main> — просто начинаем писать карточки
                 f.write("  <!-- Архивные карточки -->\n")
             for b in archived:
                 f.write("  " + b.strip() + "\n")
@@ -245,7 +269,7 @@ def update_sitemap():
 def generate_rss(news_blocks):
     items = ""
     for b in news_blocks[:20]:
-        title = re.search(r"<p>(.*?)</p>", b)
+        title = re.search(r"<h3[^>]*>(.*?)</h3>", b) or re.search(r"<p>(.*?)</p>", b)
         link = re.search(r"<a href='(https://t\.me/[^']+)'", b)
         date = re.search(r"data-ts='([^']+)'", b)
         t = title.group(1) if title else "Новость"
@@ -335,7 +359,7 @@ def main():
         post_to_vk(clean_text(first.caption or ""), clean_text(last.text or ""), url, ct, pid)
 
         if visible_count >= 12:
-            html = html.replace("<article class='news-item", "<article class='news-item hidden")
+            html = html.replace("class='news-item", "class='news-item hidden", 1)
         fresh_news.insert(0, html)
         visible_count += 1
         new_ids.add(pid)
