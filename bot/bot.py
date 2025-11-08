@@ -157,7 +157,8 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     if message.content_type == "photo":
         fi = bot.get_file(message.photo[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
-        html += f"<img src='{file_url}' alt='Фото: {headline}' loading='lazy' />\n"
+        # ИСПРАВЛЕНО: без />
+        html += f"<img src=\"{file_url}\" alt=\"Фото: {headline}\" loading=\"lazy\">\n"
         content_type = "photo"
 
     elif message.content_type == "video":
@@ -169,8 +170,9 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
             else:
                 fi = bot.get_file(message.video.file_id)
                 file_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
-                html += f"<video controls preload='metadata'>\n"
-                html += f"  <source src='{file_url}' type='video/mp4'>\n"
+                html += f"<video controls preload=\"metadata\">\n"
+                # ИСПРАВЛЕНО: без />
+                html += f"  <source src=\"{file_url}\" type=\"video/mp4\">\n"
                 html += f"  Ваш браузер не поддерживает видео.\n"
                 html += f"</video>\n"
                 content_type = "video"
