@@ -59,6 +59,9 @@ jobs:
 
       # === ДЕПЛОЙ ИЗ ПАПКИ public НА ЯНДЕКС ===
       - name: Deploy public/ to Yandex
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.YC_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_SECRET_KEY }}
         run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip -q awscliv2.zip
