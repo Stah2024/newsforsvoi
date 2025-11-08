@@ -1,14 +1,13 @@
-name: Run Telegram Bot
+name: Run Telegram Bot + Deploy to Yandex
 
 on:
   schedule:
-    # Каждые 10 минут с 07:30 до 22:05 МСК → с 04:30 до 19:05 UTC
-    - cron: '0,10,20,30,40,50 4-18 * * *'   # 04:00–18:59 UTC
-    - cron: '5 19 * * *'                    # 19:05 UTC — последний запуск в 22:05 МСК
-  workflow_dispatch:  # Ручной запуск — всегда разрешён
+    - cron: '0,10,20,30,40,50 4-18 * * *'
+    - cron: '5 19 * * *'
+  workflow_dispatch:
 
 jobs:
-  run-bot:
+  run-bot-and-deploy:
     runs-on: ubuntu-latest
 
     env:
@@ -16,27 +15,23 @@ jobs:
       VK_TOKEN: ${{ secrets.VK_TOKEN }}
       VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
       GH_PAT: ${{ secrets.GH_PAT }}
+      YC_ACCESS_KEY: ${{ secrets.YC_ACCESS_KEY }}
+      YC_SECRET_KEY: ${{ secrets.YC_SECRET_KEY }}
 
     steps:
-      # === БЛОКИРОВКА НОЧНЫХ АВТОЗАПУСКОВ ===
-      - name: Блокировка ночных автозапусков (22:05–07:30 МСК)
+      - name: Блокировка ночных автозапусков
         if: github.event_name == 'schedule'
         run: |
           CURRENT_UTC=$(date -u +%H:%M)
           HOUR=$(date -u +%H)
           MINUTE=$(date -u +%M)
           MINUTES=$((HOUR * 60 + MINUTE))
-
-          # Ночь: с 19:05 UTC (1145 мин) до 04:30 UTC (270 мин)
           if [ $MINUTES -ge 1145 ] || [ $MINUTES -le 270 ]; then
-            echo "🌙 Ночь! Автозапуск запрещён (22:05–07:30 МСК)"
-            echo "Текущее время UTC: $CURRENT_UTC"
-            echo "Ручной запуск доступен в UI → Actions → Run workflow"
-            exit 0  # ← Выход без ошибки, минуты почти не тратятся
+            echo "🌙 Ночь! Автозапуск запрещён"
+            exit 0
           fi
-          echo "☀️ День! Запуск разрешён. Время UTC: $CURRENT_UTC"
+          echo "☀️ День! Запуск разрешён"
 
-      # === ОСНОВНЫЕ ШАГИ (всегда выполняются при ручном запуске и днём) ===
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
@@ -61,3 +56,14 @@ jobs:
           git add public/news.html public/sitemap.xml public/rss.xml seen_ids.txt
           git commit -m "bot" || echo "ok"
           git push || echo "ok"
+
+      # === ДЕПЛОЙ ИЗ ПАПКИ public НА ЯНДЕКС ===
+      - name: Deploy public/ to Yandex
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          ./aws/install -i /usr/local/aws-cli -b /usr/local/bin
+          aws --endpoint-url=https://storage.yandexcloud.net \
+            s3 sync public s3://newsforsvoi-backend \
+            --acl public-read \
+            --delete
