@@ -115,7 +115,6 @@ def load_posts():
             if not post["title"] and not post["text"]:
                 continue
 
-            # Поддержка image, photo → thumbnail = media_url
             if post["media_type"] in ["photo", "image"] and post["media_url"]:
                 post["thumbnail"] = post["media_url"]
 
@@ -146,20 +145,18 @@ def format_post(post):
     media_type = post.get("media_type", "")
     thumbnail = post.get("thumbnail", DEFAULT_THUMBNAIL)
 
+    # === ГЕНЕРАЦИЯ КАРТОЧКИ С <h3> ===
     html = "<article class='news-item'>\n"
     html += f"<span class='category-badge'>{THEME_TITLE}</span>\n"
 
-    # === МЕДИА: image / video ===
     if media_url and media_type in ["photo", "image"]:
-        html += f"<img src='{media_url}' alt='Фото события' class='news-image' style='display:block; max-width:100%; height:auto; margin:10px 0; border-radius:8px;' />\n"
+        html += f"<img src='{media_url}' alt='Фото события' class='news-image' style='display:block; max-width:100%; height:auto; margin:10px 0; border-radius:8px;'>\n"
     elif media_url and media_type == "video":
-        # Для видео — НЕ используем default-history.jpg
         poster = thumbnail if thumbnail != DEFAULT_THUMBNAIL else ""
         poster_attr = f" poster='{poster}'" if poster else ""
         html += f"<video controls src='{media_url}' class='news-image'{poster_attr}></video>\n"
-    # Если нет медиа — ничего не вставляем
 
-    html += f"<p><b class='news-title'>{title}</b></p>\n"
+    html += f"<h3>{title}</h3>\n"  # ← КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ
     html += f"<p class='news-text'>{text}</p>\n"
     html += f"<div class='timestamp' data-ts='{iso_time}'>  {formatted_time}</div>\n"
     html += "</article>\n"
@@ -184,7 +181,6 @@ def format_post(post):
         "url": PAGE_URL
     }
 
-    # Добавляем image только если это фото
     if media_url and media_type in ["photo", "image"]:
         json_ld_article["image"] = {
             "@type": "ImageObject",
@@ -194,7 +190,6 @@ def format_post(post):
         }
         json_ld_article["thumbnailUrl"] = media_url
 
-    # Добавляем video только если это видео
     if media_url and media_type == "video":
         json_ld_article["video"] = {
             "@type": "VideoObject",
@@ -235,9 +230,15 @@ def update_history_html(html, json_ld_article):
         logging.error("Контейнер #history-container не найден в history.html")
         return
 
+    # === ОЧИСТКА void-тегов от /> ===
+    for tag in soup.find_all(['meta', 'link', 'img', 'input', 'br', 'hr']):
+        if tag.string is None and str(tag).endswith('/>'):
+            tag.name = tag.name
+            tag.append('')
+
     container.insert(0, BeautifulSoup(html, "html.parser"))
 
-    # Обновляем JSON-LD
+    # === JSON-LD ===
     schema_script = soup.find("script", id="schema-org")
     if not schema_script:
         schema_script = soup.new_tag("script", type="application/ld+json", id="schema-org")
@@ -319,7 +320,7 @@ def generate_rss():
 '''
 
         for item in items:
-            title_tag = item.find(class_="news-title")
+            title_tag = item.find("h3") or item.find(class_="news-title")
             title = title_tag.get_text(strip=True) if title_tag else f"{THEME_DESC}: Историческое событие"
             desc_tag = item.find(class_="news-text")
             description = desc_tag.get_text(separator=" ", strip=True)[:500] if desc_tag else ""
@@ -378,8 +379,9 @@ def main():
     generate_rss()
 
 
+# === ТОЛЬКО РУЧНОЙ ЗАПУСК ===
 if __name__ == "__main__":
-    logging.info("Запуск обработки постов")
+    logging.info("Запуск обработки постов (ручной режим)")
     try:
         main()
     except Exception as e:
