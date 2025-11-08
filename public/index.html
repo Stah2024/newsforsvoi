@@ -1,38 +1,38 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Новости для Своих — независимые новости России и мира</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-  <link rel="alternate" type="application/rss+xml" title="Новости для Своих" href="/rss.xml" />
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="alternate" type="application/rss+xml" title="Новости для Своих" href="/rss.xml">
 
   <!-- SEO -->
-  <meta name="description" content="Актуальные новости России и мира без фейков и лишнего шума. Главные события, аналитика, обзоры и факты — коротко и по делу." />
-  <meta name="keywords" content="новости, Telegram, SVOih, события, видео, фото, Россия" />
-  <meta name="author" content="SVOih News Team" />
-  <meta name="robots" content="index, follow" />
-  <link rel="canonical" href="https://newsforsvoi.ru/" />
+  <meta name="description" content="Актуальные новости России и мира без фейков и лишнего шума. Главные события, аналитика, обзоры и факты — коротко и по делу.">
+  <meta name="keywords" content="новости, Telegram, SVOih, события, видео, фото, Россия">
+  <meta name="author" content="SVOih News Team">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://newsforsvoi.ru/">
 
   <!-- Open Graph -->
-  <meta property="og:title" content="Новости для Своих" />
-  <meta property="og:description" content="Честные новости России и мира" />
-  <meta property="og:url" content="https://newsforsvoi.ru/" />
-  <meta property="og:type" content="website" />
-  <meta property="og:image" content="https://newsforsvoi.ru/preview.jpg" />
-  <meta property="og:image:type" content="image/jpeg" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
+  <meta property="og:title" content="Новости для Своих">
+  <meta property="og:description" content="Честные новости России и мира">
+  <meta property="og:url" content="https://newsforsvoi.ru/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://newsforsvoi.ru/preview.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
 
   <!-- Yandex -->
-  <meta name="yandex-verification" content="3a33e674e5836564" />
+  <meta name="yandex-verification" content="3a33e674e5836564">
 
   <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Новости для Своих" />
-  <meta name="twitter:description" content="Честные новости России и мира" />
-  <meta name="twitter:image" content="https://newsforsvoi.ru/preview.jpg" />
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Новости для Своих">
+  <meta name="twitter:description" content="Честные новости России и мира">
+  <meta name="twitter:image" content="https://newsforsvoi.ru/preview.jpg">
 
   <!-- Schema.org -->
   <script type="application/ld+json">
@@ -221,12 +221,12 @@
     <div class="history-info">
       <span id="current-date" class="history-date"></span>
       <a href="/history.html" class="button small">
-        <img src="/calendar-icon.svg" alt="Календарь" class="icon" /> Этот день в истории
+        <img src="/calendar-icon.svg" alt="Календарь" class="icon"> Этот день в истории
       </a>
     </div>
 
     <div class="header-content">
-      <img src="/rf-flag.svg" alt="Флаг России" class="flag-icon" />
+      <img src="/rf-flag.svg" alt="Флаг России" class="flag-icon">
       <div class="text-block">
         <h1>Новости для Своих</h1>
         <h2>Честные новости России и мира</h2>
@@ -240,25 +240,25 @@
 
     <div class="button-bar">
       <a href="https://t.me/newsSVOih" class="button small" target="_blank">
-        <img src="/tg-icon.svg" alt="Telegram" class="icon" /> Telegram
+        <img src="/tg-icon.svg" alt="Telegram" class="icon"> Telegram
       </a>
       <a href="archive.html" class="button small">
-        <img src="/archive-icon.svg" alt="Архив" class="icon" /> Архив
+        <img src="/archive-icon.svg" alt="Архив" class="icon"> Архив
       </a>
       <a href="https://dzen.ru/britancirazvedos" class="button small" target="_blank">
-        <img src="/zen-icon.svg" alt="Дзен" class="icon" /> Дзен
+        <img src="/zen-icon.svg" alt="Дзен" class="icon"> Дзен
       </a>
     </div>
 
     <div class="search-wrapper">
-      <input type="search" id="search-box" placeholder="Поиск по новостям…" />
+      <input type="search" id="search-box" placeholder="Поиск по новостям…">
     </div>
   </header>
 
   <!-- БОКОВОЙ БАННЕР TG2VK -->
   <aside id="tg2vk-sidebar" class="tg2vk-sidebar">
     <div class="sidebar-header" onclick="toggleSidebar()">
-      <span>TG2VK → ВК + сайт</span>
+      <span>TG2VK to ВК + сайт</span>
       <span class="toggle-arrow">></span>
     </div>
     <div class="sidebar-content">
@@ -418,7 +418,7 @@
       document.querySelectorAll('.news-item').forEach(item => {
         item.addEventListener('click', () => {
           modal.innerHTML = `
-            <button class="close-btn" onclick="closeModal()">×</button>
+            <button class="close-btn" onclick="closeModal()">x</button>
             ${item.outerHTML}
           `;
           modal.style.display = 'flex';
@@ -501,7 +501,7 @@
     })(window, document, "script", "https://mc.yandex.ru/metrika/metrika.js", "ym");
   </script>
   <noscript>
-    <div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt="" /></div>
+    <div><img src="https://mc.yandex.ru/watch/104596413" style="position:absolute; left:-9999px;" alt=""></div>
   </noscript>
 
   <!-- YANDEX.RTB — УСЛОВНАЯ ЗАГРУЗКА -->
