@@ -55,7 +55,7 @@ def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
             open("temp.jpg", "wb").write(data)
             upload = requests.post(
                 requests.get(
-                    "https://api.vk.com/method/photos.getWallUploadServer",
+                    " "https://api.vk.com/method/photos.getWallUploadServer",
                     params={"group_id": VK_GROUP_ID, "access_token": VK_TOKEN, "v": "5.199"}
                 ).json()["response"]["upload_url"],
                 files={"photo": open("temp.jpg", "rb")}
@@ -373,6 +373,9 @@ def main():
     visible_count = sum(1 for b in fresh_news if "hidden" not in b)
     any_new = False
 
+    # === ИСПРАВЛЕННЫЙ БЛОК: СОРТИРОВКА ПО ВРЕМЕНИ ===
+    new_cards = []
+
     for gid, group in grouped.items():
         pid = str(gid)
         first = group[0]
@@ -395,13 +398,9 @@ def main():
         if hash_html_block(html) in seen_hashes:
             continue
 
-        # ВК — Telegram URL
         post_to_vk(clean_text(first.caption or ""), clean_text(last.text or ""), telegram_url, ct, pid)
 
-        if visible_count >= 12:
-            html = html.replace("class='news-item", "class='news-item hidden", 1)
-        fresh_news.insert(0, html)
-        visible_count += 1
+        new_cards.append((first.date, html))
         new_ids.add(pid)
         seen_hashes.add(hash_html_block(html))
         any_new = True
@@ -410,10 +409,19 @@ def main():
         html, telegram_url, ct, tg_link = format_post(urgent[1], urgent[1].caption, urgent[2], True)
         if html:
             post_to_vk(clean_text(urgent[1].caption or ""), clean_text(urgent[0].text or ""), telegram_url, ct, urgent[3])
-            fresh_news.insert(0, html)
+            new_cards.append((urgent[1].date, html))
             new_ids.add(urgent[3])
             any_new = True
             print("СРОЧНО → ВК + сайт")
+
+    new_cards.sort(key=lambda x: x[0], reverse=True)
+
+    for _, html in new_cards:
+        if visible_count >= 12:
+            html = html.replace("class='news-item", "class='news-item hidden", 1)
+        fresh_news.insert(0, html)
+        visible_count += 1
+    # === КОНЕЦ ИСПРАВЛЕНИЯ ===
 
     if any_new:
         with open("public/news.html", "w", encoding="utf-8") as f:
