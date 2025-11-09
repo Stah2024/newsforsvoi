@@ -6,6 +6,7 @@ import hashlib
 import pytz
 import telebot
 import requests
+import glob
 from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 
@@ -19,18 +20,29 @@ VK_POSTED = "vk_posted.txt"
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone("Europe/Moscow")
 
+# === ПАПКИ ДЛЯ МЕДИА ===
+MEDIA_ROOT = "public/media"
+VIDEOS_DIR = os.path.join(MEDIA_ROOT, "videos")
+PHOTOS_DIR = os.path.join(MEDIA_ROOT, "photos")
+os.makedirs(VIDEOS_DIR, exist_ok=True)
+os.makedirs(PHOTOS_DIR, exist_ok=True)
+
+
 def load_vk():
     if not os.path.exists(VK_POSTED):
         return set()
     with open(VK_POSTED, "r", encoding="utf-8") as f:
         return set(line.strip() for line in f if line.strip())
 
+
 def save_vk(posted_set):
     with open(VK_POSTED, "w", encoding="utf-8") as f:
         f.write("\n".join(sorted(posted_set)) + "\n")
 
+
 def hash_post_content(caption, text):
     return hashlib.md5(clean_text(caption + text).encode("utf-8")).hexdigest()
+
 
 def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
     vk_seen = load_vk()
@@ -67,7 +79,7 @@ def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
             size = len(requests.get(file_url, stream=True).content)
             if size > 20_000_000:
                 print(f"Видео {size/1e6:.1f}МБ — слишком большое для ВК")
-                return  # ПРОПУСК ВК
+                return
             else:
                 open("temp.mp4", "wb").write(requests.get(file_url).content)
                 video = requests.post("https://api.vk.com/method/video.save", data={
@@ -83,14 +95,14 @@ def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
             "from_group": 1,
             "message": message[:4095],
             "attachments": ",".join(attachments),
-            "access_token": VK_TOKEN,
-            "v": "5.199"
+            "access_token": VK_TOKEN, "v": "5.199"
         })
         print("Запощено в ВК")
         vk_seen.add(vk_key)
         save_vk(vk_seen)
     except Exception as e:
         print(f"ВК ошибка: {e}")
+
 
 def clean_text(text):
     if not text:
@@ -105,7 +117,7 @@ def clean_text(text):
     text = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF]+', '', text)
     return re.sub(r'\s+', ' ', text).strip()
 
-# === УЛУЧШЕННЫЙ HTML: SEO + ДОСТУПНОСТЬ + ВАЛИДНОСТЬ ===
+
 def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     ts = message.date
     fmt_time = datetime.fromtimestamp(ts, moscow).strftime("%d.%m.%Y %H:%M")
@@ -119,7 +131,6 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
         caption = full
         text = ""
 
-    # Заголовок для SEO (первые 100 символов)
     headline = (caption or text or "Новость")[:100]
     if len(caption + text) > 100:
         headline += "..."
@@ -130,7 +141,7 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     post_id = f"post-{message.message_id}"
     html = ""
 
-    # === Категория: <h2> (один раз на группу) ===
+    # Категория
     category = None
     if any(w in caption + text for w in ["Россия"]):
         category = "Россия"
@@ -142,82 +153,92 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     if category:
         html += f"<h2 class='category-header'>{category}</h2>\n"
 
-    # === <article> с id, lang, классом urgent (без инлайн-стилей) ===
     urgency_class = " urgent" if is_urgent else ""
     html += f"<article class='news-item{urgency_class}' id='{post_id}' lang='ru'>\n"
 
-    # === СРОЧНО: как класс, не инлайн ===
     if is_urgent:
         html += "<p class='urgency-label'>СРОЧНО:</p>\n"
 
-    # === Заголовок новости: <h3> (SEO + доступность) ===
     html += f"<h3 class='news-headline'>{headline}</h3>\n"
 
-    # === Медиа ===
-    if message.content_type == "photo":
-        fi = bot.get_file(message.photo[-1].file_id)
-        file_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
-        # ИСПРАВЛЕНО: без />
-        html += f"<img src=\"{file_url}\" alt=\"Фото: {headline}\" loading=\"lazy\">\n"
-        content_type = "photo"
+    # === МЕДИА: СКАЧИВАЕМ И СОХРАНЯЕМ ЛОКАЛЬНО ===
+    try:
+        if message.content_type == "photo":
+            fi = bot.get_file(message.photo[-1].file_id)
+            tg_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
+            data = requests.get(tg_url).content
+            file_hash = hashlib.md5(data).hexdigest()
+            local_filename = f"{message.message_id}_{file_hash}.jpg"
+            local_path = os.path.join(PHOTOS_DIR, local_filename)
+            with open(local_path, "wb") as f:
+                f.write(data)
+            file_url = f"/media/photos/{local_filename}"
+            html += f"<img src=\"{file_url}\" alt=\"Фото: {headline}\" loading=\"lazy\">\n"
+            content_type = "photo"
 
-    elif message.content_type == "video":
-        try:
+        elif message.content_type == "video":
             size = message.video.file_size or 0
             if size > 20_000_000:
                 print(f"Видео {size/1e6:.1f}МБ — пропуск (сайт + ВК)")
                 return "", None, None, tg_link
-            else:
-                fi = bot.get_file(message.video.file_id)
-                file_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
-                html += f"<video controls preload=\"metadata\">\n"
-                # ИСПРАВЛЕНО: без />
-                html += f"  <source src=\"{file_url}\" type=\"video/mp4\">\n"
-                html += f"  Ваш браузер не поддерживает видео.\n"
-                html += f"</video>\n"
-                content_type = "video"
-        except Exception as e:
-            print(f"Видео ошибка: {e}")
-            return "", None, None, tg_link
 
-    # === Текст (без лишних div) ===
+            fi = bot.get_file(message.video.file_id)
+            tg_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
+            data = requests.get(tg_url).content
+            file_hash = hashlib.md5(data).hexdigest()
+            local_filename = f"{message.message_id}_{file_hash}.mp4"
+            local_path = os.path.join(VIDEOS_DIR, local_filename)
+            with open(local_path, "wb") as f:
+                f.write(data)
+            file_url = f"/media/videos/{local_filename}"
+            html += f"<video controls preload=\"metadata\">\n"
+            html += f"  <source src=\"{file_url}\" type=\"video/mp4\">\n"
+            html += f"  Ваш браузер не поддерживает видео.\n"
+            html += f"</video>\n"
+            content_type = "video"
+
+    except Exception as e:
+        print(f"Ошибка при скачивании медиа: {e}")
+        return "", None, None, tg_link
+
+    # Текст
     if caption:
         html += f"<p class='news-text'>{caption}</p>\n"
     if text and text != caption:
         html += f"<p class='news-text'>{text}</p>\n"
 
-    # === Метаданные ===
+    # Метаданные
     html += f"<p class='timestamp' data-ts='{iso_time}'>{fmt_time}</p>\n"
     html += f"<p class='source'>Источник: <a href='{tg_link}' target='_blank' rel='noopener'>Новости для Своих</a></p>\n"
 
     if group_size > 1:
         html += f"<p class='more-media'><a href='{tg_link}' target='_blank' rel='noopener'>Ещё {group_size-1} фото/видео в Telegram</a></p>\n"
 
-    # === Микроданные (JSON-LD) ===
+    # JSON-LD
     microdata = {
         "@context": "https://schema.org", "@type": "NewsArticle",
-        "headline": headline,
-        "datePublished": iso_time,
+        "headline": headline, "datePublished": iso_time,
         "author": {"@type": "Organization", "name": "Новости для Своих"},
         "publisher": {"@type": "Organization", "name": "Новости для Своих",
                       "logo": {"@type": "ImageObject", "url": "https://newsforsvoi.ru/logo.png"}},
-        "articleBody": (caption + "\n" + text).strip(),
-        "url": tg_link
+        "articleBody": (caption + "\n" + text).strip(), "url": tg_link
     }
     if file_url:
-        microdata["image"] = file_url
+        microdata["image"] = f"https://newsforsvoi.ru{file_url}"
     html += f"<script type='application/ld+json'>{json.dumps(microdata, ensure_ascii=False, indent=2)}</script>\n"
     html += "</article>\n"
     return html, file_url, content_type, tg_link
+
 
 def extract_timestamp(block):
     m = re.search(r" (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", block)
     return datetime.strptime(m.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow) if m else None
 
+
 def hash_html_block(html):
     return hashlib.md5(html.encode("utf-8")).hexdigest()
 
-# === БЕЗОПАСНАЯ АРХИВАЦИЯ (сохраняет твой archive.html) ===
+
 def move_to_archive(fresh_news):
     cutoff = datetime.now(moscow) - timedelta(days=2)
     remaining = []
@@ -228,9 +249,7 @@ def move_to_archive(fresh_news):
         if not ts:
             remaining.append(block)
             continue
-
         if ts < cutoff:
-            # Убираем медиа и JSON
             clean_block = re.sub(r"<img[^>]*>|<video[^>]*>.*?</video>", "", block, flags=re.DOTALL)
             clean_block = re.sub(r"<script type='application/ld\+json'>.*?</script>", "", clean_block, flags=re.DOTALL)
             archived.append(clean_block)
@@ -240,7 +259,6 @@ def move_to_archive(fresh_news):
     if archived:
         archive_path = "public/archive.html"
         os.makedirs("public", exist_ok=True)
-
         write_mode = "a"
         if not os.path.exists(archive_path) or os.path.getsize(archive_path) == 0:
             write_mode = "w"
@@ -255,6 +273,26 @@ def move_to_archive(fresh_news):
 
     return remaining
 
+
+def cleanup_old_media():
+    """Удаляет медиа-файлы старше 2 дней"""
+    cutoff_time = datetime.now() - timedelta(days=2)
+    cutoff_timestamp = cutoff_time.timestamp()
+    deleted = 0
+
+    for pattern in [f"{VIDEOS_DIR}/*.mp4", f"{PHOTOS_DIR}/*.jpg"]:
+        for file_path in glob.glob(pattern):
+            if os.path.getmtime(file_path) < cutoff_timestamp:
+                try:
+                    os.remove(file_path)
+                    print(f"Удалён старый файл: {file_path}")
+                    deleted += 1
+                except Exception as e:
+                    print(f"Ошибка удаления {file_path}: {e}")
+
+    print(f"Очистка медиа: удалено {deleted} файлов" if deleted else "Нет старых медиа")
+
+
 def update_sitemap():
     now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
     sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -267,6 +305,7 @@ def update_sitemap():
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
     print("sitemap.xml обновлён")
+
 
 def generate_rss(news_blocks):
     items = ""
@@ -291,20 +330,24 @@ def generate_rss(news_blocks):
         f.write(rss)
     print("rss.xml обновлён")
 
+
 def load_seen_ids():
     if not os.path.exists(SEEN_IDS_FILE):
         return set()
     with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
         return set(line.strip() for line in f if line.strip())
 
+
 def save_seen_ids(ids_set):
     with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
         f.write("\n".join(ids_set) + "\n")
+
 
 def fetch_latest_posts():
     updates = bot.get_updates()
     posts = [u.channel_post for u in updates if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]]
     return list(reversed(posts[-15:])) if posts else []
+
 
 def main():
     posts = fetch_latest_posts()
@@ -324,8 +367,9 @@ def main():
             fresh_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
             seen_hashes.update(hash_html_block(b) for b in fresh_news)
 
-    # === АРХИВАЦИЯ: БЕЗОПАСНО ===
+    # === АРХИВАЦИЯ + ОЧИСТКА ФАЙЛОВ ===
     fresh_news = move_to_archive(fresh_news)
+    cleanup_old_media()  # ← УДАЛЕНИЕ СТАРЫХ ФАЙЛОВ
 
     grouped = {}
     urgent = None
@@ -389,6 +433,7 @@ def main():
         update_sitemap()
         generate_rss(fresh_news)
         print(f"ГОТОВО! +{len(new_ids)} новостей | ВК: {len(load_vk())} записей")
+
 
 if __name__ == "__main__":
     main()
