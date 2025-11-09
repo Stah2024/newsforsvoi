@@ -216,8 +216,10 @@ def extract_timestamp(block):
     return datetime.strptime(m.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow) if m else None
 
 
-def hash_html_block(html):
-    return hashlib.md5(html.encode("utf-8")).hexdigest()
+# НОВЫЙ ХЕШ: ПО ID — ГАРАНТИЯ ОТ ДУБЛЕЙ
+def hash_html_block(message_id, media_group_id=None):
+    key = f"{media_group_id or message_id}_{message_id}"
+    return hashlib.md5(key.encode()).hexdigest()
 
 
 def move_to_archive(fresh_news):
@@ -349,7 +351,11 @@ def main():
         with open("public/news.html", "r", encoding="utf-8") as f:
             raw = f.read()
             fresh_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
-            seen_hashes.update(hash_html_block(b) for b in fresh_news)
+            # Хеши по ID — перестраиваем
+            for block in fresh_news:
+                post_id = re.search(r"id='post-(\d+)'", block)
+                if post_id:
+                    seen_hashes.add(hash_html_block(int(post_id.group(1))))
 
     fresh_news = move_to_archive(fresh_news)
     cleanup_old_media()
@@ -363,7 +369,6 @@ def main():
     visible_count = sum(1 for b in fresh_news if "hidden" not in b)
     any_new = False
 
-    # === ИСПРАВЛЕННЫЙ БЛОК: СОРТИРОВКА ПО ВРЕМЕНИ + БЕЗ ДУБЛЕЙ ===
     new_cards = []
 
     for gid, group in grouped.items():
@@ -384,22 +389,27 @@ def main():
         html, telegram_url, ct, tg_link = format_post(last, first.caption, len(group), False)
         if not html:
             continue
-        if hash_html_block(html) in seen_hashes:
+
+        # ХЕШ ПО ID — ГАРАНТИЯ ОТ ДУБЛЕЙ
+        html_hash = hash_html_block(last.message_id, gid if gid != str(last.message_id) else None)
+        if html_hash in seen_hashes:
             continue
 
         post_to_vk(clean_text(first.caption or ""), clean_text(last.text or ""), telegram_url, ct, pid)
 
         new_cards.append((last.date, html))
         new_ids.add(pid)
-        seen_hashes.add(hash_html_block(html))
+        seen_hashes.add(html_hash)
         any_new = True
 
     if urgent:
         html, telegram_url, ct, tg_link = format_post(urgent[0], urgent[1].caption, urgent[2], True)
         if html:
             post_to_vk(clean_text(urgent[1].caption or ""), clean_text(urgent[0].text or ""), telegram_url, ct, urgent[3])
+            html_hash = hash_html_block(urgent[0].message_id, urgent[3] if urgent[3] != str(urgent[0].message_id) else None)
             new_cards.append((urgent[0].date, html))
             new_ids.add(urgent[3])
+            seen_hashes.add(html_hash)
             any_new = True
             print("СРОЧНО → ВК + сайт")
 
@@ -410,7 +420,6 @@ def main():
             html = html.replace("class='news-item", "class='news-item hidden", 1)
         fresh_news.insert(0, html)
         visible_count += 1
-    # === КОНЕЦ ===
 
     if any_new:
         with open("public/news.html", "w", encoding="utf-8") as f:
