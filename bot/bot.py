@@ -6,7 +6,6 @@ import hashlib
 import pytz
 import telebot
 import requests
-import subprocess
 from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 
@@ -20,18 +19,22 @@ VK_POSTED = "vk_posted.txt"
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone("Europe/Moscow")
 
+
 def load_vk():
     if not os.path.exists(VK_POSTED):
         return set()
     with open(VK_POSTED, "r", encoding="utf-8") as f:
         return set(line.strip() for line in f if line.strip())
 
+
 def save_vk(posted_set):
     with open(VK_POSTED, "w", encoding="utf-8") as f:
         f.write("\n".join(sorted(posted_set)) + "\n")
 
+
 def hash_post_content(caption, text):
     return hashlib.md5(clean_text(caption + text).encode("utf-8")).hexdigest()
+
 
 def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
     vk_seen = load_vk()
@@ -93,6 +96,7 @@ def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
     except Exception as e:
         print(f"ВК ошибка: {e}")
 
+
 def clean_text(text):
     if not text:
         return ""
@@ -106,13 +110,22 @@ def clean_text(text):
     text = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF]+', '', text)
     return re.sub(r'\s+', ' ', text).strip()
 
+
 def download_and_save(file_url, save_dir, ext):
-    os.makedirs(save_dir, exist_ok=True)
-    fname = hashlib.md5(file_url.encode()).hexdigest() + ext
-    fpath = os.path.join(save_dir, fname)
-    with open(fpath, "wb") as f:
-        f.write(requests.get(file_url).content)
-    return f"/media/{os.path.basename(save_dir)}/{fname}"
+    try:
+        os.makedirs(save_dir, exist_ok=True)
+        fname = hashlib.md5(file_url.encode()).hexdigest() + ext
+        fpath = os.path.join(save_dir, fname)
+        data = requests.get(file_url).content
+        with open(fpath, "wb") as f:
+            f.write(data)
+        print(f"Сохранил: {fpath}")
+        return f"/media/{os.path.basename(save_dir)}/{fname}"
+    except Exception as e:
+        print(f"Ошибка скачивания {file_url}: {e}")
+        return ""
+
+
 def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     ts = message.date
     fmt_time = datetime.fromtimestamp(ts, moscow).strftime("%d.%m.%Y %H:%M")
@@ -131,6 +144,7 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
         headline += "..."
 
     file_url = None
+    local_path = None
     content_type = None
     tg_link = f"https://t.me/{CHANNEL_ID[1:]}/{message.message_id}"
     post_id = f"post-{message.message_id}"
@@ -159,8 +173,9 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
         fi = bot.get_file(message.photo[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
         local_path = download_and_save(file_url, "public/media/photos", ".jpg")
-        html += f"<img src=\"{local_path}\" alt=\"Фото: {headline}\" loading=\"lazy\">\n"
-        content_type = "photo"
+        if local_path:
+            html += f"<img src=\"{local_path}\" alt=\"Фото: {headline}\" loading=\"lazy\">\n"
+            content_type = "photo"
 
     elif message.content_type == "video":
         try:
@@ -168,10 +183,10 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
             if size > 20_000_000:
                 print(f"Видео {size/1e6:.1f}МБ — пропуск (сайт + ВК)")
                 return "", None, None, tg_link
-            else:
-                fi = bot.get_file(message.video.file_id)
-                file_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
-                local_path = download_and_save(file_url, "public/media/videos", ".mp4")
+            fi = bot.get_file(message.video.file_id)
+            file_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
+            local_path = download_and_save(file_url, "public/media/videos", ".mp4")
+            if local_path:
                 html += f"<video controls preload=\"metadata\">\n"
                 html += f"  <source src=\"{local_path}\" type=\"video/mp4\">\n"
                 html += f"  Ваш браузер не поддерживает видео.\n"
@@ -202,17 +217,21 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
         "articleBody": (caption + "\n" + text).strip(),
         "url": tg_link
     }
-    if file_url:
-        microdata["image"] = file_url
+    if local_path:
+        microdata["image"] = f"https://newsforsvoi.ru{local_path}"
     html += f"<script type='application/ld+json'>{json.dumps(microdata, ensure_ascii=False, indent=2)}</script>\n"
     html += "</article>\n"
     return html, file_url, content_type, tg_link
+
+
 def extract_timestamp(block):
     m = re.search(r" (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", block)
     return datetime.strptime(m.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow) if m else None
 
+
 def hash_html_block(html):
     return hashlib.md5(html.encode("utf-8")).hexdigest()
+
 
 def move_to_archive(fresh_news):
     cutoff = datetime.now(moscow) - timedelta(days=2)
@@ -255,6 +274,7 @@ def move_to_archive(fresh_news):
 
     return remaining
 
+
 def cleanup_old_media():
     cutoff = datetime.now(moscow) - timedelta(days=2)
     folders = ["public/media/photos", "public/media/videos"]
@@ -276,6 +296,7 @@ def cleanup_old_media():
     if deleted:
         print(f"Удалено {deleted} устаревших медиафайлов")
 
+
 def update_sitemap():
     now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
     sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -288,6 +309,7 @@ def update_sitemap():
     with open("public/sitemap.xml", "w", encoding="utf-8") as f:
         f.write(sitemap)
     print("sitemap.xml обновлён")
+
 
 def generate_rss(news_blocks):
     items = ""
@@ -311,20 +333,25 @@ def generate_rss(news_blocks):
     with open("public/rss.xml", "w", encoding="utf-8") as f:
         f.write(rss)
     print("rss.xml обновлён")
+
+
 def load_seen_ids():
     if not os.path.exists(SEEN_IDS_FILE):
         return set()
     with open(SEEN_IDS_FILE, "r", encoding="utf-8") as f:
         return set(line.strip() for line in f if line.strip())
 
+
 def save_seen_ids(ids_set):
     with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
         f.write("\n".join(ids_set) + "\n")
+
 
 def fetch_latest_posts():
     updates = bot.get_updates()
     posts = [u.channel_post for u in updates if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]]
     return list(reversed(posts[-15:])) if posts else []
+
 
 def main():
     posts = fetch_latest_posts()
@@ -371,14 +398,17 @@ def main():
             urgent = (last, first, len(group), pid)
             continue
 
-        html, url, ct, _ = format_post(last, first.caption, len(group), False)
+        # ИСПРАВЛЕНО: передаём first (с медиа)
+        html, url, ct, tg_link = format_post(first, first.caption, len(group), False)
         if not html:
             continue
 
         if hash_html_block(html) in seen_hashes:
             continue
 
-        post_to_vk(clean_text(first.caption or ""), clean_text(last.text or ""), url, ct, pid)
+        # Передаём локальный путь
+        local_url = url if url and url.startswith("/media/") else None
+        post_to_vk(clean_text(first.caption or ""), clean_text(last.text or ""), local_url, ct, pid)
 
         if visible_count >= 12:
             html = html.replace("class='news-item", "class='news-item hidden", 1)
@@ -389,9 +419,11 @@ def main():
         any_new = True
 
     if urgent:
-        html, url, ct, _ = format_post(urgent[0], urgent[1].caption, urgent[2], True)
+        # ИСПРАВЛЕНО: first
+        html, url, ct, tg_link = format_post(urgent[1], urgent[1].caption, urgent[2], True)
         if html:
-            post_to_vk(clean_text(urgent[1].caption or ""), clean_text(urgent[0].text or ""), url, ct, urgent[3])
+            local_url = url if url and url.startswith("/media/") else None
+            post_to_vk(clean_text(urgent[1].caption or ""), clean_text(urgent[0].text or ""), local_url, ct, urgent[3])
             fresh_news.insert(0, html)
             new_ids.add(urgent[3])
             any_new = True
@@ -409,6 +441,7 @@ def main():
         update_sitemap()
         generate_rss(fresh_news)
         print(f"ГОТОВО! +{len(new_ids)} новостей | ВК: {len(load_vk())} записей")
+
 
 if __name__ == "__main__":
     main()
