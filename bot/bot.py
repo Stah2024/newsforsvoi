@@ -398,7 +398,8 @@ def main():
             urgent = (last, first, len(group), pid)
             continue
 
-        html, url, ct, _ = format_post(last, first.caption, len(group), False)
+        # ИСПРАВЛЕНО: передаём first (с медиа), а не last
+        html, url, ct, _ = format_post(first, first.caption, len(group), False)
         if not html:
             continue
 
@@ -416,7 +417,8 @@ def main():
         any_new = True
 
     if urgent:
-        html, url, ct, _ = format_post(urgent[0], urgent[1].caption, urgent[2], True)
+        # ИСПРАВЛЕНО: передаём first (с медиа)
+        html, url, ct, _ = format_post(urgent[1], urgent[1].caption, urgent[2], True)
         if html:
             post_to_vk(clean_text(urgent[1].caption or ""), clean_text(urgent[0].text or ""), url, ct, urgent[3])
             fresh_news.insert(0, html)
