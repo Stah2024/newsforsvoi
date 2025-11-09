@@ -358,44 +358,64 @@
       }
     });
 
-    // Загрузка новостей
-    fetch('/news.html')
-      .then(response => response.text())
-      .then(html => {
-        const container = document.getElementById('news-container');
-        const temp = document.createElement('div');
-        temp.innerHTML = html;
+   // Загрузка новостей
+fetch('/news.html')
+  .then(response => response.text())
+  .then(html => {
+    const container = document.getElementById('news-container');
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
 
-        const items = Array.from(temp.querySelectorAll('.news-item'));
+    const items = Array.from(temp.querySelectorAll('.news-item'));
 
-        items.sort((a, b) => {
-          const timeA = new Date(a.querySelector('.timestamp')?.dataset.ts);
-          const timeB = new Date(b.querySelector('.timestamp')?.dataset.ts);
-          return timeB - timeA;
-        });
+    items.sort((a, b) => {
+      const timeA = new Date(a.querySelector('.timestamp')?.dataset.ts);
+      const timeB = new Date(b.querySelector('.timestamp')?.dataset.ts);
+      return timeB - timeA;
+    });
 
-        let visibleCount = 9;
+    let visibleCount = 9;
 
-        function renderItems() {
-          container.innerHTML = '';
-          items.slice(0, visibleCount).forEach(item => container.appendChild(item));
-          if (visibleCount >= items.length) {
-            document.getElementById('load-more').style.display = 'none';
-          }
-          enableCardEnlargement(); // ← Обновление обработчиков после рендера
+    function renderItems() {
+      container.innerHTML = '';
+      items.slice(0, visibleCount).forEach(item => container.appendChild(item));
+      if (visibleCount >= items.length) {
+        document.getElementById('load-more').style.display = 'none';
+      }
+      enableCardEnlargement(); // ← Обновление обработчиков после рендера
+
+      // --- вставляем перестановку карточек для нужного порядка ---
+      reorderForMasonry();
+    }
+
+    // --- новая функция для перестановки по ТЗ ---
+    function reorderForMasonry() {
+      const columns = 3; // фиксированное число колонок как в ТЗ
+      const currentItems = Array.from(container.children);
+      const rows = Math.ceil(currentItems.length / columns);
+      const reordered = [];
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < columns; c++) {
+          const index = r + c * rows;
+          if (currentItems[index]) reordered.push(currentItems[index]);
         }
+      }
 
-        document.getElementById('load-more').addEventListener('click', () => {
-          visibleCount += 9;
-          renderItems();
-        });
+      reordered.forEach(el => container.appendChild(el));
+    }
 
-        renderItems();
-      })
-      .catch(error => {
-        document.getElementById('news-container').innerHTML = '<p>Не удалось загрузить новости.</p>';
-        console.error('Ошибка загрузки news.html:', error);
-      });
+    document.getElementById('load-more').addEventListener('click', () => {
+      visibleCount += 9;
+      renderItems();
+    });
+
+    renderItems();
+  })
+  .catch(error => {
+    document.getElementById('news-container').innerHTML = '<p>Не удалось загрузить новости.</p>';
+    console.error('Ошибка загрузки news.html:', error);
+  });
 
     // Поиск по карточкам
     document.getElementById('search-box').addEventListener('input', function(e) {
