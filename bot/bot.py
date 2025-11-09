@@ -72,15 +72,14 @@ def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
             if size > 20_000_000:
                 print(f"Видео {size/1e6:.1f}МБ — слишком большое для ВК")
                 return
-            else:
-                open("temp.mp4", "wb").write(requests.get(file_url).content)
-                video = requests.post("https://api.vk.com/method/video.save", data={
-                    "group_id": VK_GROUP_ID, "name": caption[:50],
-                    "access_token": VK_TOKEN, "v": "5.199"
-                }).json()["response"]
-                requests.post(video["upload_url"], files={"video_file": open("temp.mp4", "rb")})
-                attachments.append(f"video{video['owner_id']}_{video['video_id']}")
-                os.remove("temp.mp4")
+            open("temp.mp4", "wb").write(requests.get(file_url).content)
+            video = requests.post("https://api.vk.com/method/video.save", data={
+                "group_id": VK_GROUP_ID, "name": caption[:50],
+                "access_token": VK_TOKEN, "v": "5.199"
+            }).json()["response"]
+            requests.post(video["upload_url"], files={"video_file": open("temp.mp4", "rb")})
+            attachments.append(f"video{video['owner_id']}_{video['video_id']}")
+            os.remove("temp.mp4")
 
         requests.post("https://api.vk.com/method/wall.post", data={
             "owner_id": f"-{VK_GROUP_ID}",
@@ -143,8 +142,8 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     if len(caption + text) > 100:
         headline += "..."
 
-    file_url = None
-    local_path = None
+    telegram_url = None   # ← для ВК
+    local_path = None     # ← для сайта
     content_type = None
     tg_link = f"https://t.me/{CHANNEL_ID[1:]}/{message.message_id}"
     post_id = f"post-{message.message_id}"
@@ -171,8 +170,8 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
 
     if message.content_type == "photo":
         fi = bot.get_file(message.photo[-1].file_id)
-        file_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
-        local_path = download_and_save(file_url, "public/media/photos", ".jpg")
+        telegram_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
+        local_path = download_and_save(telegram_url, "public/media/photos", ".jpg")
         if local_path:
             html += f"<img src=\"{local_path}\" alt=\"Фото: {headline}\" loading=\"lazy\">\n"
             content_type = "photo"
@@ -184,8 +183,8 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
                 print(f"Видео {size/1e6:.1f}МБ — пропуск (сайт + ВК)")
                 return "", None, None, tg_link
             fi = bot.get_file(message.video.file_id)
-            file_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
-            local_path = download_and_save(file_url, "public/media/videos", ".mp4")
+            telegram_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
+            local_path = download_and_save(telegram_url, "public/media/videos", ".mp4")
             if local_path:
                 html += f"<video controls preload=\"metadata\">\n"
                 html += f"  <source src=\"{local_path}\" type=\"video/mp4\">\n"
@@ -209,19 +208,17 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
 
     microdata = {
         "@context": "https://schema.org", "@type": "NewsArticle",
-        "headline": headline,
-        "datePublished": iso_time,
+        "headline": headline, "datePublished": iso_time,
         "author": {"@type": "Organization", "name": "Новости для Своих"},
         "publisher": {"@type": "Organization", "name": "Новости для Своих",
                       "logo": {"@type": "ImageObject", "url": "https://newsforsvoi.ru/logo.png"}},
-        "articleBody": (caption + "\n" + text).strip(),
-        "url": tg_link
+        "articleBody": (caption + "\n" + text).strip(), "url": tg_link
     }
     if local_path:
         microdata["image"] = f"https://newsforsvoi.ru{local_path}"
     html += f"<script type='application/ld+json'>{json.dumps(microdata, ensure_ascii=False, indent=2)}</script>\n"
     html += "</article>\n"
-    return html, file_url, content_type, tg_link
+    return html, telegram_url, content_type, tg_link  # ← telegram_url для ВК
 
 
 def extract_timestamp(block):
@@ -243,16 +240,13 @@ def move_to_archive(fresh_news):
         if not ts:
             remaining.append(block)
             continue
-
         if ts < cutoff:
             clean_block = re.sub(r"<img[^>]*>|<video[^>]*>.*?</video>", "", block, flags=re.DOTALL)
             clean_block = re.sub(r"<script type='application/ld\+json'>.*?</script>", "", clean_block, flags=re.DOTALL)
-
             if "Источник:" not in clean_block:
                 tg_match = re.search(r"https://t\.me/[^']+", block)
                 if tg_match:
                     clean_block += f"\n<p class='source'>Источник: <a href='{tg_match.group(0)}' target='_blank' rel='noopener'>Новости для Своих</a></p>\n"
-
             archived.append(clean_block)
         else:
             remaining.append(block)
@@ -264,14 +258,12 @@ def move_to_archive(fresh_news):
         if not os.path.exists(archive_path) or os.path.getsize(archive_path) == 0:
             write_mode = "w"
             print("archive.html пуст или отсутствует — начинаем с чистого листа")
-
         with open(archive_path, write_mode, encoding="utf-8") as f:
             if write_mode == "w":
                 f.write("  <!-- Архивные карточки -->\n")
             for b in archived:
                 f.write("  " + b.strip() + "\n")
         print(f"В архив: {len(archived)} карточек")
-
     return remaining
 
 
@@ -279,7 +271,6 @@ def cleanup_old_media():
     cutoff = datetime.now(moscow) - timedelta(days=2)
     folders = ["public/media/photos", "public/media/videos"]
     deleted = 0
-
     for folder in folders:
         if not os.path.exists(folder):
             continue
@@ -292,7 +283,6 @@ def cleanup_old_media():
                 os.remove(fpath)
                 deleted += 1
                 print(f"Удалено: {fpath}")
-
     if deleted:
         print(f"Удалено {deleted} устаревших медиафайлов")
 
@@ -398,17 +388,15 @@ def main():
             urgent = (last, first, len(group), pid)
             continue
 
-        # ИСПРАВЛЕНО: передаём first (с медиа)
-        html, url, ct, tg_link = format_post(first, first.caption, len(group), False)
+        html, telegram_url, ct, tg_link = format_post(first, first.caption, len(group), False)
         if not html:
             continue
 
         if hash_html_block(html) in seen_hashes:
             continue
 
-        # Передаём локальный путь
-        local_url = url if url and url.startswith("/media/") else None
-        post_to_vk(clean_text(first.caption or ""), clean_text(last.text or ""), local_url, ct, pid)
+        # ВК — Telegram URL
+        post_to_vk(clean_text(first.caption or ""), clean_text(last.text or ""), telegram_url, ct, pid)
 
         if visible_count >= 12:
             html = html.replace("class='news-item", "class='news-item hidden", 1)
@@ -419,11 +407,9 @@ def main():
         any_new = True
 
     if urgent:
-        # ИСПРАВЛЕНО: first
-        html, url, ct, tg_link = format_post(urgent[1], urgent[1].caption, urgent[2], True)
+        html, telegram_url, ct, tg_link = format_post(urgent[1], urgent[1].caption, urgent[2], True)
         if html:
-            local_url = url if url and url.startswith("/media/") else None
-            post_to_vk(clean_text(urgent[1].caption or ""), clean_text(urgent[0].text or ""), local_url, ct, urgent[3])
+            post_to_vk(clean_text(urgent[1].caption or ""), clean_text(urgent[0].text or ""), telegram_url, ct, urgent[3])
             fresh_news.insert(0, html)
             new_ids.add(urgent[3])
             any_new = True
