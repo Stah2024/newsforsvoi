@@ -216,7 +216,6 @@ def extract_timestamp(block):
     return datetime.strptime(m.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow) if m else None
 
 
-# НОВЫЙ ХЕШ: ПО ID — ГАРАНТИЯ ОТ ДУБЛЕЙ
 def hash_html_block(message_id, media_group_id=None):
     key = f"{media_group_id or message_id}_{message_id}"
     return hashlib.md5(key.encode()).hexdigest()
@@ -351,7 +350,6 @@ def main():
         with open("public/news.html", "r", encoding="utf-8") as f:
             raw = f.read()
             fresh_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
-            # Хеши по ID — перестраиваем
             for block in fresh_news:
                 post_id = re.search(r"id='post-(\d+)'", block)
                 if post_id:
@@ -390,7 +388,6 @@ def main():
         if not html:
             continue
 
-        # ХЕШ ПО ID — ГАРАНТИЯ ОТ ДУБЛЕЙ
         html_hash = hash_html_block(last.message_id, gid if gid != str(last.message_id) else None)
         if html_hash in seen_hashes:
             continue
