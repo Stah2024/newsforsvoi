@@ -6,6 +6,7 @@ import hashlib
 import pytz
 import telebot
 import requests
+import subprocess
 from datetime import datetime, timedelta
 import xml.etree.ElementTree as ET
 
@@ -67,7 +68,7 @@ def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
             size = len(requests.get(file_url, stream=True).content)
             if size > 20_000_000:
                 print(f"Видео {size/1e6:.1f}МБ — слишком большое для ВК")
-                return  # ПРОПУСК ВК
+                return
             else:
                 open("temp.mp4", "wb").write(requests.get(file_url).content)
                 video = requests.post("https://api.vk.com/method/video.save", data={
@@ -105,7 +106,13 @@ def clean_text(text):
     text = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF]+', '', text)
     return re.sub(r'\s+', ' ', text).strip()
 
-# === УЛУЧШЕННЫЙ HTML: SEO + ДОСТУПНОСТЬ + ВАЛИДНОСТЬ ===
+def download_and_save(file_url, save_dir, ext):
+    os.makedirs(save_dir, exist_ok=True)
+    fname = hashlib.md5(file_url.encode()).hexdigest() + ext
+    fpath = os.path.join(save_dir, fname)
+    with open(fpath, "wb") as f:
+        f.write(requests.get(file_url).content)
+    return f"/media/{os.path.basename(save_dir)}/{fname}"
 def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     ts = message.date
     fmt_time = datetime.fromtimestamp(ts, moscow).strftime("%d.%m.%Y %H:%M")
@@ -119,7 +126,6 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
         caption = full
         text = ""
 
-    # Заголовок для SEO (первые 100 символов)
     headline = (caption or text or "Новость")[:100]
     if len(caption + text) > 100:
         headline += "..."
@@ -130,7 +136,6 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     post_id = f"post-{message.message_id}"
     html = ""
 
-    # === Категория: <h2> (один раз на группу) ===
     category = None
     if any(w in caption + text for w in ["Россия"]):
         category = "Россия"
@@ -142,23 +147,19 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     if category:
         html += f"<h2 class='category-header'>{category}</h2>\n"
 
-    # === <article> с id, lang, классом urgent (без инлайн-стилей) ===
     urgency_class = " urgent" if is_urgent else ""
     html += f"<article class='news-item{urgency_class}' id='{post_id}' lang='ru'>\n"
 
-    # === СРОЧНО: как класс, не инлайн ===
     if is_urgent:
         html += "<p class='urgency-label'>СРОЧНО:</p>\n"
 
-    # === Заголовок новости: <h3> (SEO + доступность) ===
     html += f"<h3 class='news-headline'>{headline}</h3>\n"
 
-    # === Медиа ===
     if message.content_type == "photo":
         fi = bot.get_file(message.photo[-1].file_id)
         file_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
-        # ИСПРАВЛЕНО: без />
-        html += f"<img src=\"{file_url}\" alt=\"Фото: {headline}\" loading=\"lazy\">\n"
+        local_path = download_and_save(file_url, "public/media/photos", ".jpg")
+        html += f"<img src=\"{local_path}\" alt=\"Фото: {headline}\" loading=\"lazy\">\n"
         content_type = "photo"
 
     elif message.content_type == "video":
@@ -170,9 +171,9 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
             else:
                 fi = bot.get_file(message.video.file_id)
                 file_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
+                local_path = download_and_save(file_url, "public/media/videos", ".mp4")
                 html += f"<video controls preload=\"metadata\">\n"
-                # ИСПРАВЛЕНО: без />
-                html += f"  <source src=\"{file_url}\" type=\"video/mp4\">\n"
+                html += f"  <source src=\"{local_path}\" type=\"video/mp4\">\n"
                 html += f"  Ваш браузер не поддерживает видео.\n"
                 html += f"</video>\n"
                 content_type = "video"
@@ -180,20 +181,17 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
             print(f"Видео ошибка: {e}")
             return "", None, None, tg_link
 
-    # === Текст (без лишних div) ===
     if caption:
         html += f"<p class='news-text'>{caption}</p>\n"
     if text and text != caption:
         html += f"<p class='news-text'>{text}</p>\n"
 
-    # === Метаданные ===
     html += f"<p class='timestamp' data-ts='{iso_time}'>{fmt_time}</p>\n"
     html += f"<p class='source'>Источник: <a href='{tg_link}' target='_blank' rel='noopener'>Новости для Своих</a></p>\n"
 
     if group_size > 1:
         html += f"<p class='more-media'><a href='{tg_link}' target='_blank' rel='noopener'>Ещё {group_size-1} фото/видео в Telegram</a></p>\n"
 
-    # === Микроданные (JSON-LD) ===
     microdata = {
         "@context": "https://schema.org", "@type": "NewsArticle",
         "headline": headline,
@@ -209,7 +207,6 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     html += f"<script type='application/ld+json'>{json.dumps(microdata, ensure_ascii=False, indent=2)}</script>\n"
     html += "</article>\n"
     return html, file_url, content_type, tg_link
-
 def extract_timestamp(block):
     m = re.search(r" (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", block)
     return datetime.strptime(m.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow) if m else None
@@ -217,7 +214,6 @@ def extract_timestamp(block):
 def hash_html_block(html):
     return hashlib.md5(html.encode("utf-8")).hexdigest()
 
-# === БЕЗОПАСНАЯ АРХИВАЦИЯ (сохраняет твой archive.html) ===
 def move_to_archive(fresh_news):
     cutoff = datetime.now(moscow) - timedelta(days=2)
     remaining = []
@@ -230,9 +226,14 @@ def move_to_archive(fresh_news):
             continue
 
         if ts < cutoff:
-            # Убираем медиа и JSON
             clean_block = re.sub(r"<img[^>]*>|<video[^>]*>.*?</video>", "", block, flags=re.DOTALL)
             clean_block = re.sub(r"<script type='application/ld\+json'>.*?</script>", "", clean_block, flags=re.DOTALL)
+
+            if "Источник:" not in clean_block:
+                tg_match = re.search(r"https://t\.me/[^']+", block)
+                if tg_match:
+                    clean_block += f"\n<p class='source'>Источник: <a href='{tg_match.group(0)}' target='_blank' rel='noopener'>Новости для Своих</a></p>\n"
+
             archived.append(clean_block)
         else:
             remaining.append(block)
@@ -240,7 +241,6 @@ def move_to_archive(fresh_news):
     if archived:
         archive_path = "public/archive.html"
         os.makedirs("public", exist_ok=True)
-
         write_mode = "a"
         if not os.path.exists(archive_path) or os.path.getsize(archive_path) == 0:
             write_mode = "w"
@@ -254,6 +254,27 @@ def move_to_archive(fresh_news):
         print(f"В архив: {len(archived)} карточек")
 
     return remaining
+
+def cleanup_old_media():
+    cutoff = datetime.now(moscow) - timedelta(days=2)
+    folders = ["public/media/photos", "public/media/videos"]
+    deleted = 0
+
+    for folder in folders:
+        if not os.path.exists(folder):
+            continue
+        for fname in os.listdir(folder):
+            fpath = os.path.join(folder, fname)
+            if not os.path.isfile(fpath):
+                continue
+            mtime = datetime.fromtimestamp(os.path.getmtime(fpath)).replace(tzinfo=moscow)
+            if mtime < cutoff:
+                os.remove(fpath)
+                deleted += 1
+                print(f"Удалено: {fpath}")
+
+    if deleted:
+        print(f"Удалено {deleted} устаревших медиафайлов")
 
 def update_sitemap():
     now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
@@ -290,7 +311,6 @@ def generate_rss(news_blocks):
     with open("public/rss.xml", "w", encoding="utf-8") as f:
         f.write(rss)
     print("rss.xml обновлён")
-
 def load_seen_ids():
     if not os.path.exists(SEEN_IDS_FILE):
         return set()
@@ -324,8 +344,8 @@ def main():
             fresh_news = re.findall(r"<article class='news-item.*?>.*?</article>", raw, re.DOTALL)
             seen_hashes.update(hash_html_block(b) for b in fresh_news)
 
-    # === АРХИВАЦИЯ: БЕЗОПАСНО ===
     fresh_news = move_to_archive(fresh_news)
+    cleanup_old_media()
 
     grouped = {}
     urgent = None
