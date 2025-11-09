@@ -20,12 +20,10 @@ VK_POSTED = "vk_posted.txt"
 bot = telebot.TeleBot(TOKEN)
 moscow = pytz.timezone("Europe/Moscow")
 
-# === ПАПКИ ДЛЯ МЕДИА ===
+# === ПАПКИ ДЛЯ МЕДИА (только объявление) ===
 MEDIA_ROOT = "public/media"
 VIDEOS_DIR = os.path.join(MEDIA_ROOT, "videos")
 PHOTOS_DIR = os.path.join(MEDIA_ROOT, "photos")
-os.makedirs(VIDEOS_DIR, exist_ok=True)
-os.makedirs(PHOTOS_DIR, exist_ok=True)
 
 
 def load_vk():
@@ -350,6 +348,11 @@ def fetch_latest_posts():
 
 
 def main():
+    # === ГАРАНТИРОВАННО СОЗДАЁМ ПАПКИ ДЛЯ МЕДИА ===
+    os.makedirs(VIDEOS_DIR, exist_ok=True)
+    os.makedirs(PHOTOS_DIR, exist_ok=True)
+    print(f"Папки медиа созданы: {VIDEOS_DIR}, {PHOTOS_DIR}")
+
     posts = fetch_latest_posts()
     if not posts:
         print("Новых постов нет")
@@ -369,7 +372,7 @@ def main():
 
     # === АРХИВАЦИЯ + ОЧИСТКА ФАЙЛОВ ===
     fresh_news = move_to_archive(fresh_news)
-    cleanup_old_media()  # ← УДАЛЕНИЕ СТАРЫХ ФАЙЛОВ
+    cleanup_old_media()
 
     grouped = {}
     urgent = None
