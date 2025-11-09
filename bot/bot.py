@@ -7,7 +7,6 @@ import pytz
 import telebot
 import requests
 from datetime import datetime, timedelta
-import xml.etree.ElementTree as ET
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 VK_TOKEN = os.getenv("VK_TOKEN")
@@ -55,7 +54,7 @@ def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
             open("temp.jpg", "wb").write(data)
             upload = requests.post(
                 requests.get(
-                    " "https://api.vk.com/method/photos.getWallUploadServer",
+                    "https://api.vk.com/method/photos.getWallUploadServer",
                     params={"group_id": VK_GROUP_ID, "access_token": VK_TOKEN, "v": "5.199"}
                 ).json()["response"]["upload_url"],
                 files={"photo": open("temp.jpg", "rb")}
@@ -99,11 +98,7 @@ def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
 def clean_text(text):
     if not text:
         return ""
-    patterns = [
-        r"Подписаться на новости для своих",
-        r"https://t\.me/newsSVOih",
-        r"РФ"
-    ]
+    patterns = [r"Подписаться на новости для своих", r"https://t\.me/newsSVOih", r"РФ"]
     for p in patterns:
         text = re.sub(p, "", text, flags=re.IGNORECASE)
     text = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF]+', '', text)
@@ -122,7 +117,7 @@ def download_and_save(file_url, save_dir, ext):
         return f"/media/{os.path.basename(save_dir)}/{fname}"
     except Exception as e:
         print(f"Ошибка скачивания {file_url}: {e}")
-        return ""
+        return file_url  # fallback
 
 
 def format_post(message, caption_override=None, group_size=1, is_urgent=False):
@@ -142,20 +137,17 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     if len(caption + text) > 100:
         headline += "..."
 
-    telegram_url = None   # ← для ВК
-    local_path = None     # ← для сайта
+    telegram_url = None
+    local_path = None
     content_type = None
     tg_link = f"https://t.me/{CHANNEL_ID[1:]}/{message.message_id}"
     post_id = f"post-{message.message_id}"
     html = ""
 
     category = None
-    if any(w in caption + text for w in ["Россия"]):
-        category = "Россия"
-    elif any(w in caption + text for w in ["Космос"]):
-        category = "Космос"
-    elif any(w in caption + text for w in ["Израиль", "Газа", "Мексика", "США", "Китай", "Тайвань", "Мир"]):
-        category = "Мир"
+    if any(w in caption + text for w in ["Россия"]): category = "Россия"
+    elif any(w in caption + text for w in ["Космос"]): category = "Космос"
+    elif any(w in caption + text for w in ["Израиль", "Газа", "Мексика", "США", "Китай", "Тайвань", "Мир"]): category = "Мир"
 
     if category:
         html += f"<h2 class='category-header'>{category}</h2>\n"
@@ -172,9 +164,8 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
         fi = bot.get_file(message.photo[-1].file_id)
         telegram_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
         local_path = download_and_save(telegram_url, "public/media/photos", ".jpg")
-        if local_path:
-            html += f"<img src=\"{local_path}\" alt=\"Фото: {headline}\" loading=\"lazy\">\n"
-            content_type = "photo"
+        html += f"<img src=\"{local_path}\" alt=\"Фото: {headline}\" loading=\"lazy\">\n"
+        content_type = "photo"
 
     elif message.content_type == "video":
         try:
@@ -185,12 +176,11 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
             fi = bot.get_file(message.video.file_id)
             telegram_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
             local_path = download_and_save(telegram_url, "public/media/videos", ".mp4")
-            if local_path:
-                html += f"<video controls preload=\"metadata\">\n"
-                html += f"  <source src=\"{local_path}\" type=\"video/mp4\">\n"
-                html += f"  Ваш браузер не поддерживает видео.\n"
-                html += f"</video>\n"
-                content_type = "video"
+            html += f"<video controls preload=\"metadata\">\n"
+            html += f"  <source src=\"{local_path}\" type=\"video/mp4\">\n"
+            html += f"  Ваш браузер не поддерживает видео.\n"
+            html += f"</video>\n"
+            content_type = "video"
         except Exception as e:
             print(f"Видео ошибка: {e}")
             return "", None, None, tg_link
@@ -218,7 +208,7 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
         microdata["image"] = f"https://newsforsvoi.ru{local_path}"
     html += f"<script type='application/ld+json'>{json.dumps(microdata, ensure_ascii=False, indent=2)}</script>\n"
     html += "</article>\n"
-    return html, telegram_url, content_type, tg_link  # ← telegram_url для ВК
+    return html, telegram_url, content_type, tg_link
 
 
 def extract_timestamp(block):
@@ -373,7 +363,7 @@ def main():
     visible_count = sum(1 for b in fresh_news if "hidden" not in b)
     any_new = False
 
-    # === ИСПРАВЛЕННЫЙ БЛОК: СОРТИРОВКА ПО ВРЕМЕНИ ===
+    # === ИСПРАВЛЕННЫЙ БЛОК: СОРТИРОВКА ПО ВРЕМЕНИ + БЕЗ ДУБЛЕЙ ===
     new_cards = []
 
     for gid, group in grouped.items():
@@ -391,25 +381,24 @@ def main():
             urgent = (last, first, len(group), pid)
             continue
 
-        html, telegram_url, ct, tg_link = format_post(first, first.caption, len(group), False)
+        html, telegram_url, ct, tg_link = format_post(last, first.caption, len(group), False)
         if not html:
             continue
-
         if hash_html_block(html) in seen_hashes:
             continue
 
         post_to_vk(clean_text(first.caption or ""), clean_text(last.text or ""), telegram_url, ct, pid)
 
-        new_cards.append((first.date, html))
+        new_cards.append((last.date, html))
         new_ids.add(pid)
         seen_hashes.add(hash_html_block(html))
         any_new = True
 
     if urgent:
-        html, telegram_url, ct, tg_link = format_post(urgent[1], urgent[1].caption, urgent[2], True)
+        html, telegram_url, ct, tg_link = format_post(urgent[0], urgent[1].caption, urgent[2], True)
         if html:
             post_to_vk(clean_text(urgent[1].caption or ""), clean_text(urgent[0].text or ""), telegram_url, ct, urgent[3])
-            new_cards.append((urgent[1].date, html))
+            new_cards.append((urgent[0].date, html))
             new_ids.add(urgent[3])
             any_new = True
             print("СРОЧНО → ВК + сайт")
@@ -421,7 +410,7 @@ def main():
             html = html.replace("class='news-item", "class='news-item hidden", 1)
         fresh_news.insert(0, html)
         visible_count += 1
-    # === КОНЕЦ ИСПРАВЛЕНИЯ ===
+    # === КОНЕЦ ===
 
     if any_new:
         with open("public/news.html", "w", encoding="utf-8") as f:
