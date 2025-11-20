@@ -122,8 +122,10 @@ def download_and_save(file_url, save_dir, ext):
 
 def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     ts = message.date
-    fmt_time = datetime.fromtimestamp(ts, moscow).strftime("%d.%m.%Y %H:%M")
-    iso_time = datetime.fromtimestamp(ts, moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
+    dt_moscow = datetime.fromtimestamp(ts, moscow)
+    fmt_time = dt_moscow.strftime("%d.%m.%Y %H:%M")
+    iso_time = dt_moscow.isoformat(timespec='seconds')  # 2025-11-20T14:30:00+03:00
+
     caption = clean_text(caption_override or message.caption or "")
     text = clean_text(message.text or "")
     full = re.sub(r'#срочно', '', caption + " " + text, flags=re.IGNORECASE).strip()
@@ -211,16 +213,36 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     return html, telegram_url, content_type, tg_link
 
 
+# ────────────────────────────────────────────────────────────────
+# ИСПРАВЛЕННАЯ ФУНКЦИЯ ИЗВЛЕЧЕНИЯ ДАТЫ ДЛЯ АРХИВА
+# ────────────────────────────────────────────────────────────────
 def extract_timestamp(block):
-    m = re.search(r" (\d{2}\.\d{2}\.\d{4} \d{2}:\d{2})", block)
-    return datetime.strptime(m.group(1), "%d.%m.%Y %H:%M").replace(tzinfo=moscow) if m else None
+    """Извлекает дату публикации из атрибута data-ts (самый надёжный способ)"""
+    m = re.search(r'data-ts=[\'"]([^\'"]+)[\'"]', block)
+    if not m:
+        return None
+    dt_str = m.group(1)
+    try:
+        # Поддержка +03:00 в ISO формате
+        if '+' in dt_str:
+            base, offset = dt_str.rsplit('+', 1)
+            offset = '+' + offset
+        elif 'Z' in dt_str:
+            base = dt_str.replace('Z', '+00:00')
+            offset = '+00:00'
+        else:
+            base = dt_str
+            offset = '+03:00'
+        dt = datetime.fromisoformat(base + offset)
+        return dt.astimezone(moscow)
+    except Exception as e:
+        print(f"Ошибка парсинга даты: {dt_str} — {e}")
+        return None
 
 
-def hash_html_block(message_id, media_group_id=None):
-    key = f"{media_group_id or message_id}_{message_id}"
-    return hashlib.md5(key.encode()).hexdigest()
-
-
+# ────────────────────────────────────────────────────────────────
+# ИСПРАВЛЕННАЯ ФУНКЦИЯ ПЕРЕМЕЩЕНИЯ В АРХИВ
+# ────────────────────────────────────────────────────────────────
 def move_to_archive(fresh_news):
     cutoff = datetime.now(moscow) - timedelta(days=2)
     remaining = []
@@ -231,13 +253,29 @@ def move_to_archive(fresh_news):
         if not ts:
             remaining.append(block)
             continue
+
         if ts < cutoff:
+            # Сохраняем человекочитаемую дату
+            visible_date_match = re.search(r"<p class='timestamp[^>]*>([^<]+)</p>", block)
+            visible_date = visible_date_match.group(1) if visible_date_match else ts.strftime("%d.%m.%Y %H:%M")
+
+            # Удаляем медиа и JSON-LD
             clean_block = re.sub(r"<img[^>]*>|<video[^>]*>.*?</video>", "", block, flags=re.DOTALL)
             clean_block = re.sub(r"<script type='application/ld\+json'>.*?</script>", "", clean_block, flags=re.DOTALL)
+
+            # Гарантируем наличие источника
             if "Источник:" not in clean_block:
-                tg_match = re.search(r"https://t\.me/[^']+", block)
+                tg_match = re.search(r"https://t\.me/[^'\"]+", block)
                 if tg_match:
                     clean_block += f"\n<p class='source'>Источник: <a href='{tg_match.group(0)}' target='_blank' rel='noopener'>Новости для Своих</a></p>\n"
+
+            # Возвращаем дату, если её случайно удалили
+            if "<p class='timestamp'" not in clean_block:
+                clean_block = re.sub(r"(</h3>)", r"\1\n<p class='timestamp archived'>" + visible_date + "</p>", clean_block, count=1)
+
+            # Помечаем как архивную карточку (для стилей)
+            clean_block = clean_block.replace("class='news-item", "class='news-item archived", 1)
+
             archived.append(clean_block)
         else:
             remaining.append(block)
@@ -245,16 +283,16 @@ def move_to_archive(fresh_news):
     if archived:
         archive_path = "public/archive.html"
         os.makedirs("public", exist_ok=True)
-        write_mode = "a"
-        if not os.path.exists(archive_path) or os.path.getsize(archive_path) == 0:
-            write_mode = "w"
-            print("archive.html пуст или отсутствует — начинаем с чистого листа")
-        with open(archive_path, write_mode, encoding="utf-8") as f:
-            if write_mode == "w":
-                f.write("  <!-- Архивные карточки -->\n")
+        mode = "a" if os.path.exists(archive_path) and os.path.getsize(archive_path) > 100 else "w"
+        with open(archive_path, mode, encoding="utf-8") as f:
+            if mode == "w":
+                f.write("<!DOCTYPE html>\n<html lang='ru'>\n<head>\n<meta charset='utf-8'>\n<title>Архив новостей</title>\n")
+                f.write("<style>.news-item{margin:20px 0;padding:15px;background:#f9f9f9;border-left:4px solid #aaa;} .archived{opacity:0.95;}</style>\n</head>\n<body>\n")
             for b in archived:
-                f.write("  " + b.strip() + "\n")
-        print(f"В архив: {len(archived)} карточек")
+                f.write(b.strip() + "\n")
+            # Не закрываем </body></html> — будем дозаписывать вечно
+        print(f"Перемещено в архив: {len(archived)} карточек (старше 2 дней)")
+
     return remaining
 
 
@@ -269,17 +307,17 @@ def cleanup_old_media():
             fpath = os.path.join(folder, fname)
             if not os.path.isfile(fpath):
                 continue
-            mtime = datetime.fromtimestamp(os.path.getmtime(fpath)).replace(tzinfo=moscow)
+            mtime = datetime.fromtimestamp(os.path.getmtime(fpath), moscow)
             if mtime < cutoff:
                 os.remove(fpath)
                 deleted += 1
-                print(f"Удалено: {fpath}")
+                print(f"Удалено старое медиа: {fpath}")
     if deleted:
-        print(f"Удалено {deleted} устаревших медиафайлов")
+        print(f"Всего удалено устаревших файлов: {deleted}")
 
 
 def update_sitemap():
-    now = datetime.now(moscow).strftime("%Y-%m-%dT%H:%M:%S+03:00")
+    now = datetime.now(moscow).isoformat(timespec='seconds')
     sitemap = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://newsforsvoi.ru/index.html</loc><lastmod>{now}</lastmod><changefreq>always</changefreq><priority>1.0</priority></url>
@@ -295,11 +333,12 @@ def update_sitemap():
 def generate_rss(news_blocks):
     items = ""
     for b in news_blocks[:20]:
-        title = re.search(r"<h3[^>]*>(.*?)</h3>", b) or re.search(r"<p>(.*?)</p>", b)
-        link = re.search(r"<a href='(https://t\.me/[^']+)'", b)
+        title = re.search(r"<h3[^>]*>(.*?)</h3>", b)
+        link = re.search(r"https://t\.me/[^'\"]+", b)
         date = re.search(r"data-ts='([^']+)'", b)
         t = title.group(1) if title else "Новость"
-        l = link.group(1) if link else "https://t.me/newsSVOih"
+        t = re.sub(r"<[^>]+>", "", t)
+        l = link.group(0) if link else "https://t.me/newsSVOih"
         d = date.group(1) if date else datetime.now(moscow).isoformat()
         items += f"<item><title>{t}</title><link>{l}</link><description>{t}</description><pubDate>{d}</pubDate></item>\n"
     rss = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -325,13 +364,18 @@ def load_seen_ids():
 
 def save_seen_ids(ids_set):
     with open(SEEN_IDS_FILE, "w", encoding="utf-8") as f:
-        f.write("\n".join(ids_set) + "\n")
+        f.write("\n".join(sorted(ids_set)) + "\n")
 
 
 def fetch_latest_posts():
     updates = bot.get_updates()
     posts = [u.channel_post for u in updates if u.channel_post and u.channel_post.chat.username == CHANNEL_ID[1:]]
     return list(reversed(posts[-15:])) if posts else []
+
+
+def hash_html_block(message_id, media_group_id=None):
+    key = f"{media_group_id or message_id}_{message_id}"
+    return hashlib.md5(key.encode()).hexdigest()
 
 
 def main():
@@ -366,7 +410,6 @@ def main():
 
     visible_count = sum(1 for b in fresh_news if "hidden" not in b)
     any_new = False
-
     new_cards = []
 
     for gid, group in grouped.items():
@@ -418,18 +461,18 @@ def main():
         fresh_news.insert(0, html)
         visible_count += 1
 
-    if any_new:
+    if any_new or fresh_news:  # перезаписываем всегда, чтобы скрытые работали
         with open("public/news.html", "w", encoding="utf-8") as f:
             for b in fresh_news:
                 f.write(b + "\n")
             if any("hidden" in b for b in fresh_news):
-                f.write('<button id="show-more" style="padding:10px 20px;background:#0077cc;color:#fff;border:none;border-radius:4px;cursor:pointer">Показать ещё</button>\n')
+                f.write('<button id="show-more" style="padding:10px 20px;background:#0077cc;color:#fff;border:none;border-radius:4px;cursor:pointer;margin:20px auto;display:block;">Показать ещё</button>\n')
                 f.write('<script>document.getElementById("show-more").onclick=()=>{document.querySelectorAll(".hidden").forEach(e=>e.classList.remove("hidden"));this.style.display="none"};</script>\n')
 
         save_seen_ids(seen_ids | new_ids)
         update_sitemap()
         generate_rss(fresh_news)
-        print(f"ГОТОВО! +{len(new_ids)} новостей | ВК: {len(load_vk())} записей")
+        print(f"ГОТОВО! Добавлено новостей: {len(new_ids)} | Всего на главной: {len(fresh_news)} | ВК записей: {len(load_vk())}")
 
 
 if __name__ == "__main__":
