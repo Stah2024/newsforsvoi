@@ -45,6 +45,7 @@ def post_to_vk(caption, text, file_url=None, ctype=None, msg_id=None):
         print("VK не настроен")
         return
 
+    # Сохраняем переносы строк для ВК!
     message = f"{caption}\n\n{text}".strip() or "Новость"
     attachments = []
 
@@ -102,7 +103,8 @@ def clean_text(text):
     for p in patterns:
         text = re.sub(p, "", text, flags=re.IGNORECASE)
     text = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF]+', '', text)
-    return re.sub(r'\s+', ' ', text).strip()
+    # Сохраняем переносы строк!
+    return text.strip()
 
 
 def download_and_save(file_url, save_dir, ext):
@@ -117,26 +119,36 @@ def download_and_save(file_url, save_dir, ext):
         return f"/media/{os.path.basename(save_dir)}/{fname}"
     except Exception as e:
         print(f"Ошибка скачивания {file_url}: {e}")
-        return file_url  # fallback
+        return file_url
 
 
+# ────────────────────────────────────────────────────────────────
+# ГЛАВНАЯ ПРАВКА: ТЕКСТ КАК В TELEGRAM (с переносами и пунктами)
+# ────────────────────────────────────────────────────────────────
 def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     ts = message.date
     dt_moscow = datetime.fromtimestamp(ts, moscow)
     fmt_time = dt_moscow.strftime("%d.%m.%Y %H:%M")
-    iso_time = dt_moscow.isoformat(timespec='seconds')  # 2025-11-20T14:30:00+03:00
+    iso_time = dt_moscow.isoformat(timespec='seconds')
 
-    caption = clean_text(caption_override or message.caption or "")
-    text = clean_text(message.text or "")
-    full = re.sub(r'#срочно', '', caption + " " + text, flags=re.IGNORECASE).strip()
-    if text and text in full:
-        caption = full.split(text)[0].strip()
+    # Берём оригинальные caption и text, чистим, но сохраняем \n
+    raw_caption = caption_override or message.caption or ""
+    raw_text = message.text or ""
+    caption = clean_text(raw_caption)
+    text = clean_text(raw_text)
+
+    # Формируем полный текст как в Telegram
+    if caption and text:
+        full_text = caption + "\n\n" + text
+    elif caption:
+        full_text = caption
     else:
-        caption = full
-        text = ""
+        full_text = text
 
-    headline = (caption or text or "Новость")[:100]
-    if len(caption + text) > 100:
+    # Убираем #срочно только из заголовка
+    headline_text = re.sub(r'#срочно\s*', '', full_text, flags=re.IGNORECASE).strip()
+    headline = headline_text.split('\n', 1)[0][:100]
+    if len(headline_text) > 100:
         headline += "..."
 
     telegram_url = None
@@ -146,10 +158,11 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     post_id = f"post-{message.message_id}"
     html = ""
 
+    # Категории
     category = None
-    if any(w in caption + text for w in ["Россия"]): category = "Россия"
-    elif any(w in caption + text for w in ["Космос"]): category = "Космос"
-    elif any(w in caption + text for w in ["Израиль", "Газа", "Мексика", "США", "Китай", "Тайвань", "Мир"]): category = "Мир"
+    if any(w in full_text for w in ["Россия"]): category = "Россия"
+    elif any(w in full_text for w in ["Космос"]): category = "Космос"
+    elif any(w in full_text for w in ["Израиль", "Газа", "Мексика", "США", "Китай", "Тайвань", "Мир"]): category = "Мир"
 
     if category:
         html += f"<h2 class='category-header'>{category}</h2>\n"
@@ -162,6 +175,7 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
 
     html += f"<h3 class='news-headline'>{headline}</h3>\n"
 
+    # Медиа
     if message.content_type == "photo":
         fi = bot.get_file(message.photo[-1].file_id)
         telegram_url = f"https://api.telegram.org/file/bot{TOKEN}/{fi.file_path}"
@@ -187,10 +201,17 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
             print(f"Видео ошибка: {e}")
             return "", None, None, tg_link
 
-    if caption:
-        html += f"<p class='news-text'>{caption}</p>\n"
-    if text and text != caption:
-        html += f"<p class='news-text'>{text}</p>\n"
+    # ───── ТЕКСТ С ПЕРЕНОСАМИ И КРАСИВЫМИ ПУНКТАМИ ─────
+    if full_text.strip():
+        lines = full_text.strip().split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith(('▪️', '•', '—', '-', '–', '•')):
+                html += f"<p class='bullet-point'>{line}</p>\n"
+            else:
+                html += f"<p class='news-text'>{line}</p>\n"
 
     html += f"<p class='timestamp' data-ts='{iso_time}'>{fmt_time}</p>\n"
     html += f"<p class='source'>Источник: <a href='{tg_link}' target='_blank' rel='noopener'>Новости для Своих</a></p>\n"
@@ -204,7 +225,7 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
         "author": {"@type": "Organization", "name": "Новости для Своих"},
         "publisher": {"@type": "Organization", "name": "Новости для Своих",
                       "logo": {"@type": "ImageObject", "url": "https://newsforsvoi.ru/logo.png"}},
-        "articleBody": (caption + "\n" + text).strip(), "url": tg_link
+        "articleBody": full_text.strip(), "url": tg_link
     }
     if local_path:
         microdata["image"] = f"https://newsforsvoi.ru{local_path}"
@@ -213,17 +234,12 @@ def format_post(message, caption_override=None, group_size=1, is_urgent=False):
     return html, telegram_url, content_type, tg_link
 
 
-# ────────────────────────────────────────────────────────────────
-# ИСПРАВЛЕННАЯ ФУНКЦИЯ ИЗВЛЕЧЕНИЯ ДАТЫ ДЛЯ АРХИВА
-# ────────────────────────────────────────────────────────────────
 def extract_timestamp(block):
-    """Извлекает дату публикации из атрибута data-ts (самый надёжный способ)"""
     m = re.search(r'data-ts=[\'"]([^\'"]+)[\'"]', block)
     if not m:
         return None
     dt_str = m.group(1)
     try:
-        # Поддержка +03:00 в ISO формате
         if '+' in dt_str:
             base, offset = dt_str.rsplit('+', 1)
             offset = '+' + offset
@@ -240,9 +256,6 @@ def extract_timestamp(block):
         return None
 
 
-# ────────────────────────────────────────────────────────────────
-# ИСПРАВЛЕННАЯ ФУНКЦИЯ ПЕРЕМЕЩЕНИЯ В АРХИВ
-# ────────────────────────────────────────────────────────────────
 def move_to_archive(fresh_news):
     cutoff = datetime.now(moscow) - timedelta(days=2)
     remaining = []
@@ -255,27 +268,21 @@ def move_to_archive(fresh_news):
             continue
 
         if ts < cutoff:
-            # Сохраняем человекочитаемую дату
             visible_date_match = re.search(r"<p class='timestamp[^>]*>([^<]+)</p>", block)
             visible_date = visible_date_match.group(1) if visible_date_match else ts.strftime("%d.%m.%Y %H:%M")
 
-            # Удаляем медиа и JSON-LD
             clean_block = re.sub(r"<img[^>]*>|<video[^>]*>.*?</video>", "", block, flags=re.DOTALL)
             clean_block = re.sub(r"<script type='application/ld\+json'>.*?</script>", "", clean_block, flags=re.DOTALL)
 
-            # Гарантируем наличие источника
             if "Источник:" not in clean_block:
                 tg_match = re.search(r"https://t\.me/[^'\"]+", block)
                 if tg_match:
                     clean_block += f"\n<p class='source'>Источник: <a href='{tg_match.group(0)}' target='_blank' rel='noopener'>Новости для Своих</a></p>\n"
 
-            # Возвращаем дату, если её случайно удалили
             if "<p class='timestamp'" not in clean_block:
                 clean_block = re.sub(r"(</h3>)", r"\1\n<p class='timestamp archived'>" + visible_date + "</p>", clean_block, count=1)
 
-            # Помечаем как архивную карточку (для стилей)
             clean_block = clean_block.replace("class='news-item", "class='news-item archived", 1)
-
             archived.append(clean_block)
         else:
             remaining.append(block)
@@ -290,7 +297,6 @@ def move_to_archive(fresh_news):
                 f.write("<style>.news-item{margin:20px 0;padding:15px;background:#f9f9f9;border-left:4px solid #aaa;} .archived{opacity:0.95;}</style>\n</head>\n<body>\n")
             for b in archived:
                 f.write(b.strip() + "\n")
-            # Не закрываем </body></html> — будем дозаписывать вечно
         print(f"Перемещено в архив: {len(archived)} карточек (старше 2 дней)")
 
     return remaining
@@ -461,7 +467,7 @@ def main():
         fresh_news.insert(0, html)
         visible_count += 1
 
-    if any_new or fresh_news:  # перезаписываем всегда, чтобы скрытые работали
+    if any_new or fresh_news:
         with open("public/news.html", "w", encoding="utf-8") as f:
             for b in fresh_news:
                 f.write(b + "\n")
